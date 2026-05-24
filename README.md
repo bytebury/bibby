@@ -69,4 +69,5 @@ Bytebury provides a few libraries and microservices that bibby can incorporate i
 | --- | --- |
 | geodude | A geolocation microservice built on top of ip2location. Supports auto-updates from ip2location. |
 | shima | A simple stripe microservice to help handle payments and integrate customers into your application. |
+| paperboy | A mailer microservice. Send e-mails on your behalf. |
 

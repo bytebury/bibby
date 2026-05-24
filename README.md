@@ -1,5 +1,9 @@
+<div align=center>
+<img width="128" height="128" src="https://bytebury.com/assets/images/bibby_welcome.webp" alt="Bytebury's mascot, Bibby" />
+
 # bibby
-A full stack template at the heart of every Bytebury application. Written in Rust. Built with axum, sqlx, htmx, tailwindcss, and askama. 
+A full stack template at the heart of every Bytebury application. Written in Rust. Built with axum, sqlx, htmx, tailwindcss, and askama.
+</div>
 
 # Getting Started
 You can get started by creating a repository from this template repository. This framework helps the bytebury team deliver efficiently and safely. You will need Rust and NodeJS available in your development environment to run the application.

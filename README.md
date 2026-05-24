@@ -62,6 +62,9 @@ async fn sample(headers: HeaderMap) -> impl IntoResponse {
 }
 ```
 
+## OAuth Providers
+By default, we support Google OAuth out of the box. If you'd like to support other OAuth clients, you will need to add your new provider into the `OAuthProvider` enum and add a configuration for it. This will automatically set up the auth endpoints `/auth/{provider_code}` and the callback `/auth/{provider_code}/callback`.
+
 ## Opt-out Microservices
 Bytebury provides a few libraries and microservices that bibby can incorporate into projects. By default these are all included. You can delete any you feel are not important to your needs. Bytebury uses Railway as our primary cloud host, so you may see some preference there, but all microservices are platform / cloud-provider agnostic.
 

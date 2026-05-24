@@ -61,3 +61,12 @@ async fn sample(headers: HeaderMap) -> impl IntoResponse {
     redirect!("/", &headers)
 }
 ```
+
+## Opt-in Microservices
+Bytebury provides a few libraries and microservices that bibby can incorporate into projects. By default these are all included. You can delete any you feel are not important to your needs.
+
+| Name | Description |
+| --- | --- |
+| geodude | A geolocation microservice built on top of ip2location. Supports auto-updates from ip2location. |
+| shima | A simple stripe microservice to help handle payments and integrate customers into your application. |
+

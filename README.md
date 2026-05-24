@@ -64,6 +64,22 @@ async fn sample(headers: HeaderMap) -> impl IntoResponse {
 }
 ```
 
+## Web Utilities
+### Spinners
+todo
+
+### Tooltips
+todo
+
+### Modals
+todo
+
+### Popover Menus
+todo
+
+### I18n
+todo
+
 ## OAuth Providers
 By default, we support Google OAuth out of the box. If you'd like to support other OAuth clients, you will need to add your new provider into the `OAuthProvider` enum and add a configuration for it. This will automatically set up the auth endpoints `/auth/{provider_code}` and the callback `/auth/{provider_code}/callback`.
 

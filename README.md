@@ -43,7 +43,8 @@ impl Paginate for User {
     }
 }
 ```
-this will allow you to paginate through two means
+
+**Sample Usage**
 ```rs
 paginate!(User, &db);
 paginate_with!(User, &db, "where role = $1", vec!["admin"]);

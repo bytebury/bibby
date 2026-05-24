@@ -18,7 +18,7 @@ cd ./bibby
 You can always run the application locally by running the `./dev.sh` file. This will run the application in with a debug build and watch for file changes. This will also watch for html and css changes so that tailwind will also generate.
 
 ## Design Decisions
-This framework follows Clean Architecture relatively close. We do not use repositories, as all of our data gathering happens directly on the model itself. This allows for extremely ergonomic code as seen below.
+This framework follows Clean Architecture relatively close. We do not use repositories, as all of our data gathering happens directly on the model itself. This allows for more ergonomic code as seen below.
 
 ```rs
 pub async fn execute(&self, request: &CreateUser) -> Result<User> {

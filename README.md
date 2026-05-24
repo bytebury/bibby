@@ -78,3 +78,6 @@ Bytebury provides a few libraries and microservices that bibby can incorporate i
 stripe listen --forward-to localhost:8080/stripe
 ```
 
+# Tests
+We strongly encourage you to test mission-critical features through end-to-end (e2e) tests. Bibby uses Playwright for this, which can be run using `./e2e.sh`. We also bootstrap GitHub Actions, which will automatically execute tests and e2e tests on every Pull Request as the default functionality.
+

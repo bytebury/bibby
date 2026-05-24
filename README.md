@@ -1,7 +1,9 @@
 <div align=center>
 <img width="168" height="168" src="https://bytebury.com/assets/images/bibby_welcome.webp" alt="Bytebury's mascot, Bibby" />
 
-<p>A full stack template at the heart of every Bytebury application. Written in Rust. Built with axum, sqlx, htmx, tailwindcss, and askama.</p>
+<p>
+  A full stack template at the heart of every Bytebury application. Written in Rust. Built with axum, sqlx, htmx, tailwindcss, and askama. Out-of-the-box integration with Stripe, OAuth, Postgres, Geolocation, Mailers, Blogs, Announcements, User Management, Privacy and Terms of Service, and more.
+</p>
 </div>
 
 # Getting Started

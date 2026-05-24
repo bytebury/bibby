@@ -63,7 +63,7 @@ async fn sample(headers: HeaderMap) -> impl IntoResponse {
 ```
 
 ## Opt-out Microservices
-Bytebury provides a few libraries and microservices that bibby can incorporate into projects. By default these are all included. You can delete any you feel are not important to your needs.
+Bytebury provides a few libraries and microservices that bibby can incorporate into projects. By default these are all included. You can delete any you feel are not important to your needs. Bytebury uses Railway as our primary cloud host, so you may see some preference there, but all microservices are platform / cloud-provider agnostic.
 
 | Name | Description |
 | --- | --- |

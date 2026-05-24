@@ -7,7 +7,8 @@ You can get started by creating a repository from this template repository. This
 For a quick start, you can copy the following lines into your terminal and go to `localhost:8080` to view the application running locally in watch mode.
 
 ```sh
-git clone https://github.com/bytebury/bibby && cd ./bibby
+git clone https://github.com/bytebury/bibby
+cd ./bibby
 ./dev.sh
 ```
 
@@ -26,3 +27,21 @@ pub async fn execute(&self, request: &CreateUser) -> Result<User> {
 ```
 
 Therefore, we use `use_cases` to derive business logic.
+
+## Common Utilities
+
+### Pagination
+You can use the Paginate trait to implement pagination on models.
+
+```rs
+impl Paginate for User {
+    fn table_name() -> &'static str {
+        "users"
+    }
+}
+```
+this will allow you to paginate through two means
+```rs
+paginate!(User, &db);
+paginate_with!(User, &db, "where role = $1", vec!["admin"]);
+```

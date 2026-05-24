@@ -12,7 +12,7 @@ cd ./bibby
 ./dev.sh
 ```
 
-You can always run the application locally by running the `./dev.sh` file.
+You can always run the application locally by running the `./dev.sh` file. This will run the application in with a debug build and watch for file changes. This will also watch for html and css changes so that tailwind will also generate.
 
 ## Design Decisions
 This framework follows Clean Architecture relatively close. We do not use repositories, as all of our data gathering happens directly on the model itself. This allows for extremely ergonomic code as seen below.
@@ -44,4 +44,16 @@ this will allow you to paginate through two means
 ```rs
 paginate!(User, &db);
 paginate_with!(User, &db, "where role = $1", vec!["admin"]);
+```
+
+### Redirects
+
+It is strongly encouraged to use the provided `redirect!` macro when dealing with redirects. Standard browser requests receive a typical 303 Redirect.
+HTMX requests receive a 200 OK with the `HX-Redirect` header, preventing HTMX from swapping the redirect target into the current element and forcing a full-page navigation instead.
+
+**Sample Usage**
+```rs
+async fn sample(headers: HeaderMap) -> impl IntoResponse {
+    redirect!("/", &headers)
+}
 ```

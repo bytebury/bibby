@@ -1,0 +1,102 @@
+name: Playwright
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: playwright-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  RUST_LOG: "info"
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      PORT: "8080"
+      APP_NAME: Bibby
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@v2
+        with:
+          # Share the cache with the Rust check workflow so the debug build is
+          # already warm by the time we get here.
+          shared-key: bibby-debug
+          cache-targets: "true"
+
+      - name: Build app (debug)
+        run: cargo build --bin bibby --locked
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install npm deps
+        run: npm ci
+
+      - name: Build Tailwind stylesheet
+        run: npm run css:build
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright OS deps
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Start app
+        run: |
+          export GIT_HASH=${GITHUB_SHA}
+          ./target/debug/bibby > app.log 2>&1 &
+          echo $! > app.pid
+
+      - name: Wait for app to be ready
+        run: npx wait-on -t 60000 http://127.0.0.1:8080/
+
+      - name: Run Playwright tests
+        run: npx playwright test
+
+      - name: Stop app
+        if: always()
+        run: |
+          if [ -f app.pid ]; then kill "$(cat app.pid)" || true; fi
+
+      - name: Upload app log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-log
+          path: app.log
+          if-no-files-found: ignore
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          if-no-files-found: ignore

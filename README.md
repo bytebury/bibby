@@ -1,5 +1,5 @@
 <div align=center>
-k 
+
 <img width="168" height="168" src="https://bytebury.com/assets/images/bibby_welcome.webp" alt="Bytebury's mascot, Bibby" />
 
 <p>

@@ -38,6 +38,7 @@
               <label class="inline-flex items-center gap-2">
                 <input
                   type="checkbox"
+                  class="toggle"
                   name="locked"
                   {% if c.locked %}checked{% endif %}
                   hx-patch="/countries/{{ c.id }}/lock"

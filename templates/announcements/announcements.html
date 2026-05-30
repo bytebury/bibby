@@ -44,6 +44,7 @@
               <label class="inline-flex items-center gap-2">
                 <input
                   type="checkbox"
+                  class="toggle"
                   name="active"
                   {% if a.active %}checked{% endif %}
                   hx-patch="/announcements/{{ a.id }}/active"

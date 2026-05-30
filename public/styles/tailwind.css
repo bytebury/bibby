@@ -235,6 +235,20 @@
     .banner-body code { @apply rounded bg-black/10 px-1 py-0.5 text-xs; }
     .banner-body ul, .banner-body ol { @apply mt-1 ml-5 list-inside; }
 
+    /* Toggle — checkbox styled as an iOS-style on/off switch.
+       Apply `.toggle` to an <input type="checkbox"> to get the pill+knob look. */
+    .toggle {
+        @apply relative h-6 w-10 shrink-0 cursor-pointer appearance-none rounded-full bg-gray-300 transition-colors;
+    }
+    .toggle:checked { @apply bg-emerald-500; }
+    .toggle::before {
+        content: "";
+        @apply absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform;
+    }
+    .toggle:checked::before { @apply translate-x-4; }
+    .toggle:focus-visible { @apply outline-none ring-2 ring-emerald-400 ring-offset-1; }
+    .toggle:disabled { @apply cursor-not-allowed opacity-50; }
+
     /* Modal — public/scripts/modal.js shows/hides `#modal_wrapper` and
        fires the `closing` class to play a fade-out before display:none. */
     .modal.wrapper {

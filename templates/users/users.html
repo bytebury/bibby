@@ -38,22 +38,24 @@
           <tr>
             <td>
               <div class="flex items-center gap-3">
-                <img
-                  src="{{ u.image_url }}"
-                  alt="{{ u.full_name }}"
-                  width="32"
-                  height="32"
-                  class="h-8 w-8 rounded-full border border-gray-200 object-cover"
-                  referrerpolicy="no-referrer"
-                />
-                <img
-                  src="/assets/images/flags/{{ u.country_code }}.svg"
-                  alt="{{ u.country_code }}"
-                  data-tooltip="{% if let Some(region) = u.region_name %}{{ region }}, {% endif %}{{ u.country_name }}"
-                  width="20"
-                  height="16"
-                  class="rounded-sm"
-                />
+                <div class="relative shrink-0">
+                  <img
+                    src="{{ u.image_url }}"
+                    alt="{{ u.full_name }}"
+                    width="40"
+                    height="40"
+                    class="h-10 w-10 rounded-full border border-gray-200 object-cover"
+                    referrerpolicy="no-referrer"
+                  />
+                  <img
+                    src="/assets/images/flags/{{ u.country_code }}.svg"
+                    alt="{{ u.country_code }}"
+                    data-tooltip="{% if let Some(region) = u.region_name %}{{ region }}, {% endif %}{{ u.country_name }}"
+                    width="20"
+                    height="16"
+                    class="absolute -bottom-1 -right-1 rounded-sm border border-white shadow-sm"
+                  />
+                </div>
                 <span>{{ u.full_name }}</span>
               </div>
             </td>

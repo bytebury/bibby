@@ -301,31 +301,29 @@
        went wrong. The inner markup (icon, body, close button) is built by the
        script. */
     .toast {
-        @apply pointer-events-none fixed right-4 top-4 z-50 flex w-[calc(100%-2rem)] max-w-sm translate-x-3 items-start gap-3 rounded-xl border border-red-200 bg-white py-3 pl-4 pr-3 opacity-0 shadow-xl ring-1 ring-red-500/10 sm:right-6 sm:top-6;
-        border-left-width: 4px;
-        @apply border-l-red-500;
+        @apply pointer-events-none fixed right-4 top-4 z-50 flex w-[calc(100%-2rem)] max-w-sm translate-x-3 items-center gap-3 rounded-xl border border-red-200 bg-red-50 py-3 pl-3 pr-3 opacity-0 shadow-lg sm:right-6 sm:top-6;
         transition: opacity 0.22s ease, transform 0.22s ease;
     }
     .toast.show {
         @apply pointer-events-auto translate-x-0 opacity-100;
     }
     .toast-icon {
-        @apply mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600;
+        @apply flex size-8 shrink-0 items-center justify-center rounded-full bg-red-500 text-white;
     }
     .toast-icon svg {
-        @apply size-4;
+        @apply size-5;
     }
     .toast-body {
-        @apply min-w-0 flex-1 pt-0.5;
+        @apply min-w-0 flex-1;
     }
     .toast-title {
-        @apply text-sm font-semibold text-red-700;
+        @apply text-sm font-semibold text-red-900;
     }
     .toast-message {
-        @apply mt-0.5 break-words text-sm leading-snug text-gray-600;
+        @apply mt-0.5 break-words text-sm leading-snug text-red-800/80;
     }
     .toast-close {
-        @apply -mt-0.5 -mr-0.5 flex size-7 shrink-0 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400;
+        @apply -mr-0.5 flex size-7 shrink-0 items-center justify-center self-start rounded-md text-red-400 transition-colors hover:bg-red-100 hover:text-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400;
     }
     .toast-close svg {
         @apply size-4;

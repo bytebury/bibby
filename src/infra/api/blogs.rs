@@ -3,6 +3,7 @@ use crate::infra::api::SharedContext;
 use crate::infra::api::extract::admin::Admin;
 use crate::infra::api::extract::maybe_current_user::MaybeCurrentUser;
 use crate::infra::pagination::{Paginate, Paginated, PagingInfo};
+use crate::infra::seo::PageMeta;
 use crate::prelude::*;
 use axum::Router;
 use axum::extract::{Path, Query, State};
@@ -56,7 +57,12 @@ async fn blogs(
     Ok(BlogsTemplate {
         shared: SharedContext::new(&state)
             .with_user(user)
-            .with_canonical_path("/blogs"),
+            .with_canonical_path("/blogs")
+            .with_meta(
+                PageMeta::new()
+                    .title("Blog")
+                    .description("News, notes, and writing from the team."),
+            ),
         blogs: Blog::paginate_filter(
             &state.db,
             Some("ORDER BY created_at DESC, id DESC"),
@@ -98,7 +104,8 @@ async fn view_blog(
     Ok(BlogTemplate {
         shared: SharedContext::new(&state)
             .with_user(user)
-            .with_canonical_path(canonical_path),
+            .with_canonical_path(canonical_path)
+            .with_meta(PageMeta::article(&blog)),
         blog,
         is_admin,
     }

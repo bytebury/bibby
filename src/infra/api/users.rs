@@ -2,6 +2,7 @@ use crate::domain::user::{User, UserForm};
 use crate::infra::api::SharedContext;
 use crate::infra::api::extract::admin::Admin;
 use crate::infra::pagination::{Paginated, PagingInfo};
+use crate::infra::seo::PageMeta;
 use crate::prelude::*;
 use axum::Router;
 use axum::extract::{Path, Query, State};
@@ -55,7 +56,14 @@ async fn users(
     };
     let pagination_base = format!("/users?q={search_query}&");
     Ok(ManageUsersTemplate {
-        shared: SharedContext::new(&state).with_user(Some(user)),
+        shared: SharedContext::new(&state)
+            .with_user(Some(user))
+            .with_canonical_path("/users")
+            .with_meta(
+                PageMeta::new()
+                    .title("Manage Users")
+                    .robots("noindex,nofollow"),
+            ),
         users: state
             .user_use_cases
             .search

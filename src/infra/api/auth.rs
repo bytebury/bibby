@@ -4,6 +4,7 @@ use crate::infra::auth::OAuthProvider;
 use crate::infra::auth::google::GoogleOAuth;
 use crate::infra::auth::jwt::{Jwt, UserClaims};
 use crate::infra::auth::oauth_state::{OAuthState, is_allowed_target};
+use crate::infra::seo::PageMeta;
 use crate::prelude::*;
 use axum::Router;
 use axum::extract::{Query, State};
@@ -104,7 +105,13 @@ async fn sign_in_with_google_callback(
         .unwrap_or(false);
     if !nonce_matches {
         return Ok(FinishSignInTemplate {
-            shared: SharedContext::new(&state).with_canonical_path("/auth/google"),
+            shared: SharedContext::new(&state)
+                .with_canonical_path("/auth/google")
+                .with_meta(
+                    PageMeta::new()
+                        .title("Finish signing in")
+                        .robots("noindex,nofollow"),
+                ),
         }
         .into_response());
     }

@@ -301,13 +301,13 @@
        went wrong. The inner markup (icon, body, close button) is built by the
        script. */
     .toast {
-        @apply pointer-events-none fixed bottom-6 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 translate-y-3 items-start gap-3 rounded-xl border border-red-200 bg-white py-3 pl-4 pr-3 opacity-0 shadow-xl ring-1 ring-red-500/10;
+        @apply pointer-events-none fixed right-4 top-4 z-50 flex w-[calc(100%-2rem)] max-w-sm translate-x-3 items-start gap-3 rounded-xl border border-red-200 bg-white py-3 pl-4 pr-3 opacity-0 shadow-xl ring-1 ring-red-500/10 sm:right-6 sm:top-6;
         border-left-width: 4px;
         @apply border-l-red-500;
         transition: opacity 0.22s ease, transform 0.22s ease;
     }
     .toast.show {
-        @apply pointer-events-auto translate-y-0 opacity-100;
+        @apply pointer-events-auto translate-x-0 opacity-100;
     }
     .toast-icon {
         @apply mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600;

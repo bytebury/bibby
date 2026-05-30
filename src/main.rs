@@ -24,11 +24,16 @@ async fn main() {
     let db = Arc::new(Database::init().await);
     let state = Arc::new(AppState::new(db));
 
+    let cache_control = if cfg!(debug_assertions) {
+        "no-cache"
+    } else {
+        "public, max-age=31536000"
+    };
     let serve_static = Router::new()
         .nest_service("/assets", ServeDir::new("public"))
         .layer(SetResponseHeaderLayer::if_not_present(
             CACHE_CONTROL,
-            HeaderValue::from_static("public, max-age=31536000"),
+            HeaderValue::from_static(cache_control),
         ));
 
     let pool_for_shutdown = state.db.clone();

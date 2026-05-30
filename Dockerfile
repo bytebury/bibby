@@ -9,6 +9,7 @@ FROM chef AS builder
 RUN apt-get update && apt-get install -y --no-install-recommends musl-tools && rm -rf /var/lib/apt/lists/*
 RUN rustup target add x86_64-unknown-linux-musl
 ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-C target-feature=+crt-static"
+ENV SQLX_OFFLINE=true
 
 # Cache dependency builds via cargo-chef. This layer only invalidates when
 # Cargo.toml / Cargo.lock change, so application code edits stay fast.

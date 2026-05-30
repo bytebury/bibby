@@ -1,0 +1,244 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                id as \"id!\",\n                country_id,\n                region_id,\n                full_name as \"full_name!\",\n                first_name as \"first_name!\",\n                last_name,\n                email as \"email!\",\n                image_url as \"image_url!\",\n                role as \"role!: Role\",\n                verified as \"verified!\",\n                locked as \"locked!\",\n                last_known_ip as \"last_known_ip!\",\n                stripe_customer_id,\n                country_code as \"country_code!\",\n                country_name as \"country_name!\",\n                region_name,\n                last_seen_at as \"last_seen_at!\",\n                created_at as \"created_at!\",\n                updated_at as \"updated_at!\"\n            FROM user_details WHERE id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "user_details",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "country_id",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "user_details",
+            "name": "country_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "region_id",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "user_details",
+            "name": "region_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "full_name!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "user_details",
+            "name": "full_name"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "first_name!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "user_details",
+            "name": "first_name"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "last_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "user_details",
+            "name": "last_name"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "email!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "user_details",
+            "name": "email"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "image_url!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "user_details",
+            "name": "image_url"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "role!: Role",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "user_details",
+            "name": "role"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "verified!",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "user_details",
+            "name": "verified"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "locked!",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "user_details",
+            "name": "locked"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "last_known_ip!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "user_details",
+            "name": "last_known_ip"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "stripe_customer_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "user_details",
+            "name": "stripe_customer_id"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "country_code!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "user_details",
+            "name": "country_code"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "country_name!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "user_details",
+            "name": "country_name"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "region_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "user_details",
+            "name": "region_name"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "last_seen_at!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "user_details",
+            "name": "last_seen_at"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "created_at!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "user_details",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "updated_at!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "user_details",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "a56cad39924dc3561ed3921f9624ba2ed81910c913c3cd757b985c43b9377595"
+}

@@ -58,10 +58,35 @@ impl User {
     where
         E: Executor<'e, Database = sqlx::Postgres>,
     {
-        let user = sqlx::query_as("SELECT * FROM user_details WHERE email = $1")
-            .bind(email)
-            .fetch_one(exec)
-            .await?;
+        let user = sqlx::query_as!(
+            User,
+            r#"
+            SELECT
+                id as "id!",
+                country_id,
+                region_id,
+                full_name as "full_name!",
+                first_name as "first_name!",
+                last_name,
+                email as "email!",
+                image_url as "image_url!",
+                role as "role!: Role",
+                verified as "verified!",
+                locked as "locked!",
+                last_known_ip as "last_known_ip!",
+                stripe_customer_id,
+                country_code as "country_code!",
+                country_name as "country_name!",
+                region_name,
+                last_seen_at as "last_seen_at!",
+                created_at as "created_at!",
+                updated_at as "updated_at!"
+            FROM user_details WHERE email = $1
+            "#,
+            email,
+        )
+        .fetch_one(exec)
+        .await?;
         Ok(user)
     }
 
@@ -69,10 +94,35 @@ impl User {
     where
         E: Executor<'e, Database = sqlx::Postgres>,
     {
-        let user = sqlx::query_as("SELECT * FROM user_details WHERE id = $1")
-            .bind(id)
-            .fetch_one(exec)
-            .await?;
+        let user = sqlx::query_as!(
+            User,
+            r#"
+            SELECT
+                id as "id!",
+                country_id,
+                region_id,
+                full_name as "full_name!",
+                first_name as "first_name!",
+                last_name,
+                email as "email!",
+                image_url as "image_url!",
+                role as "role!: Role",
+                verified as "verified!",
+                locked as "locked!",
+                last_known_ip as "last_known_ip!",
+                stripe_customer_id,
+                country_code as "country_code!",
+                country_name as "country_name!",
+                region_name,
+                last_seen_at as "last_seen_at!",
+                created_at as "created_at!",
+                updated_at as "updated_at!"
+            FROM user_details WHERE id = $1
+            "#,
+            id,
+        )
+        .fetch_one(exec)
+        .await?;
         Ok(user)
     }
 
@@ -131,10 +181,35 @@ impl User {
     where
         E: Executor<'e, Database = sqlx::Postgres>,
     {
-        let user = sqlx::query_as("SELECT * FROM user_details WHERE stripe_customer_id = $1")
-            .bind(customer_id)
-            .fetch_one(exec)
-            .await?;
+        let user = sqlx::query_as!(
+            User,
+            r#"
+            SELECT
+                id as "id!",
+                country_id,
+                region_id,
+                full_name as "full_name!",
+                first_name as "first_name!",
+                last_name,
+                email as "email!",
+                image_url as "image_url!",
+                role as "role!: Role",
+                verified as "verified!",
+                locked as "locked!",
+                last_known_ip as "last_known_ip!",
+                stripe_customer_id,
+                country_code as "country_code!",
+                country_name as "country_name!",
+                region_name,
+                last_seen_at as "last_seen_at!",
+                created_at as "created_at!",
+                updated_at as "updated_at!"
+            FROM user_details WHERE stripe_customer_id = $1
+            "#,
+            customer_id,
+        )
+        .fetch_one(exec)
+        .await?;
         Ok(user)
     }
 

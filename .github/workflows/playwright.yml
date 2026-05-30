@@ -20,9 +20,26 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     env:
       PORT: "8080"
       APP_NAME: Bibby
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+      SQLX_OFFLINE: "true"
 
     steps:
       - uses: actions/checkout@v4
@@ -37,6 +54,14 @@ jobs:
           # already warm by the time we get here.
           shared-key: bibby-debug
           cache-targets: "true"
+
+      - name: Install sqlx-cli
+        uses: taiki-e/install-action@v2
+        with:
+          tool: sqlx-cli
+
+      - name: Run migrations
+        run: cargo sqlx migrate run
 
       - name: Build app (debug)
         run: cargo build --bin bibby --locked

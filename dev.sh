@@ -70,6 +70,24 @@ else
   echo "✅ .env file found."
 fi
 
+# Export .env values for sqlx and the Rust process.
+set -a
+source .env
+set +a
+
+if [ -z "${DATABASE_URL:-}" ]; then
+  echo "❌ DATABASE_URL is not set in .env"
+  exit 1
+fi
+
+# Create the database if needed and run the migrations.
+if ! sqlx database setup; then
+  echo "❌ database setup failed for DATABASE_URL=${DATABASE_URL}"
+  echo "   Make sure Postgres is running and reachable, then run ./dev.sh again."
+  exit 1
+fi
+echo "✅ database setup completed."
+
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   git config core.hooksPath .githooks
   echo "✅ Git hooks enabled."

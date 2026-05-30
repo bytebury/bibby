@@ -299,3 +299,4 @@ features should have e2e coverage.
   the user.
 - Prefer creating a new commit over amending. Never skip hooks (`--no-verify`) without explicit permission.
 - ALWAYS run cargo fmt when you are done making changes.
+- Whenever you make a commit or open a PR, the title must always be using conventional-commit format.

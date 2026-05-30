@@ -16,4 +16,4 @@ CREATE TRIGGER update_blogs_modtime
     BEFORE UPDATE
     ON blogs
     FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column();
+    EXECUTE FUNCTION update_updated_at_column();

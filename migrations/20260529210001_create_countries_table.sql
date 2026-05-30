@@ -14,7 +14,4 @@ CREATE TRIGGER update_countries_modtime
     BEFORE UPDATE
     ON countries
     FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column();
-
-ALTER TABLE users
-    ADD COLUMN country_id INTEGER REFERENCES countries (id) ON DELETE SET NULL;
+    EXECUTE FUNCTION update_updated_at_column();

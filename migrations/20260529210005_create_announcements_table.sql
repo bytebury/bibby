@@ -20,4 +20,4 @@ CREATE TRIGGER update_announcements_modtime
     BEFORE UPDATE
     ON announcements
     FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column();
+    EXECUTE FUNCTION update_updated_at_column();

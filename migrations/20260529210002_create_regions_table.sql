@@ -14,7 +14,4 @@ CREATE TRIGGER update_regions_modtime
     BEFORE UPDATE
     ON regions
     FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column();
-
-ALTER TABLE users
-    ADD COLUMN region_id INTEGER REFERENCES regions (id) ON DELETE SET NULL;
+    EXECUTE FUNCTION update_updated_at_column();

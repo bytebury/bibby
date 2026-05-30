@@ -58,14 +58,16 @@ if [ ! -d node_modules ]; then
 fi
 
 # Start the tailwind watcher in the background so HTML/CSS edits regenerate
-# public/styles.css automatically.
+# public/styles.css automatically. `--watch=always` keeps the watcher alive
+# when stdin closes — without it, IDE run consoles (RustRover) trigger a single
+# build at startup and then the watcher exits, leaving styles.css stale.
 echo "🎨 Starting Tailwind watcher..."
 npx tailwindcss \
   -i ./public/styles/tailwind.css \
   -o ./public/styles.css \
-  --watch &
+  --watch=always &
 
-# Start the dev server
+# Start the dev server in the foreground; the EXIT trap kills the tailwind bg job.
 echo "🦀 Starting Rust dev server..."
 export GIT_HASH=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
 cargo watch -x 'run --bin bibby'

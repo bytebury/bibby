@@ -295,14 +295,40 @@
         @apply opacity-100;
     }
 
-    /* Toast — transient status/error banner. Populated by
-       public/scripts/toast.js, which surfaces server response bodies HTMX
-       drops on 4xx/5xx (e.g. form validation messages). */
+    /* Toast — transient danger banner. Populated by public/scripts/toast.js,
+       which surfaces server response bodies HTMX drops on 4xx/5xx (e.g. form
+       validation messages). Styled red because it only fires when something
+       went wrong. The inner markup (icon, body, close button) is built by the
+       script. */
     .toast {
-        @apply pointer-events-none fixed bottom-4 left-1/2 z-50 max-w-md -translate-x-1/2 rounded-lg bg-gray-900 px-4 py-3 text-center text-sm text-white opacity-0 shadow-lg transition-opacity duration-200;
+        @apply pointer-events-none fixed bottom-6 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 translate-y-3 items-start gap-3 rounded-xl border border-red-200 bg-white py-3 pl-4 pr-3 opacity-0 shadow-xl ring-1 ring-red-500/10;
+        border-left-width: 4px;
+        @apply border-l-red-500;
+        transition: opacity 0.22s ease, transform 0.22s ease;
     }
     .toast.show {
-        @apply pointer-events-auto opacity-100;
+        @apply pointer-events-auto translate-y-0 opacity-100;
+    }
+    .toast-icon {
+        @apply mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600;
+    }
+    .toast-icon svg {
+        @apply size-4;
+    }
+    .toast-body {
+        @apply min-w-0 flex-1 pt-0.5;
+    }
+    .toast-title {
+        @apply text-sm font-semibold text-red-700;
+    }
+    .toast-message {
+        @apply mt-0.5 break-words text-sm leading-snug text-gray-600;
+    }
+    .toast-close {
+        @apply -mt-0.5 -mr-0.5 flex size-7 shrink-0 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400;
+    }
+    .toast-close svg {
+        @apply size-4;
     }
 
     /* Long-form rendered Markdown (blog body). The Markdown -> HTML

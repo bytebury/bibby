@@ -1,0 +1,56 @@
+{% import "_macros/buttons.html" as ui %}
+<div class="card-header">
+  <div class="flex items-center gap-3">
+    <div class="relative shrink-0">
+      <img
+        src="{{ user.image_url }}"
+        alt="{{ user.full_name }}"
+        width="48"
+        height="48"
+        class="h-12 w-12 rounded-full border border-gray-200 object-cover"
+        referrerpolicy="no-referrer"
+      />
+      <img
+        src="/assets/images/flags/{{ user.country_code }}.svg"
+        alt="{{ user.country_code }}"
+        data-tooltip="{% if let Some(region) = user.region_name %}{{ region }}, {% endif %}{{ user.country_name }}"
+        width="20"
+        height="16"
+        class="absolute -bottom-1 -right-1 rounded-sm border border-white shadow-sm"
+      />
+    </div>
+    <div>
+      <h2 class="card-title">Edit {{ user.full_name }}</h2>
+      <p class="card-subtitle">{{ user.email }}</p>
+    </div>
+  </div>
+  <button type="button" class="btn-ghost" onclick="closeModal()">&times;</button>
+</div>
+
+<form hx-patch="/users/{{ user.id }}" hx-swap="none" class="card-body space-y-4">
+  <label class="block">
+    <span class="label">Role</span>
+    <select name="role" class="input mt-1">
+      <option value="free" {% if user.role.to_string() == "free" %}selected{% endif %}>Free</option>
+      <option value="professional" {% if user.role.to_string() == "professional" %}selected{% endif %}>Professional</option>
+      <option value="admin" {% if user.role.to_string() == "admin" %}selected{% endif %}>Admin</option>
+    </select>
+  </label>
+
+  <label class="flex items-center gap-2">
+    <input type="checkbox" name="locked" {% if user.locked %}checked{% endif %} />
+    <span class="text-sm">Locked (cannot sign in)</span>
+  </label>
+
+  <input type="hidden" name="last_known_ip" value="{{ user.last_known_ip }}" />
+  <input type="hidden" name="last_seen_at" value="{{ user.last_seen_at }}" />
+  {% if let Some(cid) = user.country_id %}<input type="hidden" name="country_id" value="{{ cid }}" />{% endif %}
+  {% if let Some(rid) = user.region_id %}<input type="hidden" name="region_id" value="{{ rid }}" />{% endif %}
+
+  <div class="flex justify-between pt-2">
+    {% let user_path = format!("/users/{}", self.user.id) %}
+    {% let confirm_text = format!("Delete {}? This cannot be undone.", self.user.email) %}
+    {% call ui::spinner_button("delete", user_path.as_str(), "Delete user", "btn-danger", confirm_text.as_str()) %}{% endcall %}
+    <button type="submit" class="btn-primary">Save</button>
+  </div>
+</form>

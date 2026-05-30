@@ -2,3 +2,321 @@
 
 @source "../../templates/**/*.html";
 @source "../../src/**/*.rs";
+
+@layer components {
+    /* Layout container shared by all pages. */
+    .container-page {
+        @apply mx-auto w-full max-w-5xl px-6;
+    }
+
+    /* Footer */
+    .footer {
+        @apply mt-12 border-t border-gray-200 bg-white;
+    }
+    .footer-inner {
+        @apply mx-auto grid w-full max-w-5xl gap-8 px-6 py-10 sm:grid-cols-3;
+    }
+    .footer-brand-name {
+        @apply text-base font-semibold tracking-tight text-gray-900;
+    }
+    .footer-tagline {
+        @apply mt-2 max-w-xs text-sm text-gray-500;
+    }
+    .footer-col {
+        @apply flex flex-col gap-2;
+    }
+    .footer-heading {
+        @apply text-xs font-semibold uppercase tracking-wider text-gray-500;
+    }
+    .footer-link {
+        @apply text-sm text-gray-700 hover:text-blue-600;
+    }
+    .footer-bottom {
+        @apply border-t border-gray-100 py-4 text-center text-xs text-gray-500;
+    }
+
+    /* Navbar */
+    .navbar {
+        @apply sticky top-0 z-40 w-full border-b border-gray-200 bg-white/80 backdrop-blur;
+    }
+    .navbar-inner {
+        @apply mx-auto w-full max-w-5xl px-6 flex h-14 items-center justify-between;
+    }
+    .navbar-brand {
+        @apply text-base font-semibold tracking-tight text-gray-900;
+    }
+    .navbar-links {
+        @apply flex items-center gap-1;
+    }
+    .navbar-link {
+        @apply rounded px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900;
+    }
+    .navbar-link-active {
+        @apply bg-gray-100 text-gray-900;
+    }
+
+    /* Card */
+    .card {
+        @apply rounded-lg border border-gray-200 bg-white shadow-sm;
+    }
+    .card-body {
+        @apply p-5;
+    }
+    .card-header {
+        @apply flex items-center justify-between border-b border-gray-100 px-5 py-3;
+    }
+    .card-title {
+        @apply text-base font-semibold text-gray-900;
+    }
+    .card-subtitle {
+        @apply text-sm text-gray-500;
+    }
+
+    /* Buttons */
+    .btn {
+        @apply inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50;
+    }
+    .btn-primary {
+        @apply inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700;
+    }
+    .btn-secondary {
+        @apply inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 border border-gray-300 bg-white text-gray-800 hover:bg-gray-50;
+    }
+    .btn-ghost {
+        @apply inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 text-gray-700 hover:bg-gray-100;
+    }
+    .btn-danger {
+        @apply inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 bg-red-600 text-white hover:bg-red-700;
+    }
+    .btn-link {
+        @apply text-sm font-medium text-blue-600 hover:underline;
+    }
+
+    /* Universal in-flight spinner. HTMX adds `htmx-request` to whichever
+       element fires the XHR — the button itself for `<button hx-*>`, the
+       form for `<form hx-*>` (so the submit button lives one level deep).
+       The text is transparentized and a CSS-only spinner is painted via
+       ::after in the center of the button. `--spinner-color` is set per
+       variant so contrast holds against any background.
+
+       `!important` is on `color` to win against any Tailwind `text-*` utility
+       a button may carry — once the request is mid-flight we want the label
+       gone regardless of the original color.
+
+       Any button that drives an HTMX request gets this for free; no
+       per-button markup needed. */
+    button { --spinner-color: currentColor; }
+    .btn-primary  { --spinner-color: #ffffff; }
+    .btn-danger   { --spinner-color: #ffffff; }
+    .btn-secondary { --spinner-color: #374151; }
+    .btn-ghost    { --spinner-color: #374151; }
+    .btn-link     { --spinner-color: #2563eb; }
+
+    button.htmx-request,
+    form.htmx-request button[type="submit"],
+    form.htmx-request button:not([type]) {
+        position: relative;
+        pointer-events: none;
+        /* Hide the label only after a 150ms grace window — quick requests
+           that resolve inside that window never flash a blank button. The
+           animation is 1ms long with a 150ms delay; `forwards` retains the
+           transparent state until htmx removes the class. */
+        animation: spinner-hide-label 1ms linear 150ms forwards;
+        text-shadow: none;
+    }
+    button.htmx-request::after,
+    form.htmx-request button[type="submit"]::after,
+    form.htmx-request button:not([type])::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        margin: auto;
+        width: 1rem;
+        height: 1rem;
+        border: 2px solid var(--spinner-color);
+        border-top-color: transparent;
+        border-radius: 50%;
+        opacity: 0;
+        /* Spinner spins immediately but stays invisible for the same 150ms
+           grace window. If the request finishes first the ::after is removed
+           with the class and the user never sees it. */
+        animation:
+            spinner-rotate 0.7s linear infinite,
+            spinner-fade-in 170ms ease-out 150ms forwards;
+    }
+    @keyframes spinner-rotate {
+        to { transform: rotate(360deg); }
+    }
+    @keyframes spinner-hide-label {
+        to { color: transparent; }
+    }
+    @keyframes spinner-fade-in {
+        to { opacity: 1; }
+    }
+
+    /* Forms */
+    .input {
+        @apply w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500;
+    }
+    .label {
+        @apply block text-sm font-medium text-gray-700;
+    }
+
+    /* Tables */
+    .table-wrap {
+        @apply overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm;
+    }
+    .table {
+        @apply w-full text-left text-sm;
+    }
+    .table thead {
+        @apply bg-gray-50 text-xs font-medium uppercase tracking-wide text-gray-500;
+    }
+    .table th {
+        @apply px-4 py-2;
+    }
+    .table tbody tr {
+        @apply border-t border-gray-100;
+    }
+    .table tbody tr:hover {
+        @apply bg-gray-50;
+    }
+    .table td {
+        @apply px-4 py-2 align-middle;
+    }
+    .table-empty {
+        @apply px-4 py-8 text-center text-gray-500;
+    }
+
+    /* Badges */
+    .badge {
+        @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
+    }
+    .badge-neutral {
+        @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700;
+    }
+    .badge-success {
+        @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800;
+    }
+    .badge-warning {
+        @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800;
+    }
+    .badge-danger {
+        @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-red-100 text-red-800;
+    }
+
+    /* Banner — site-wide announcement strip at the very top of the page.
+       Severity classes pick the color theme. */
+    .banner {
+        @apply w-full border-b text-sm;
+    }
+    .banner-dismiss {
+        @apply -mr-1 shrink-0 rounded p-1 text-current opacity-70 hover:bg-black/5 hover:opacity-100;
+    }
+    .banner-info {
+        @apply border-blue-200 bg-blue-50 text-blue-900;
+    }
+    .banner-primary {
+        @apply border-emerald-200 bg-emerald-50 text-emerald-900;
+    }
+    .banner-warn {
+        @apply border-yellow-200 bg-yellow-50 text-yellow-900;
+    }
+    .banner-danger {
+        @apply border-red-200 bg-red-50 text-red-900;
+    }
+    /* `pulldown_cmark` wraps even a one-line message in <p>, which would
+       otherwise stack vertically and break the inline banner layout. Collapse
+       those into the surrounding flex row, and style links to match the rest
+       of the site's link color (`btn-link`). */
+    .banner-body { @apply inline; }
+    .banner-body > p { @apply m-0 inline; }
+    .banner-body a { @apply font-medium text-blue-600 hover:underline; }
+    .banner-body code { @apply rounded bg-black/10 px-1 py-0.5 text-xs; }
+    .banner-body ul, .banner-body ol { @apply mt-1 ml-5 list-inside; }
+
+    /* Modal — public/scripts/modal.js shows/hides `#modal_wrapper` and
+       fires the `closing` class to play a fade-out before display:none. */
+    .modal.wrapper {
+        @apply fixed inset-0 z-40 flex flex-col items-center overflow-y-auto px-4;
+        height: 100dvh;
+        animation: fadeIn 0.15s ease-in;
+        overscroll-behavior: contain;
+    }
+    .modal.wrapper.closing {
+        animation: fadeOut 0.15s linear;
+    }
+    .modal.wrapper.closing > .content {
+        animation: zoomOut 0.15s linear;
+    }
+    .modal.wrapper > .underlay {
+        @apply fixed inset-0 z-40 bg-black/40;
+    }
+    .modal.wrapper > .content {
+        @apply relative z-50 my-4 w-full max-w-lg rounded-lg border border-gray-200 bg-white p-5 shadow-xl;
+        max-height: calc(100dvh - 2rem);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    @keyframes fadeOut {
+        from { opacity: 1; }
+        to { opacity: 0; }
+    }
+    @keyframes zoomOut {
+        from { transform: scale(1); }
+        to { transform: scale(0.95); }
+    }
+
+    /* Tooltip — required by public/scripts/tooltip.js, which references
+       the implicit global `tooltip` (an element with id="tooltip"). The
+       base layout always renders <div id="tooltip" class="tooltip"></div>. */
+    .tooltip {
+        @apply pointer-events-none absolute z-50 max-w-xs rounded bg-black/85 px-2.5 py-1.5 text-center text-sm text-white opacity-0;
+    }
+    .tooltip.show {
+        @apply opacity-100;
+    }
+
+    /* Long-form rendered Markdown (blog body). The Markdown -> HTML
+       pipeline (`pulldown_cmark` + `ammonia`) produces a flat sequence of
+       semantic tags; these rules give them book-like rhythm without pulling
+       in `@tailwindcss/typography`. */
+    .prose {
+        @apply text-base leading-7 text-gray-800;
+    }
+    .prose > * + * { @apply mt-4; }
+    .prose h1 { @apply mt-8 text-3xl font-semibold text-gray-900; }
+    .prose h2 { @apply mt-8 text-2xl font-semibold text-gray-900; }
+    .prose h3 { @apply mt-6 text-xl font-semibold text-gray-900; }
+    .prose h4 { @apply mt-6 text-lg font-semibold text-gray-900; }
+    .prose p { @apply leading-7; }
+    .prose a { @apply font-medium text-blue-600 underline-offset-2 hover:underline; }
+    .prose strong { @apply font-semibold text-gray-900; }
+    .prose ul { @apply list-disc pl-6; }
+    .prose ol { @apply list-decimal pl-6; }
+    .prose li { @apply mt-1; }
+    .prose blockquote { @apply border-l-4 border-gray-200 pl-4 italic text-gray-700; }
+    .prose code { @apply rounded bg-gray-100 px-1 py-0.5 font-mono text-sm text-gray-800; }
+    .prose pre { @apply overflow-x-auto rounded-lg bg-gray-900 p-4 text-sm text-gray-100; }
+    .prose pre code { @apply bg-transparent p-0 text-gray-100; }
+    .prose img { @apply rounded-lg; }
+    .prose hr { @apply my-8 border-gray-200; }
+    .prose table { @apply w-full border-collapse text-sm; }
+    .prose th, .prose td { @apply border border-gray-200 px-3 py-2 text-left; }
+    .prose th { @apply bg-gray-50 font-semibold; }
+
+    /* Page header strip */
+    .page-header {
+        @apply mb-6 flex items-end justify-between;
+    }
+    .page-title {
+        @apply text-2xl font-semibold tracking-tight text-gray-900;
+    }
+    .page-subtitle {
+        @apply text-sm text-gray-500;
+    }
+}

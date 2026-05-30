@@ -1,0 +1,58 @@
+{% extends "_layouts/base.html" %}
+
+{% block title %}Manage Countries — {{ shared.app_name }}{% endblock %}
+
+{% block content %}
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">Manage Countries</h1>
+      <p class="page-subtitle">Block sign-ups from any country.</p>
+    </div>
+  </header>
+
+  <form method="get" action="/countries" class="mb-4">
+    <input
+      type="search"
+      name="q"
+      value="{{ search_query }}"
+      placeholder="Search by name or code"
+      class="input"
+    />
+  </form>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Country</th>
+          <th>Code</th>
+          <th class="text-right">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in countries %}
+          <tr>
+            <td>{{ c.name }}</td>
+            <td><code class="text-xs text-gray-600">{{ c.code }}</code></td>
+            <td class="text-right">
+              <label class="inline-flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  name="locked"
+                  {% if c.locked %}checked{% endif %}
+                  hx-patch="/countries/{{ c.id }}/lock"
+                  hx-trigger="change"
+                  hx-swap="none"
+                />
+                <span class="text-sm text-gray-600">block sign-ups</span>
+              </label>
+            </td>
+          </tr>
+        {% endfor %}
+        {% if countries.is_empty() %}
+          <tr><td colspan="3" class="table-empty">No countries found.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

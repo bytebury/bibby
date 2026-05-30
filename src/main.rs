@@ -1,19 +1,16 @@
-use askama::Template;
-use askama_web::WebTemplate;
 use axum::Router;
 use axum::http::HeaderValue;
 use axum::http::header::CACHE_CONTROL;
-use axum::routing::get;
+use axum::response::IntoResponse;
+use bibby::infra::api;
+use bibby::infra::db::Database;
+use bibby::{AppError, AppState};
 use std::env;
+use std::net::SocketAddr;
+use std::sync::Arc;
 use tower_http::compression::CompressionLayer;
 use tower_http::services::ServeDir;
 use tower_http::set_header::SetResponseHeaderLayer;
-
-#[derive(Template, WebTemplate)]
-#[template(path = "homepage.html")]
-struct Homepage {
-    app_name: String,
-}
 
 #[tokio::main]
 async fn main() {
@@ -21,7 +18,11 @@ async fn main() {
     tracing_subscriber::fmt::init();
 
     let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
-    let app_name = env::var("APP_NAME").unwrap_or_else(|_| "Bibby".to_string());
+    let address = format!("0.0.0.0:{}", port);
+    let listener = tokio::net::TcpListener::bind(&address).await.unwrap();
+
+    let db = Arc::new(Database::init().await);
+    let state = Arc::new(AppState::new(db));
 
     let serve_static = Router::new()
         .nest_service("/assets", ServeDir::new("public"))
@@ -30,20 +31,51 @@ async fn main() {
             HeaderValue::from_static("public, max-age=31536000"),
         ));
 
-    let app = Router::new()
-        .route(
-            "/",
-            get({
-                let app_name = app_name.clone();
-                move || async move { Homepage { app_name } }
-            }),
-        )
+    let pool_for_shutdown = state.db.clone();
+    let app = api::routes()
         .merge(serve_static)
-        .layer(CompressionLayer::new());
+        .fallback(not_found_handler)
+        .with_state(state)
+        .layer(CompressionLayer::new())
+        .into_make_service_with_connect_info::<SocketAddr>();
 
-    let address = format!("0.0.0.0:{}", port);
-    let listener = tokio::net::TcpListener::bind(&address).await.unwrap();
     tracing::info!("listening on http://localhost:{}", port);
 
-    axum::serve(listener, app).await.expect("Failed to start.");
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await
+        .expect("Failed to start.");
+
+    tracing::info!("Closing database pool.");
+    pool_for_shutdown.close().await;
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("Failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("Failed to install SIGTERM handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
+
+    tracing::info!("Shutdown signal received, draining connections.");
+}
+
+async fn not_found_handler() -> impl IntoResponse {
+    AppError::NotFound("Not Found".to_string()).into_response()
 }

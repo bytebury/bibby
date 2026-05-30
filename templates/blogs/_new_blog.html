@@ -1,0 +1,28 @@
+<div class="card-header">
+  <div>
+    <h2 class="card-title">New blog post</h2>
+    <p class="card-subtitle">Content supports Markdown.</p>
+  </div>
+  <button type="button" class="btn-ghost" onclick="closeModal()">&times;</button>
+</div>
+
+<form hx-put="/blogs" hx-swap="none" class="card-body space-y-4">
+  <label class="block">
+    <span class="label">Title</span>
+    <input type="text" name="title" class="input mt-1" required maxlength="200" />
+  </label>
+
+  <label class="block">
+    <span class="label">Cover image URL <span class="text-xs text-gray-400">(optional)</span></span>
+    <input type="url" name="image_url" class="input mt-1" maxlength="2000" placeholder="https://…" />
+  </label>
+
+  <label class="block">
+    <span class="label">Content <span class="text-xs text-gray-400">(Markdown)</span></span>
+    <textarea name="content" rows="14" class="input mt-1 font-mono text-sm" required></textarea>
+  </label>
+
+  <div class="flex justify-end pt-2">
+    <button type="submit" class="btn-primary">Publish</button>
+  </div>
+</form>

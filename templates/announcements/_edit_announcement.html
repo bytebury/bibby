@@ -1,0 +1,44 @@
+<div class="card-header">
+  <div>
+    <h2 class="card-title">Edit announcement</h2>
+    <p class="card-subtitle">Created <time data-utc="{{ announcement.created_at }}"></time></p>
+  </div>
+  <button type="button" class="btn-ghost" onclick="closeModal()">&times;</button>
+</div>
+
+<form hx-patch="/announcements/{{ announcement.id }}" hx-swap="none" class="card-body space-y-4">
+  <label class="block">
+    <span class="label">Title</span>
+    <input type="text" name="title" class="input mt-1" required maxlength="200" value="{{ announcement.title }}" />
+  </label>
+
+  <label class="block">
+    <span class="label">Message</span>
+    <textarea name="message" rows="4" class="input mt-1" required maxlength="2000">{{ announcement.message.raw() }}</textarea>
+  </label>
+
+  <label class="block">
+    <span class="label">Severity</span>
+    <select name="severity" class="input mt-1">
+      <option value="info" {% if announcement.severity.to_string() == "info" %}selected{% endif %}>Info</option>
+      <option value="primary" {% if announcement.severity.to_string() == "primary" %}selected{% endif %}>Primary</option>
+      <option value="warn" {% if announcement.severity.to_string() == "warn" %}selected{% endif %}>Warn</option>
+      <option value="danger" {% if announcement.severity.to_string() == "danger" %}selected{% endif %}>Danger</option>
+    </select>
+  </label>
+
+  <label class="flex items-center gap-2">
+    <input type="checkbox" name="active" {% if announcement.active %}checked{% endif %} />
+    <span class="text-sm">Published</span>
+  </label>
+
+  <div class="flex justify-between pt-2">
+    <button
+      type="button"
+      hx-delete="/announcements/{{ announcement.id }}"
+      hx-confirm="Delete this announcement?"
+      class="btn-danger"
+    >Delete</button>
+    <button type="submit" class="btn-primary">Save</button>
+  </div>
+</form>

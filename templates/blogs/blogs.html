@@ -1,0 +1,59 @@
+{% extends "_layouts/base.html" %}
+
+{% block title %}Blog — {{ shared.app_name }}{% endblock %}
+
+{% block content %}
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">Blog</h1>
+      <p class="page-subtitle">News, notes, and writing from the team.</p>
+    </div>
+    {% if let Some(user) = shared.user %}
+      {% if user.is_admin() %}
+        <button hx-get="/blogs/new" hx-target="#modal" class="btn-primary">New post</button>
+      {% endif %}
+    {% endif %}
+  </header>
+
+  {% if blogs.data.is_empty() %}
+    <div class="card">
+      <div class="card-body text-center text-gray-500">No blog posts yet.</div>
+    </div>
+  {% else %}
+    <div class="grid gap-4 sm:grid-cols-2">
+      {% for blog in blogs.data %}
+        <a href="/blogs/{{ blog.id }}/{{ blog.slug() }}" class="card block transition hover:shadow-md">
+          {% if !blog.image_url.is_empty() %}
+            <img
+              src="{{ blog.image_url }}"
+              alt=""
+              class="h-auto w-full rounded-t-lg bg-gray-100"
+              loading="lazy"
+              referrerpolicy="no-referrer"
+            />
+          {% endif %}
+          <div class="card-body">
+            <h2 class="text-lg font-semibold text-gray-900">{{ blog.title }}</h2>
+            <p class="mt-1 text-xs text-gray-500">
+              <time datetime="{{ blog.created_at.to_rfc3339() }}">{{ blog.display_date() }}</time>
+              · {{ blog.reading_time() }} min read
+            </p>
+            <p class="mt-3 line-clamp-3 text-sm text-gray-700">{{ blog.excerpt() }}</p>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+
+    <nav class="mt-6 flex items-center justify-between text-sm">
+      <span class="text-gray-500">Page {{ blogs.page }} of {{ blogs.total_pages() }}</span>
+      <div class="flex gap-2">
+        {% if blogs.has_previous_page %}
+          <a class="btn-link" href="/blogs?page={{ blogs.page - 1 }}">Previous</a>
+        {% endif %}
+        {% if blogs.has_next_page %}
+          <a class="btn-link" href="/blogs?page={{ blogs.page + 1 }}">Next</a>
+        {% endif %}
+      </div>
+    </nav>
+  {% endif %}
+{% endblock %}

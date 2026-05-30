@@ -1,0 +1,158 @@
+{% extends "_layouts/base.html" %}
+
+{% block title %}Privacy Policy — {{ shared.app_name }}{% endblock %}
+
+{% block content %}
+  <article class="card">
+    <div class="card-body">
+      <header class="mb-6">
+        <h1 class="page-title">Privacy Policy</h1>
+        <p class="page-subtitle">Effective date: <strong>[EFFECTIVE DATE]</strong></p>
+      </header>
+
+      <div class="mb-6 rounded border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-900">
+        <strong>Template notice — replace before launch.</strong> This page is a
+        starting point, not legal advice. Have a lawyer review and customize it
+        for your jurisdiction and the specifics of what {{ shared.app_name }}
+        actually does before relying on it. Replace every <code>[BRACKETED]</code>
+        placeholder.
+      </div>
+
+      <div class="prose">
+        <p>
+          {{ shared.app_name }} ("we", "us", "our") operates the
+          {{ shared.app_name }} website and service (the "Service"). This page
+          explains what information we collect, how we use it, and the choices
+          you have.
+        </p>
+
+        <h2>Information we collect</h2>
+        <p>When you sign in or use the Service, we collect:</p>
+        <ul>
+          <li>
+            <strong>Account information from Google</strong> — when you sign in
+            with Google OAuth, we receive your name, email address, profile
+            picture URL, and Google account identifier. We never receive your
+            Google password.
+          </li>
+          <li>
+            <strong>Network information</strong> — your IP address, derived
+            approximate country and region, and the timestamp of your last
+            sign-in. We use this for fraud and abuse prevention, geographic
+            personalization, and audit logs.
+          </li>
+          <li>
+            <strong>Content you submit</strong> — anything you post to the
+            Service, including blog content (if you're an administrator) and
+            account settings.
+          </li>
+          <li>
+            <strong>Cookies</strong> — see the cookies section below.
+          </li>
+        </ul>
+
+        <h2>How we use information</h2>
+        <ul>
+          <li>To create and authenticate your account.</li>
+          <li>To operate, maintain, and improve the Service.</li>
+          <li>To detect, investigate, and prevent fraud or abuse.</li>
+          <li>To comply with legal obligations and enforce our terms.</li>
+          <li>To send you essential service messages (e.g. security notices).</li>
+        </ul>
+
+        <h2>How we share information</h2>
+        <p>
+          We do not sell your personal information. We share limited information
+          with:
+        </p>
+        <ul>
+          <li>
+            <strong>Service providers</strong> who run infrastructure on our
+            behalf (e.g. hosting, database, analytics, error reporting). They
+            are bound by contract to use the data only to provide their service.
+          </li>
+          <li>
+            <strong>Legal and safety</strong> recipients when required by law,
+            valid legal process, or to protect the rights, property, or safety
+            of any person.
+          </li>
+          <li>
+            <strong>Successors</strong> in a merger, acquisition, or sale of all
+            or part of our business.
+          </li>
+        </ul>
+
+        <h2>Cookies and similar technologies</h2>
+        <p>We use a small set of strictly necessary cookies:</p>
+        <ul>
+          <li>
+            <code>auth_token</code> — a signed JWT that keeps you logged in.
+            HttpOnly, SameSite=Lax, secured in production.
+          </li>
+          <li>
+            <code>oauth_csrf</code> — a short-lived random nonce used during
+            sign-in to defend against cross-site request forgery.
+          </li>
+        </ul>
+        <p>
+          We do not use third-party advertising or cross-site tracking cookies.
+        </p>
+
+        <h2>Data retention</h2>
+        <p>
+          We retain account information for as long as your account is active.
+          You can request deletion at any time by contacting us at
+          <strong>[CONTACT EMAIL]</strong>; we will delete or anonymize your
+          personal data within <strong>[RETENTION WINDOW, e.g. 30 days]</strong>,
+          except where we are required to keep it for legal, accounting, or
+          security reasons.
+        </p>
+
+        <h2>Your rights</h2>
+        <p>
+          Depending on where you live, you may have the right to access,
+          correct, export, or delete the personal information we hold about
+          you, and to object to or restrict certain processing. To exercise any
+          of these rights, contact <strong>[CONTACT EMAIL]</strong>.
+        </p>
+
+        <h2>Children</h2>
+        <p>
+          The Service is not directed to children under <strong>[AGE, e.g. 13]
+          </strong>. We do not knowingly collect personal information from
+          children. If you believe we have, please contact us and we will
+          delete it.
+        </p>
+
+        <h2>International transfers</h2>
+        <p>
+          Our infrastructure and service providers may be located in countries
+          other than the one where you live. By using the Service, you
+          acknowledge that your information may be transferred to and processed
+          in <strong>[PRIMARY JURISDICTION]</strong> and other jurisdictions.
+        </p>
+
+        <h2>Security</h2>
+        <p>
+          We use industry-standard safeguards to protect your information,
+          including TLS for data in transit and access controls on our
+          infrastructure. No system is perfectly secure; we cannot guarantee
+          absolute security.
+        </p>
+
+        <h2>Changes to this policy</h2>
+        <p>
+          We may update this policy from time to time. We will post the new
+          effective date at the top of this page and, for material changes,
+          provide additional notice (such as an in-app banner or email).
+        </p>
+
+        <h2>Contact us</h2>
+        <p>
+          Questions about this policy? Contact us at
+          <strong>[CONTACT EMAIL]</strong> or <strong>[MAILING ADDRESS]</strong>.
+        </p>
+      </div>
+    </div>
+  </article>
+{% endblock %}

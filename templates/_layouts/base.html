@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}{{ shared.app_name }}{% endblock %}</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+    {% include "_partials/scripts.html" %}
+  </head>
+  <body class="flex min-h-screen flex-col bg-gray-50 text-gray-900 antialiased">
+    <div hx-get="/announcements/banner" hx-trigger="load" hx-swap="outerHTML"></div>
+    {% include "_partials/navbar.html" %}
+    <main class="container-page flex-1 py-8">
+      {% block content %}{% endblock %}
+    </main>
+    {% include "_partials/footer.html" %}
+    <div id="modal_wrapper" class="modal wrapper" style="display: none">
+      <div class="underlay" onclick="closeModal()"></div>
+      <div id="modal" class="content"></div>
+    </div>
+    <div id="tooltip" class="tooltip"></div>
+  </body>
+</html>

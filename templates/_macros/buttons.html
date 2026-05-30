@@ -1,0 +1,35 @@
+{#
+  spinner_button — a convenience wrapper for an HTMX-driven button. Every
+  HTMX button in the app gets the loading spinner automatically (driven by
+  CSS targeting `.htmx-request`); this macro just bundles the common HTMX
+  attribute set in one place.
+
+  Usage:
+    {% import "_macros/buttons.html" as ui %}
+
+    {% call ui::spinner_button("post", "/users/123/promote", "Promote") %}{% endcall %}
+    {% call ui::spinner_button("delete", url, "Delete user", "btn-danger", confirm_text) %}{% endcall %}
+
+  Note: macro args and {% let %} RHS don't auto-prefix struct fields with
+  `self.` — use `self.foo.bar`, or pre-bind with {% let x = format!(..., self.foo) %}.
+
+  Positional args:
+    method  — get | post | put | patch | delete
+    url     — the endpoint
+    label   — visible button text
+    class   — defaults to `btn-primary`; pass `btn-danger` etc. as needed
+    confirm — empty string for none, otherwise the hx-confirm prompt
+    swap    — defaults to "none"; pass "outerHTML" / "innerHTML" / etc.
+    target  — empty string for none, otherwise the hx-target selector
+#}
+{% macro spinner_button(method, url, label, class = "btn-primary", confirm = "", swap = "none", target = "") %}
+<button
+  type="button"
+  hx-{{ method }}="{{ url }}"
+  hx-swap="{{ swap }}"
+  hx-disabled-elt="this"
+  {% if target != "" %}hx-target="{{ target }}"{% endif %}
+  {% if confirm != "" %}hx-confirm="{{ confirm }}"{% endif %}
+  class="{{ class }}"
+>{{ label }}</button>
+{% endmacro %}

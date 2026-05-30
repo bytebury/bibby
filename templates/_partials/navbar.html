@@ -1,0 +1,22 @@
+{% import "_macros/buttons.html" as ui %}
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a href="/" class="navbar-brand">{{ shared.app_name }}</a>
+
+    <div class="navbar-links">
+      <a href="/blogs" class="navbar-link">Blog</a>
+      {% match shared.user %}
+        {% when Some with (user) %}
+          {% if user.is_admin() %}
+            <a href="/users" class="navbar-link">Users</a>
+            <a href="/countries" class="navbar-link">Countries</a>
+            <a href="/announcements" class="navbar-link">Announcements</a>
+          {% endif %}
+          <span class="hidden sm:inline text-sm text-gray-500 px-2">{{ user.email }}</span>
+          {% call ui::spinner_button("delete", "/auth", "Sign out", "btn-ghost") %}{% endcall %}
+        {% when None %}
+          <a href="/auth/google" class="btn-primary">Sign in</a>
+      {% endmatch %}
+    </div>
+  </div>
+</nav>

@@ -1,0 +1,38 @@
+<div class="card-header">
+  <div>
+    <h2 class="card-title">New announcement</h2>
+    <p class="card-subtitle">The most recent active announcement is shown sitewide.</p>
+  </div>
+  <button type="button" class="btn-ghost" onclick="closeModal()">&times;</button>
+</div>
+
+<form hx-put="/announcements" hx-swap="none" class="card-body space-y-4">
+  <label class="block">
+    <span class="label">Title</span>
+    <input type="text" name="title" class="input mt-1" required maxlength="200" />
+  </label>
+
+  <label class="block">
+    <span class="label">Message</span>
+    <textarea name="message" rows="4" class="input mt-1" required maxlength="2000"></textarea>
+  </label>
+
+  <label class="block">
+    <span class="label">Severity</span>
+    <select name="severity" class="input mt-1">
+      <option value="info" selected>Info</option>
+      <option value="primary">Primary</option>
+      <option value="warn">Warn</option>
+      <option value="danger">Danger</option>
+    </select>
+  </label>
+
+  <label class="flex items-center gap-2">
+    <input type="checkbox" name="active" checked />
+    <span class="text-sm">Publish immediately</span>
+  </label>
+
+  <div class="flex justify-end pt-2">
+    <button type="submit" class="btn-primary">Create</button>
+  </div>
+</form>

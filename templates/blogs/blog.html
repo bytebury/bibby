@@ -1,0 +1,38 @@
+{% extends "_layouts/base.html" %}
+
+{% block title %}{{ blog.title }} — {{ shared.app_name }}{% endblock %}
+
+{% block content %}
+  <article class="card">
+    {% if !blog.image_url.is_empty() %}
+      <img
+        src="{{ blog.image_url }}"
+        alt=""
+        class="h-auto w-full rounded-t-lg bg-gray-100"
+        referrerpolicy="no-referrer"
+      />
+    {% endif %}
+    <div class="card-body">
+      <header class="mb-6">
+        <h1 class="text-3xl font-semibold tracking-tight text-gray-900">{{ blog.title }}</h1>
+        <p class="mt-2 flex items-center gap-2 text-sm text-gray-500">
+          <time datetime="{{ blog.created_at.to_rfc3339() }}">{{ blog.display_date() }}</time>
+          <span>·</span>
+          <span>{{ blog.reading_time() }} min read</span>
+          {% if is_admin %}
+            <span>·</span>
+            <button hx-get="/blogs/{{ blog.id }}/edit" hx-target="#modal" class="btn-link">Edit</button>
+          {% endif %}
+        </p>
+      </header>
+
+      <div class="prose">
+        {{ blog.content|safe }}
+      </div>
+    </div>
+  </article>
+
+  <p class="mt-6">
+    <a href="/blogs" class="btn-link">&larr; All posts</a>
+  </p>
+{% endblock %}

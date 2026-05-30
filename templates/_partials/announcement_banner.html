@@ -1,0 +1,13 @@
+{% match announcement %}
+  {% when Some with (a) %}
+    <div class="banner banner-{{ a.severity }}">
+      <div class="container-page py-2 text-sm">
+        <div class="banner-body">
+          <strong class="mr-2">{{ a.title }}</strong>
+          {{ a.message|safe }}
+        </div>
+      </div>
+    </div>
+  {% when None %}
+    <div hidden></div>
+{% endmatch %}

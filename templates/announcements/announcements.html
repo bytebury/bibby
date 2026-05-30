@@ -1,0 +1,68 @@
+{% extends "_layouts/base.html" %}
+
+{% block title %}Announcements — {{ shared.app_name }}{% endblock %}
+
+{% block content %}
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">Announcements</h1>
+      <p class="page-subtitle">{{ announcements.total_formatted() }} total · the most recent active one shows as the sitewide banner.</p>
+    </div>
+    <button hx-get="/announcements/new" hx-target="#modal" class="btn-primary">New announcement</button>
+  </header>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Severity</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in announcements.data %}
+          <tr>
+            <td>
+              <div class="font-medium">{{ a.title }}</div>
+              <div class="text-xs text-gray-500 line-clamp-1">{{ a.message.raw() }}</div>
+            </td>
+            <td>
+              {% if a.severity.to_string() == "danger" %}
+                <span class="badge-danger">{{ a.severity }}</span>
+              {% else if a.severity.to_string() == "warn" %}
+                <span class="badge-warning">{{ a.severity }}</span>
+              {% else if a.severity.to_string() == "primary" %}
+                <span class="badge-success">{{ a.severity }}</span>
+              {% else %}
+                <span class="badge-neutral">{{ a.severity }}</span>
+              {% endif %}
+            </td>
+            <td>
+              <label class="inline-flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  name="active"
+                  {% if a.active %}checked{% endif %}
+                  hx-patch="/announcements/{{ a.id }}/active"
+                  hx-trigger="change"
+                  hx-swap="none"
+                />
+                <span class="text-sm text-gray-600">published</span>
+              </label>
+            </td>
+            <td class="text-gray-500"><time data-utc="{{ a.created_at }}"></time></td>
+            <td class="text-right">
+              <button hx-get="/announcements/{{ a.id }}/edit" hx-target="#modal" class="btn-link">Edit</button>
+            </td>
+          </tr>
+        {% endfor %}
+        {% if announcements.data.is_empty() %}
+          <tr><td colspan="5" class="table-empty">No announcements yet.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

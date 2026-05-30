@@ -1,0 +1,100 @@
+{% extends "_layouts/base.html" %}
+
+{% block title %}Manage Users — {{ shared.app_name }}{% endblock %}
+
+{% block content %}
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">Manage Users</h1>
+      <p class="page-subtitle">{{ users.total_formatted() }} total</p>
+    </div>
+  </header>
+
+  <form method="get" action="/users" class="mb-4">
+    <input
+      type="search"
+      name="q"
+      value="{{ search_query }}"
+      placeholder="Search by email, name, or IP"
+      class="input"
+    />
+  </form>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Last seen</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users.data %}
+          <tr>
+            <td>
+              <div class="flex items-center gap-3">
+                <img
+                  src="{{ u.image_url }}"
+                  alt="{{ u.full_name }}"
+                  width="32"
+                  height="32"
+                  class="h-8 w-8 rounded-full border border-gray-200 object-cover"
+                  referrerpolicy="no-referrer"
+                />
+                <img
+                  src="/assets/images/flags/{{ u.country_code }}.svg"
+                  alt="{{ u.country_code }}"
+                  data-tooltip="{% if let Some(region) = u.region_name %}{{ region }}, {% endif %}{{ u.country_name }}"
+                  width="20"
+                  height="16"
+                  class="rounded-sm"
+                />
+                <span>{{ u.full_name }}</span>
+              </div>
+            </td>
+            <td class="text-gray-600">{{ u.email }}</td>
+            <td>
+              {% if u.role.to_string() == "admin" %}
+                <span class="badge-warning">{{ u.role }}</span>
+              {% else if u.role.to_string() == "professional" %}
+                <span class="badge-success">{{ u.role }}</span>
+              {% else %}
+                <span class="badge-neutral">{{ u.role }}</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if u.locked %}
+                <span class="badge-danger">locked</span>
+              {% else %}
+                <span class="badge-neutral">active</span>
+              {% endif %}
+            </td>
+            <td class="text-gray-500"><time data-utc="{{ u.last_seen_at }}"></time></td>
+            <td class="text-right">
+              <button hx-get="/users/{{ u.id }}/edit" hx-target="#modal" class="btn-link">Edit</button>
+            </td>
+          </tr>
+        {% endfor %}
+        {% if users.data.is_empty() %}
+          <tr><td colspan="6" class="table-empty">No users found.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  <nav class="mt-4 flex items-center justify-between text-sm">
+    <span class="text-gray-500">Page {{ users.page }} of {{ users.total_pages() }}</span>
+    <div class="flex gap-2">
+      {% if users.has_previous_page %}
+        <a class="btn-link" href="{{ pagination_base }}page={{ users.page - 1 }}">Previous</a>
+      {% endif %}
+      {% if users.has_next_page %}
+        <a class="btn-link" href="{{ pagination_base }}page={{ users.page + 1 }}">Next</a>
+      {% endif %}
+    </div>
+  </nav>
+{% endblock %}

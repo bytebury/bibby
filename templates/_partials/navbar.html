@@ -3,7 +3,37 @@
   <div class="navbar-inner">
     <a href="/" class="navbar-brand">{{ shared.app_name }}</a>
 
-    <div class="navbar-links">
+    <details class="menu relative md:hidden">
+      <summary class="btn-ghost h-9 w-9 cursor-pointer list-none [&::-webkit-details-marker]:hidden" aria-label="Menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <line x1="3" y1="12" x2="21" y2="12" />
+          <line x1="3" y1="18" x2="21" y2="18" />
+        </svg>
+      </summary>
+      <div class="menu-items absolute right-0 top-full z-50 mt-2 flex w-56 flex-col gap-1 rounded-md border border-gray-200 bg-white p-2 shadow-md">
+        <a href="/blogs" class="navbar-link">Blog</a>
+        {% match shared.user %}
+          {% when Some with (user) %}
+            {% if user.is_admin() %}
+              <a href="/users" class="navbar-link">Users</a>
+              <a href="/countries" class="navbar-link">Countries</a>
+              <a href="/announcements" class="navbar-link">Announcements</a>
+            {% endif %}
+            {% if user.is_free() %}
+              <a href="/upgrade" class="navbar-link">Upgrade</a>
+            {% else if user.is_pro() %}
+              {% call ui::spinner_button("post", "/manage-subscriptions", "Billing", "btn-ghost") %}{% endcall %}
+            {% endif %}
+            <div class="mt-1 truncate border-t border-gray-100 px-3 pt-2 text-sm text-gray-500">{{ user.email }}</div>
+            {% call ui::spinner_button("delete", "/auth", "Sign out", "btn-ghost") %}{% endcall %}
+          {% when None %}
+            <a href="/auth/google" class="btn-primary">Sign in</a>
+        {% endmatch %}
+      </div>
+    </details>
+
+    <div class="navbar-links hidden md:flex">
       <a href="/blogs" class="navbar-link">Blog</a>
       {% match shared.user %}
         {% when Some with (user) %}
@@ -17,7 +47,7 @@
           {% else if user.is_pro() %}
             {% call ui::spinner_button("post", "/manage-subscriptions", "Billing", "btn-ghost") %}{% endcall %}
           {% endif %}
-          <span class="hidden sm:inline text-sm text-gray-500 px-2">{{ user.email }}</span>
+          <span class="hidden lg:inline text-sm text-gray-500 px-2">{{ user.email }}</span>
           {% call ui::spinner_button("delete", "/auth", "Sign out", "btn-ghost") %}{% endcall %}
         {% when None %}
           <a href="/auth/google" class="btn-primary">Sign in</a>

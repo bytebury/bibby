@@ -1,6 +1,6 @@
 {% import "_macros/buttons.html" as ui %}
-<div class="card-header">
-  <div class="flex items-center gap-3">
+<div class="card-header gap-3">
+  <div class="flex items-center gap-3 min-w-0 flex-1">
     <div class="relative shrink-0">
       <img
         src="{{ user.image_url }}"
@@ -19,16 +19,16 @@
         class="absolute -bottom-1 -right-1 rounded-sm border border-white shadow-sm"
       />
     </div>
-    <div>
-      <h2 class="card-title">{{ user.full_name }}</h2>
-      <p class="card-subtitle">{{ user.email }}</p>
-      <p class="card-subtitle font-mono text-xs">
+    <div class="min-w-0 flex-1">
+      <h2 class="card-title truncate">{{ user.full_name }}</h2>
+      <p class="card-subtitle truncate">{{ user.email }}</p>
+      <p class="card-subtitle font-mono text-xs truncate">
         <a class="font-medium text-blue-600 underline underline-offset-2" href="https://ip-api.com/#{{ user.last_known_ip }}" rel="noopener noreferrer"
            target="_blank">{{ user.last_known_ip }}</a>
       </p>
     </div>
   </div>
-  <button type="button" class="btn-ghost" onclick="closeModal()">&times;</button>
+  <button type="button" class="btn-ghost shrink-0" onclick="closeModal()">&times;</button>
 </div>
 
 <form hx-patch="/users/{{ user.id }}" hx-swap="none" class="card-body space-y-4">

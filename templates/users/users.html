@@ -20,7 +20,7 @@
     />
   </form>
 
-  <div class="table-wrap">
+  <div class="hidden md:block table-wrap">
     <table class="table">
       <thead>
         <tr>
@@ -100,6 +100,70 @@
         {% endif %}
       </tbody>
     </table>
+  </div>
+
+  <div class="md:hidden space-y-3">
+    {% for u in users.data %}
+      <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+        <div class="flex items-start gap-3">
+          <div class="relative shrink-0">
+            <img
+              src="{{ u.image_url }}"
+              alt="{{ u.full_name }}"
+              width="40"
+              height="40"
+              class="h-10 w-10 rounded-full border border-gray-200 object-cover"
+              referrerpolicy="no-referrer"
+            />
+            <img
+              src="/assets/images/flags/{{ u.country_code }}.svg"
+              alt="{{ u.country_code }}"
+              data-tooltip="{% if let Some(region) = u.region_name %}{{ region }}, {% endif %}{{ u.country_name }}"
+              width="20"
+              height="16"
+              class="absolute -bottom-1 -right-1 rounded-sm border border-white shadow-sm"
+            />
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="truncate font-medium">{{ u.full_name }}</p>
+            <p class="truncate text-sm text-gray-600">{{ u.email }}</p>
+          </div>
+          <button hx-get="/users/{{ u.id }}/edit" hx-target="#modal" class="btn-link shrink-0">Edit</button>
+        </div>
+        <div class="mt-3 flex flex-wrap items-center gap-2">
+          {% if u.role.to_string() == "admin" %}
+            <span class="badge-warning">{{ u.role }}</span>
+          {% else if u.role.to_string() == "professional" %}
+            <span class="badge-success">{{ u.role }}</span>
+          {% else %}
+            <span class="badge-neutral">{{ u.role }}</span>
+          {% endif %}
+          {% if u.locked %}
+            <span class="badge-danger">locked</span>
+          {% else %}
+            <span class="badge-neutral">active</span>
+          {% endif %}
+          <span class="text-xs text-gray-500">
+            Last seen <time data-utc="{{ u.last_seen_at }}"></time>
+          </span>
+        </div>
+        {% if let Some(cid) = u.stripe_customer_id %}
+          <div class="mt-2 truncate">
+            <a
+              href="https://dashboard.stripe.com/customers/{{ cid }}"
+              target="_blank"
+              rel="noopener"
+              class="btn-link font-mono text-xs"
+            >{{ cid }}</a>
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+    {% if users.data.is_empty() %}
+      <div class="rounded-lg border border-gray-200 bg-white px-4 py-8 text-center text-gray-500 shadow-sm">
+        No users found.
+      </div>
+    {% endif %}
   </div>
 
   <nav class="mt-4 flex items-center justify-between text-sm">

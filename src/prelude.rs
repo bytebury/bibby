@@ -9,3 +9,4 @@ pub use serde::{Deserialize, Serialize};
 pub use sqlx::prelude::*;
 pub use std::env;
 pub use std::fmt::{Display, Formatter};
+pub use tracing::*;

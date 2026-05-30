@@ -31,7 +31,9 @@ impl LocationDetails {
     /// response, network error — so callers can `unwrap_or_default()` and
     /// continue with registration.
     pub async fn lookup(ip: IpAddr) -> Result<Self> {
-        let location = geodude::locate(ip).await?;
+        let location = geodude::locate(ip)
+            .await
+            .inspect_err(|e| warn!("Issue getting location: {}", e))?;
         let country = match (location.country_name, location.country_code) {
             (Some(name), Some(code)) if name != "-" && code != "-" => CountryDetails {
                 name,

@@ -40,6 +40,9 @@ jobs:
       APP_NAME: Bibby
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
       SQLX_OFFLINE: "true"
+      # Startup-time .expect()s in AppState::new — dummy values keep the
+      # binary alive long enough for wait-on to see the port.
+      STRIPE_SECRET_KEY: sk_test_dummy
 
     steps:
       - uses: actions/checkout@v4

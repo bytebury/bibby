@@ -2,6 +2,7 @@ pub mod admin;
 pub mod current_user;
 pub mod maybe_current_user;
 pub mod real_ip;
+pub mod validated_form;
 
 use crate::domain::user::User;
 use crate::infra::auth::jwt::{Jwt, UserClaims};

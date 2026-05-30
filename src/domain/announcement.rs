@@ -169,8 +169,8 @@ pub struct AnnouncementForm {
     pub severity: Severity,
 }
 
-impl AnnouncementForm {
-    pub fn validate(&self) -> Result<()> {
+impl Validate for AnnouncementForm {
+    fn validate(&self) -> Result<()> {
         if self.title.trim().is_empty() {
             return Err(AppError::BadRequest("Title is required.".into()));
         }

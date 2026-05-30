@@ -2,6 +2,7 @@ use crate::domain::blog::{Blog, BlogForm};
 use crate::infra::api::SharedContext;
 use crate::infra::api::extract::admin::Admin;
 use crate::infra::api::extract::maybe_current_user::MaybeCurrentUser;
+use crate::infra::api::extract::validated_form::ValidatedForm;
 use crate::infra::pagination::{Paginate, Paginated, PagingInfo};
 use crate::infra::seo::PageMeta;
 use crate::prelude::*;
@@ -10,7 +11,6 @@ use axum::extract::{Path, Query, State};
 use axum::http::HeaderMap;
 use axum::response::{IntoResponse, Redirect};
 use axum::routing::{delete, get, patch, put};
-use axum_extra::extract::Form;
 
 pub fn routes() -> Router<SharedState> {
     Router::new()
@@ -120,9 +120,8 @@ async fn create_blog(
     State(state): State<SharedState>,
     Admin(user): Admin,
     headers: HeaderMap,
-    Form(form): Form<BlogForm>,
+    ValidatedForm(form): ValidatedForm<BlogForm>,
 ) -> Result<impl IntoResponse> {
-    form.validate()?;
     let blog = Blog::create(state.db.as_ref(), user.id, &form).await?;
     Ok(crate::redirect!(
         format!("/blogs/{}/{}", blog.id, blog.slug()).as_str(),
@@ -144,9 +143,8 @@ async fn edit_blog(
     Admin(user): Admin,
     Path(id): Path<PrimaryKey>,
     headers: HeaderMap,
-    Form(form): Form<BlogForm>,
+    ValidatedForm(form): ValidatedForm<BlogForm>,
 ) -> Result<impl IntoResponse> {
-    form.validate()?;
     Blog::update(state.db.as_ref(), id, user.id, &form).await?;
     let blog = Blog::find_by_id(state.db.as_ref(), id).await?;
     Ok(crate::redirect!(

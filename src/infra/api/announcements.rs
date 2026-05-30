@@ -2,6 +2,7 @@ use crate::domain::announcement::{Announcement, AnnouncementForm};
 use crate::domain::value_objects::toggle::Toggle;
 use crate::infra::api::SharedContext;
 use crate::infra::api::extract::admin::Admin;
+use crate::infra::api::extract::validated_form::ValidatedForm;
 use crate::infra::pagination::{Paginate, Paginated, PagingInfo};
 use crate::infra::seo::PageMeta;
 use crate::prelude::*;
@@ -79,9 +80,8 @@ async fn create_announcement(
     State(state): State<SharedState>,
     Admin(user): Admin,
     headers: HeaderMap,
-    Form(form): Form<AnnouncementForm>,
+    ValidatedForm(form): ValidatedForm<AnnouncementForm>,
 ) -> Result<impl IntoResponse> {
-    form.validate()?;
     Announcement::create(state.db.as_ref(), user.id, &form).await?;
     Ok(redirect!("/announcements", &headers))
 }
@@ -100,9 +100,8 @@ async fn edit_announcement(
     Admin(user): Admin,
     Path(id): Path<PrimaryKey>,
     headers: HeaderMap,
-    Form(form): Form<AnnouncementForm>,
+    ValidatedForm(form): ValidatedForm<AnnouncementForm>,
 ) -> Result<impl IntoResponse> {
-    form.validate()?;
     Announcement::update(state.db.as_ref(), id, user.id, &form).await?;
     Ok(redirect!("/announcements", &headers))
 }

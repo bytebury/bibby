@@ -295,6 +295,16 @@
         @apply opacity-100;
     }
 
+    /* Toast — transient status/error banner. Populated by
+       public/scripts/toast.js, which surfaces server response bodies HTMX
+       drops on 4xx/5xx (e.g. form validation messages). */
+    .toast {
+        @apply pointer-events-none fixed bottom-4 left-1/2 z-50 max-w-md -translate-x-1/2 rounded-lg bg-gray-900 px-4 py-3 text-center text-sm text-white opacity-0 shadow-lg transition-opacity duration-200;
+    }
+    .toast.show {
+        @apply pointer-events-auto opacity-100;
+    }
+
     /* Long-form rendered Markdown (blog body). The Markdown -> HTML
        pipeline (`pulldown_cmark` + `ammonia`) produces a flat sequence of
        semantic tags; these rules give them book-like rhythm without pulling

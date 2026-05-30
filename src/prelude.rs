@@ -1,4 +1,5 @@
 pub use crate::SharedState;
+pub use crate::domain::Validate;
 pub use crate::error::*;
 pub use crate::infra::db::PrimaryKey;
 pub use askama::Template;

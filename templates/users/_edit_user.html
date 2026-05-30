@@ -20,8 +20,12 @@
       />
     </div>
     <div>
-      <h2 class="card-title">Edit {{ user.full_name }}</h2>
+      <h2 class="card-title">{{ user.full_name }}</h2>
       <p class="card-subtitle">{{ user.email }}</p>
+      <p class="card-subtitle font-mono text-xs">
+        <a class="font-medium text-blue-600 underline underline-offset-2" href="https://whatismyipaddress.com/ip/{{ user.last_known_ip }}" rel="noopener noreferrer"
+           target="_blank">{{ user.last_known_ip }}</a>
+      </p>
     </div>
   </div>
   <button type="button" class="btn-ghost" onclick="closeModal()">&times;</button>

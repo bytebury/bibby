@@ -5,3 +5,4 @@ pub mod geolocation;
 pub mod markdown;
 pub mod pagination;
 pub mod payments;
+pub mod seo;

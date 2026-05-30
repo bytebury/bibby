@@ -3,9 +3,46 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{% block title %}{{ shared.app_name }}{% endblock %}</title>
+    <title>{% block title %}{{ shared.title_tag() }}{% endblock %}</title>
+    <meta name="description" content="{{ shared.meta_description() }}" />
+    <meta name="robots" content="{{ shared.meta_robots() }}" />
+    <link rel="canonical" href="{{ shared.canonical_url() }}" />
+    <meta property="og:site_name" content="{{ shared.app_name }}" />
+    <meta property="og:title" content="{{ shared.page_title() }}" />
+    <meta property="og:description" content="{{ shared.meta_description() }}" />
+    <meta property="og:type" content="{{ shared.page_meta.kind }}" />
+    <meta property="og:url" content="{{ shared.canonical_url() }}" />
+    {% if shared.has_image() %}
+      <meta property="og:image" content="{{ shared.image_url() }}" />
+    {% endif %}
+    <meta name="twitter:card" content="{% if shared.has_image() %}summary_large_image{% else %}summary{% endif %}" />
+    <meta name="twitter:title" content="{{ shared.page_title() }}" />
+    <meta name="twitter:description" content="{{ shared.meta_description() }}" />
+    {% if shared.has_image() %}
+      <meta name="twitter:image" content="{{ shared.image_url() }}" />
+    {% endif %}
+    {% if shared.has_twitter_handle() %}
+      <meta name="twitter:site" content="{{ shared.twitter_handle }}" />
+    {% endif %}
+    <meta name="theme-color" content="{{ shared.theme_color }}" />
+    <meta name="application-name" content="{{ shared.web_app_name }}" />
+    <meta name="apple-mobile-web-app-title" content="{{ shared.web_app_short_name }}" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="icon" href="/assets/images/app-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/assets/images/app-icon.svg" />
+    <script type="application/ld+json">{{ shared.structured_data_json()|safe }}</script>
     <link rel="stylesheet" href="/assets/styles.css" />
     {% include "_partials/scripts.html" %}
+    {% if shared.web_app_service_worker_enabled %}
+      <script>
+        if ("serviceWorker" in navigator) {
+          window.addEventListener("load", () => {
+            navigator.serviceWorker.register("/service-worker.js");
+          });
+        }
+      </script>
+    {% endif %}
   </head>
   <body class="flex min-h-screen flex-col bg-gray-50 text-gray-900 antialiased">
     <div hx-get="/announcements/banner" hx-trigger="load" hx-swap="outerHTML"></div>

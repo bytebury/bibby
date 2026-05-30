@@ -1,6 +1,7 @@
 use crate::SharedState;
 use crate::infra::api::SharedContext;
 use crate::infra::api::extract::current_user::CurrentUser;
+use crate::infra::seo::PageMeta;
 use crate::prelude::*;
 use crate::use_cases::payments::checkout_use_case::Plan;
 use axum::Form;
@@ -40,7 +41,10 @@ async fn upgrade_page(
     if !user.is_free() {
         return Ok(redirect!("/", &headers).into_response());
     }
-    let shared = SharedContext::new(&state).with_user(Some(user));
+    let shared = SharedContext::new(&state)
+        .with_user(Some(user))
+        .with_canonical_path("/upgrade")
+        .with_meta(PageMeta::new().title("Upgrade").robots("noindex,nofollow"));
     Ok(UpgradeTemplate { shared }.into_response())
 }
 
@@ -85,7 +89,10 @@ async fn checkout_success(
         ("Priority support", "Get help faster when you need it."),
         ("Early access", "Try new features before everyone else."),
     ];
-    let shared = SharedContext::new(&state).with_user(Some(user));
+    let shared = SharedContext::new(&state)
+        .with_user(Some(user))
+        .with_canonical_path("/checkout/success")
+        .with_meta(PageMeta::new().title("Welcome").robots("noindex,nofollow"));
     Ok(SubscriptionSuccessTemplate { shared, features }.into_response())
 }
 

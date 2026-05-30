@@ -3,6 +3,7 @@ use crate::domain::value_objects::toggle::Toggle;
 use crate::infra::api::SharedContext;
 use crate::infra::api::extract::admin::Admin;
 use crate::infra::pagination::{Paginate, Paginated, PagingInfo};
+use crate::infra::seo::PageMeta;
 use crate::prelude::*;
 use axum::Router;
 use axum::extract::{Path, Query, State};
@@ -58,7 +59,14 @@ async fn announcements(
     Query(params): Query<PagingInfo>,
 ) -> Result<AnnouncementsTemplate> {
     Ok(AnnouncementsTemplate {
-        shared: SharedContext::new(&state).with_user(Some(user)),
+        shared: SharedContext::new(&state)
+            .with_user(Some(user))
+            .with_canonical_path("/announcements")
+            .with_meta(
+                PageMeta::new()
+                    .title("Announcements")
+                    .robots("noindex,nofollow"),
+            ),
         announcements: Announcement::paginate(&state.db, &params).await?,
     })
 }

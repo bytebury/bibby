@@ -36,6 +36,65 @@ Therefore, we use `use_cases` to derive business logic.
 
 ## Common Utilities
 
+### SEO and Web App Metadata
+Bibby renders SEO, social sharing, and installable web-app metadata from `SharedContext` in `templates/_layouts/base.html`. The defaults are configured with environment variables, so a new app can ship with correct canonical URLs, Open Graph tags, Twitter cards, a web manifest, and `robots.txt`/`sitemap.xml` without editing templates.
+
+The important defaults are:
+
+```sh
+# Public URL used for canonical URLs, Open Graph URLs, robots.txt, and sitemap.xml.
+# Falls back to APP_ORIGIN, then http://localhost:${PORT}.
+PUBLIC_SITE_URL=https://example.com
+
+SEO_DEFAULT_TITLE="Example App"
+SEO_DEFAULT_DESCRIPTION="A short description of the app."
+SEO_DEFAULT_IMAGE=/assets/images/app-icon.svg
+SEO_TWITTER_HANDLE=@example
+SEO_ROBOTS=index,follow
+
+WEB_APP_NAME="Example App"
+WEB_APP_SHORT_NAME=Example
+WEB_APP_THEME_COLOR="#111827"
+WEB_APP_BACKGROUND_COLOR="#f9fafb"
+WEB_APP_DISPLAY=standalone
+
+# Off by default to avoid stale caching surprises in server-rendered HTMX apps.
+WEB_APP_SERVICE_WORKER=false
+```
+
+Root metadata endpoints are built in:
+
+- `/robots.txt`
+- `/sitemap.xml`
+- `/site.webmanifest`
+- `/service-worker.js`
+
+For page-specific metadata, set it in the handler when constructing `SharedContext`:
+
+```rs
+use crate::infra::seo::PageMeta;
+
+shared: SharedContext::new(&state)
+    .with_user(user)
+    .with_canonical_path("/pricing")
+    .with_meta(
+        PageMeta::new()
+            .title("Pricing")
+            .description("Choose the plan that fits your team."),
+    )
+```
+
+For pages that should not be indexed, such as admin screens, auth interstitials, and account billing pages, use:
+
+```rs
+shared: SharedContext::new(&state)
+    .with_user(Some(user))
+    .with_canonical_path("/users")
+    .with_meta(PageMeta::new().title("Manage Users").robots("noindex,nofollow"))
+```
+
+Blog posts use `PageMeta::article(&blog)`, which sets article structured data, title, excerpt description, image, published date, updated date, and the canonical slug URL. If you add new public content types, add a model method for sitemap data and include those URLs in `sitemap_xml` in `src/infra/api/core.rs`.
+
 ### Pagination
 You can use the Paginate trait to implement pagination on models.
 
@@ -195,4 +254,3 @@ stripe listen --forward-to localhost:8080/stripe
 
 # Tests
 We strongly encourage you to test mission-critical features through end-to-end (e2e) tests. Bibby uses Playwright for this, which can be run using `./e2e.sh`. We also bootstrap GitHub Actions, which will automatically execute tests and e2e tests on every Pull Request as the default functionality.
-

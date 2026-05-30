@@ -3,6 +3,7 @@ use crate::domain::country::Country;
 use crate::domain::value_objects::toggle::Toggle;
 use crate::infra::api::SharedContext;
 use crate::infra::api::extract::admin::Admin;
+use crate::infra::seo::PageMeta;
 use crate::prelude::*;
 use axum::Router;
 use axum::extract::{Path, Query, State};
@@ -45,7 +46,14 @@ async fn countries(
     let search_query = params.q.unwrap_or_default();
     let countries = Country::search(state.db.as_ref(), &search_query).await?;
     Ok(CountriesTemplate {
-        shared: SharedContext::new(&state).with_user(Some(user)),
+        shared: SharedContext::new(&state)
+            .with_user(Some(user))
+            .with_canonical_path("/countries")
+            .with_meta(
+                PageMeta::new()
+                    .title("Manage Countries")
+                    .robots("noindex,nofollow"),
+            ),
         countries,
         search_query,
     })

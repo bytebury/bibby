@@ -126,6 +126,30 @@ impl Blog {
         Ok(blog)
     }
 
+    pub async fn find_all_for_sitemap<'e, E>(exec: E) -> Result<Vec<Blog>>
+    where
+        E: Executor<'e, Database = sqlx::Postgres>,
+    {
+        let blogs = sqlx::query_as!(
+            Blog,
+            r#"
+            SELECT
+                id,
+                user_id,
+                title,
+                content as "content: Markdown",
+                image_url,
+                created_at,
+                updated_at
+            FROM blogs
+            ORDER BY updated_at DESC, id DESC
+            "#
+        )
+        .fetch_all(exec)
+        .await?;
+        Ok(blogs)
+    }
+
     pub async fn update<'e, E>(
         exec: E,
         blog_id: PrimaryKey,

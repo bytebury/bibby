@@ -13,14 +13,33 @@ fi
 # Check to see if the user set up an environment file
 if [ ! -f .env ]; then
   echo "🤖 .env not found. Generating..."
+  APP_PORT="${PORT:-8080}"
   cat >.env <<EOF
-PORT=8080
+PORT=${APP_PORT}
 
 # Display name of the app (page titles, etc.). Defaults to "Bibby" when unset.
 APP_NAME=Bibby
 
 # Public origin used for OAuth state target + cookie secure flag.
-APP_ORIGIN=http://localhost:8080
+APP_ORIGIN=http://localhost:${APP_PORT}
+
+# Public origin used for canonical URLs, Open Graph URLs, robots.txt, and sitemap.xml.
+PUBLIC_SITE_URL=http://localhost:${APP_PORT}
+
+# SEO defaults. Individual pages can override these in their SharedContext metadata.
+SEO_DEFAULT_TITLE=Bibby
+SEO_DEFAULT_DESCRIPTION="A full-stack Rust template at the heart of every Bytebury application."
+SEO_DEFAULT_IMAGE=/assets/images/app-icon.svg
+SEO_TWITTER_HANDLE=
+SEO_ROBOTS=index,follow
+
+# Installable web-app defaults.
+WEB_APP_NAME=Bibby
+WEB_APP_SHORT_NAME=Bibby
+WEB_APP_THEME_COLOR="#111827"
+WEB_APP_BACKGROUND_COLOR="#f9fafb"
+WEB_APP_DISPLAY=standalone
+WEB_APP_SERVICE_WORKER=false
 
 DATABASE_URL=postgresql://localhost:5432/postgres
 
@@ -31,11 +50,11 @@ JWT_SECRET=CHANGE_ME_IN_PROD
 # callback by listing them in OAUTH_ALLOWED_TARGETS on prod.
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
-GOOGLE_CALLBACK_URL=http://localhost:8080/auth/google/callback
+GOOGLE_CALLBACK_URL=http://localhost:${APP_PORT}/auth/google/callback
 
 # Comma-separated allowlist for OAuth state targets when this env acts as the
 # registered proxy for preview environments. Wildcard \`*\` allowed once per rule.
-OAUTH_ALLOWED_TARGETS=localhost:8080
+OAUTH_ALLOWED_TARGETS=localhost:${APP_PORT}
 
 # Optional \`geodude\` microservice base URL for IP → country/region lookup at
 # sign-in. Leave unset locally (or for IPs the service can't resolve) and

@@ -41,6 +41,10 @@ OAUTH_ALLOWED_TARGETS=localhost:8080
 # sign-in. Leave unset locally (or for IPs the service can't resolve) and
 # users register against the auto-created "Unknown" country.
 GEODUDE_URL=http://localhost:8081
+
+# Include your stripe secrets
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
 EOF
   echo "✅ .env generated."
 else

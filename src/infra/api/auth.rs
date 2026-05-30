@@ -1,3 +1,4 @@
+use crate::infra::api::SharedContext;
 use crate::infra::api::extract::real_ip::RealIp;
 use crate::infra::auth::OAuthProvider;
 use crate::infra::auth::google::GoogleOAuth;
@@ -11,6 +12,14 @@ use axum::response::IntoResponse;
 use axum::routing::{delete, get};
 use axum_extra::extract::CookieJar;
 use axum_extra::extract::cookie::{self, Cookie};
+
+const OAUTH_NONCE_COOKIE: &str = "oauth_nonce";
+
+#[derive(Template, WebTemplate)]
+#[template(path = "finish_sign_in.html")]
+struct FinishSignInTemplate {
+    shared: SharedContext,
+}
 
 #[derive(Debug, Deserialize)]
 struct AuthRequest {
@@ -30,13 +39,28 @@ pub fn routes() -> Router<SharedState> {
         .route("/auth", delete(sign_out))
 }
 
-async fn sign_in_with_google(headers: HeaderMap) -> Result<impl IntoResponse> {
+async fn sign_in_with_google(headers: HeaderMap, cookies: CookieJar) -> Result<impl IntoResponse> {
     let origin =
         env::var("APP_ORIGIN").map_err(|_| AppError::Internal("APP_ORIGIN not set".to_string()))?;
     let nonce = OAuthState::new_nonce();
     let url = GoogleOAuth::default().auth_url_for_target(&origin, &nonce)?;
 
-    Ok(redirect!(url.as_str(), &headers))
+    // Pin this flow to this browser. The callback compares this cookie to
+    // `state.nonce`; if they don't match the user finished OAuth in a
+    // different browser context (common on mobile) and we route them through
+    // an interstitial instead of silently dropping the sign-in.
+    let nonce_cookie = Cookie::build((OAUTH_NONCE_COOKIE, nonce))
+        .path("/")
+        .http_only(true)
+        .same_site(cookie::SameSite::Lax)
+        .secure(
+            env::var("APP_ORIGIN")
+                .unwrap_or_default()
+                .starts_with("https://"),
+        );
+    let cookies = cookies.add(nonce_cookie);
+
+    Ok((cookies, redirect!(url.as_str(), &headers)))
 }
 
 async fn sign_in_with_google_callback(
@@ -69,6 +93,22 @@ async fn sign_in_with_google_callback(
         return Ok(redirect!(relay.as_str(), &headers).into_response());
     }
 
+    // The browser that started this flow set `oauth_nonce` to `state.nonce`.
+    // If it's missing/different, the callback landed in a different browser
+    // (Custom Tabs handoff, in-app browser → system browser, etc.) — render
+    // an interstitial that restarts the flow in *this* browser so the auth
+    // cookie ends up where the user actually is.
+    let nonce_matches = cookies
+        .get(OAUTH_NONCE_COOKIE)
+        .map(|c| c.value() == oauth_state.nonce)
+        .unwrap_or(false);
+    if !nonce_matches {
+        return Ok(FinishSignInTemplate {
+            shared: SharedContext::new(&state).with_canonical_path("/auth/google"),
+        }
+        .into_response());
+    }
+
     let mut create_user = GoogleOAuth::default()
         .exchange_code_for_user(&params.code)
         .await?;
@@ -90,7 +130,9 @@ async fn sign_in_with_google_callback(
                 .unwrap_or_default()
                 .starts_with("https://"),
         );
-    let cookies = cookies.add(auth_cookie);
+    let cookies = cookies
+        .add(auth_cookie)
+        .remove(Cookie::build(OAUTH_NONCE_COOKIE).path("/"));
 
     Ok((cookies, redirect!("/", &headers)).into_response())
 }

@@ -1,0 +1,16 @@
+{% extends "_layouts/base.html" %}
+
+{% block title %}Finish signing in — {{ shared.app_name }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body text-center">
+        <h1 class="page-title">Almost there</h1>
+        <p class="mt-2 page-subtitle">
+            It looks like your sign-in started in a different browser or tab.
+            Tap below to finish signing in here.
+        </p>
+        <a class="btn-primary mt-6" href="/auth/google">Continue with Google</a>
+    </div>
+</div>
+{% endblock %}

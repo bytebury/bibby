@@ -16,15 +16,16 @@ impl Country {
     where
         E: Executor<'e, Database = sqlx::Postgres>,
     {
-        let country = sqlx::query_as(
+        let country = sqlx::query_as!(
+            Country,
             r#"
             INSERT INTO countries (name, code)
             VALUES ($1, LOWER($2))
             RETURNING *
             "#,
+            request.name,
+            request.code,
         )
-        .bind(&request.name)
-        .bind(&request.code)
         .fetch_one(exec)
         .await?;
         Ok(country)
@@ -34,10 +35,13 @@ impl Country {
     where
         E: Executor<'e, Database = sqlx::Postgres>,
     {
-        let country = sqlx::query_as("SELECT * FROM countries WHERE code = LOWER($1)")
-            .bind(code)
-            .fetch_one(exec)
-            .await?;
+        let country = sqlx::query_as!(
+            Country,
+            "SELECT * FROM countries WHERE code = LOWER($1)",
+            code
+        )
+        .fetch_one(exec)
+        .await?;
         Ok(country)
     }
 
@@ -45,7 +49,8 @@ impl Country {
     where
         E: Executor<'e, Database = sqlx::Postgres>,
     {
-        let countries = sqlx::query_as(
+        let countries = sqlx::query_as!(
+            Country,
             r#"
             SELECT *
             FROM countries
@@ -53,8 +58,8 @@ impl Country {
                OR code ILIKE '%' || $1 || '%'
             ORDER BY name ASC
             "#,
+            query,
         )
-        .bind(query)
         .fetch_all(exec)
         .await?;
         Ok(countries)

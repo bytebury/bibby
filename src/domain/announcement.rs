@@ -24,18 +24,27 @@ impl Announcement {
     where
         E: Executor<'e, Database = sqlx::Postgres>,
     {
-        let row = sqlx::query_as(
+        let row = sqlx::query_as!(
+            Announcement,
             r#"
             INSERT INTO announcements (user_id, title, message, active, severity)
             VALUES ($1, $2, $3, $4, $5)
-            RETURNING *
+            RETURNING
+                id,
+                user_id,
+                title,
+                message as "message: Markdown",
+                active,
+                severity as "severity: Severity",
+                created_at,
+                updated_at
             "#,
+            user_id,
+            request.title,
+            request.message.raw(),
+            request.active.is_some(),
+            request.severity.to_string(),
         )
-        .bind(user_id)
-        .bind(&request.title)
-        .bind(request.message.raw())
-        .bind(request.active.is_some())
-        .bind(request.severity.to_string())
         .fetch_one(exec)
         .await?;
         Ok(row)
@@ -45,10 +54,24 @@ impl Announcement {
     where
         E: Executor<'e, Database = sqlx::Postgres>,
     {
-        let row = sqlx::query_as("SELECT * FROM announcements WHERE id = $1")
-            .bind(id)
-            .fetch_one(exec)
-            .await?;
+        let row = sqlx::query_as!(
+            Announcement,
+            r#"
+            SELECT
+                id,
+                user_id,
+                title,
+                message as "message: Markdown",
+                active,
+                severity as "severity: Severity",
+                created_at,
+                updated_at
+            FROM announcements WHERE id = $1
+            "#,
+            id,
+        )
+        .fetch_one(exec)
+        .await?;
         Ok(row)
     }
 
@@ -57,9 +80,18 @@ impl Announcement {
     where
         E: Executor<'e, Database = sqlx::Postgres>,
     {
-        let row = sqlx::query_as(
+        let row = sqlx::query_as!(
+            Announcement,
             r#"
-            SELECT *
+            SELECT
+                id,
+                user_id,
+                title,
+                message as "message: Markdown",
+                active,
+                severity as "severity: Severity",
+                created_at,
+                updated_at
             FROM announcements
             WHERE active = true
             ORDER BY created_at DESC

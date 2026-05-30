@@ -18,16 +18,17 @@ impl Region {
     where
         E: Executor<'e, Database = sqlx::Postgres>,
     {
-        let region = sqlx::query_as(
+        let region = sqlx::query_as!(
+            Region,
             r#"
             INSERT INTO regions (country_id, name)
             VALUES ($1, $2)
             ON CONFLICT (country_id, name) DO UPDATE SET name = EXCLUDED.name
             RETURNING *
             "#,
+            country_id,
+            name,
         )
-        .bind(country_id)
-        .bind(name)
         .fetch_one(exec)
         .await?;
         Ok(region)

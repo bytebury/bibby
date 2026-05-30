@@ -78,17 +78,25 @@ impl Blog {
     where
         E: Executor<'e, Database = sqlx::Postgres>,
     {
-        let blog = sqlx::query_as(
+        let blog = sqlx::query_as!(
+            Blog,
             r#"
             INSERT INTO blogs (user_id, title, content, image_url)
             VALUES ($1, $2, $3, $4)
-            RETURNING *
+            RETURNING
+                id,
+                user_id,
+                title,
+                content as "content: Markdown",
+                image_url,
+                created_at,
+                updated_at
             "#,
+            user_id,
+            request.title,
+            request.content.raw(),
+            request.image_url,
         )
-        .bind(user_id)
-        .bind(&request.title)
-        .bind(request.content.raw())
-        .bind(&request.image_url)
         .fetch_one(exec)
         .await?;
         Ok(blog)
@@ -98,10 +106,23 @@ impl Blog {
     where
         E: Executor<'e, Database = sqlx::Postgres>,
     {
-        let blog = sqlx::query_as("SELECT * FROM blogs WHERE id = $1")
-            .bind(id)
-            .fetch_one(exec)
-            .await?;
+        let blog = sqlx::query_as!(
+            Blog,
+            r#"
+            SELECT
+                id,
+                user_id,
+                title,
+                content as "content: Markdown",
+                image_url,
+                created_at,
+                updated_at
+            FROM blogs WHERE id = $1
+            "#,
+            id,
+        )
+        .fetch_one(exec)
+        .await?;
         Ok(blog)
     }
 

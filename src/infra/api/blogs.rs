@@ -74,7 +74,11 @@ async fn view_blog_redirect(
     Path(id): Path<PrimaryKey>,
 ) -> Result<impl IntoResponse> {
     let blog = Blog::find_by_id(state.db.as_ref(), id).await?;
-    Ok(Redirect::permanent(&format!("/blogs/{}/{}", blog.id, blog.slug())))
+    Ok(Redirect::permanent(&format!(
+        "/blogs/{}/{}",
+        blog.id,
+        blog.slug()
+    )))
 }
 
 async fn view_blog(

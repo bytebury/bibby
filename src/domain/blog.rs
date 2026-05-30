@@ -74,11 +74,7 @@ impl Blog {
         }
     }
 
-    pub async fn create<'e, E>(
-        exec: E,
-        user_id: PrimaryKey,
-        request: &BlogForm,
-    ) -> Result<Blog>
+    pub async fn create<'e, E>(exec: E, user_id: PrimaryKey, request: &BlogForm) -> Result<Blog>
     where
         E: Executor<'e, Database = sqlx::Postgres>,
     {

@@ -1,9 +1,9 @@
 use crate::infra::db::SharedDatabase;
 use crate::infra::payments::Stripe;
+use crate::prelude::*;
 use crate::use_cases::payments::PaymentsUseCases;
 use crate::use_cases::user::UserUseCases;
 use std::sync::Arc;
-use crate::prelude::*;
 
 mod domain;
 mod error;

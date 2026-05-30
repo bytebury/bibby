@@ -25,8 +25,7 @@ impl RegisterUserUseCase {
             None => LocationDetails::default(),
         };
 
-        let country = match Country::find_by_code(self.db.as_ref(), &location.country.code).await
-        {
+        let country = match Country::find_by_code(self.db.as_ref(), &location.country.code).await {
             Ok(country) => country,
             Err(_) => Country::create(self.db.as_ref(), &location.country.clone().into()).await?,
         };

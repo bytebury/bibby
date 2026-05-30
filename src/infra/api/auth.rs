@@ -31,8 +31,8 @@ pub fn routes() -> Router<SharedState> {
 }
 
 async fn sign_in_with_google(headers: HeaderMap) -> Result<impl IntoResponse> {
-    let origin = env::var("APP_ORIGIN")
-        .map_err(|_| AppError::Internal("APP_ORIGIN not set".to_string()))?;
+    let origin =
+        env::var("APP_ORIGIN").map_err(|_| AppError::Internal("APP_ORIGIN not set".to_string()))?;
     let nonce = OAuthState::new_nonce();
     let url = GoogleOAuth::default().auth_url_for_target(&origin, &nonce)?;
 
@@ -74,14 +74,22 @@ async fn sign_in_with_google_callback(
         .await?;
     create_user.last_known_ip = ip_addr;
 
-    let user = state.user_use_cases.register.execute(&mut create_user).await?;
+    let user = state
+        .user_use_cases
+        .register
+        .execute(&mut create_user)
+        .await?;
 
     let token = Jwt::generate(&UserClaims::from(user))?;
     let auth_cookie = Cookie::build(("auth_token", token))
         .path("/")
         .http_only(true)
         .same_site(cookie::SameSite::Lax)
-        .secure(env::var("APP_ORIGIN").unwrap_or_default().starts_with("https://"));
+        .secure(
+            env::var("APP_ORIGIN")
+                .unwrap_or_default()
+                .starts_with("https://"),
+        );
     let cookies = cookies.add(auth_cookie);
 
     Ok((cookies, redirect!("/", &headers)).into_response())

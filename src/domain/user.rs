@@ -16,9 +16,7 @@ pub struct User {
     pub verified: bool,
     pub locked: bool,
     pub last_known_ip: String,
-    /// `country_code` and `country_name` come from the `user_details` view's
-    /// LEFT JOIN on countries, COALESCEd to `"unknown"` / `"Unknown"` so the
-    /// template can always render `/assets/images/flags/{code}.svg`.
+    pub stripe_customer_id: Option<String>,
     pub country_code: String,
     pub country_name: String,
     pub region_name: Option<String>,
@@ -113,12 +111,55 @@ impl User {
         Ok(())
     }
 
+    pub async fn set_stripe_customer_id<'e, E>(
+        exec: E,
+        id: PrimaryKey,
+        customer_id: &shima::CustomerId,
+    ) -> Result<()>
+    where
+        E: Executor<'e, Database = sqlx::Postgres>,
+    {
+        sqlx::query("UPDATE users SET stripe_customer_id = $1 WHERE id = $2")
+            .bind(customer_id.as_ref())
+            .bind(id)
+            .execute(exec)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn find_by_stripe_customer_id<'e, E>(exec: E, customer_id: &str) -> Result<User>
+    where
+        E: Executor<'e, Database = sqlx::Postgres>,
+    {
+        let user = sqlx::query_as("SELECT * FROM user_details WHERE stripe_customer_id = $1")
+            .bind(customer_id)
+            .fetch_one(exec)
+            .await?;
+        Ok(user)
+    }
+
+    pub async fn set_role<'e, E>(exec: E, id: PrimaryKey, role: &Role) -> Result<()>
+    where
+        E: Executor<'e, Database = sqlx::Postgres>,
+    {
+        sqlx::query("UPDATE users SET role = $1 WHERE id = $2")
+            .bind(role.to_string())
+            .bind(id)
+            .execute(exec)
+            .await?;
+        Ok(())
+    }
+
     pub fn is_admin(&self) -> bool {
         matches!(self.role, Role::Admin)
     }
 
     pub fn is_free(&self) -> bool {
         matches!(self.role, Role::Free)
+    }
+
+    pub fn is_pro(&self) -> bool {
+        matches!(self.role, Role::Professional)
     }
 
     pub fn ensure_can_read<T>(&self, entity: &T) -> Result<()>

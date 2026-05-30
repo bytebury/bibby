@@ -52,6 +52,12 @@ impl From<geodude::Error> for AppError {
     }
 }
 
+impl From<shima::Error> for AppError {
+    fn from(err: shima::Error) -> Self {
+        AppError::Internal(format!("Error with stripe: {}", err))
+    }
+}
+
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         match &self {

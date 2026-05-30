@@ -4,3 +4,4 @@ pub mod db;
 pub mod geolocation;
 pub mod markdown;
 pub mod pagination;
+pub mod payments;

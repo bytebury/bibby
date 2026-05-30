@@ -28,6 +28,7 @@
           <th>Email</th>
           <th>Role</th>
           <th>Status</th>
+          <th>Stripe</th>
           <th>Last seen</th>
           <th></th>
         </tr>
@@ -73,6 +74,19 @@
                 <span class="badge-neutral">active</span>
               {% endif %}
             </td>
+            <td class="text-gray-500">
+              {% if let Some(cid) = u.stripe_customer_id %}
+                <a
+                  href="https://dashboard.stripe.com/customers/{{ cid }}"
+                  target="_blank"
+                  rel="noopener"
+                  class="btn-link font-mono text-xs"
+                  data-tooltip="Open in Stripe dashboard"
+                >{{ cid }}</a>
+              {% else %}
+                <span class="text-gray-400">—</span>
+              {% endif %}
+            </td>
             <td class="text-gray-500"><time data-utc="{{ u.last_seen_at }}"></time></td>
             <td class="text-right">
               <button hx-get="/users/{{ u.id }}/edit" hx-target="#modal" class="btn-link">Edit</button>
@@ -80,7 +94,7 @@
           </tr>
         {% endfor %}
         {% if users.data.is_empty() %}
-          <tr><td colspan="6" class="table-empty">No users found.</td></tr>
+          <tr><td colspan="7" class="table-empty">No users found.</td></tr>
         {% endif %}
       </tbody>
     </table>

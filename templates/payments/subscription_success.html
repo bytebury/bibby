@@ -1,0 +1,32 @@
+{% extends "_layouts/base.html" %}
+
+{% block title %}Welcome — {{ shared.app_name }}{% endblock %}
+
+{% block content %}
+  <div class="card">
+    <div class="card-body text-center">
+      <h1 class="page-title">You're all set!</h1>
+      <p class="mt-2 page-subtitle">
+        Thanks for subscribing — your {{ shared.app_name }} Professional plan is active.
+      </p>
+      <a href="/" class="btn-primary mt-6 inline-block">Go to dashboard</a>
+    </div>
+  </div>
+
+  <section class="mt-8">
+    <header class="text-center">
+      <h2 class="text-lg font-semibold text-gray-900">Here's what you just unlocked</h2>
+      <p class="text-sm text-gray-500">Everything below is now available on your account.</p>
+    </header>
+    <div class="mt-4 grid gap-4 sm:grid-cols-2">
+      {% for (title, blurb) in features %}
+        <div class="card">
+          <div class="card-body">
+            <strong class="block text-gray-900">{{ title }}</strong>
+            <span class="block text-sm text-gray-500">{{ blurb }}</span>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+{% endblock %}

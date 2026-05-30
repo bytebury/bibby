@@ -40,6 +40,7 @@ pub mod blogs;
 pub mod core;
 pub mod countries;
 pub mod extract;
+pub mod payments;
 pub mod users;
 
 pub fn routes() -> Router<SharedState> {
@@ -50,6 +51,7 @@ pub fn routes() -> Router<SharedState> {
         .merge(countries::routes())
         .merge(announcements::routes())
         .merge(blogs::routes())
+        .merge(payments::routes())
 }
 
 pub struct SharedContext {

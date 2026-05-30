@@ -12,6 +12,11 @@
             <a href="/countries" class="navbar-link">Countries</a>
             <a href="/announcements" class="navbar-link">Announcements</a>
           {% endif %}
+          {% if user.is_free() %}
+            <a href="/upgrade" class="navbar-link">Upgrade</a>
+          {% else if user.is_pro() %}
+            {% call ui::spinner_button("post", "/manage-subscriptions", "Billing", "btn-ghost") %}{% endcall %}
+          {% endif %}
           <span class="hidden sm:inline text-sm text-gray-500 px-2">{{ user.email }}</span>
           {% call ui::spinner_button("delete", "/auth", "Sign out", "btn-ghost") %}{% endcall %}
         {% when None %}

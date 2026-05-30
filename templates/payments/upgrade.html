@@ -1,0 +1,96 @@
+{% extends "_layouts/base.html" %}
+
+{% block title %}Upgrade — {{ shared.app_name }}{% endblock %}
+
+{% block content %}
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">Choose your plan</h1>
+      <p class="page-subtitle">Cancel anytime. Secure checkout with Stripe.</p>
+    </div>
+  </header>
+
+  <div class="mb-6 flex justify-center">
+    <div class="inline-flex rounded-full bg-gray-100 p-1">
+      <button type="button" class="btn-primary rounded-full px-4 py-1 text-sm" data-billing-toggle="monthly" onclick="setBilling('monthly')">Monthly</button>
+      <button type="button" class="btn-ghost rounded-full px-4 py-1 text-sm" data-billing-toggle="annual" onclick="setBilling('annual')">Annually</button>
+    </div>
+  </div>
+
+  <div class="grid gap-6 sm:grid-cols-2">
+    <article class="card flex flex-col justify-between">
+      <div class="card-body">
+        <h2 class="text-lg font-semibold text-gray-900">Free</h2>
+        <p class="mt-1 text-sm text-gray-500">The basics for getting started.</p>
+        <p class="mt-4 text-3xl font-bold">$0</p>
+        <ul class="mt-4 space-y-1 text-sm text-gray-700">
+          <li>Core features</li>
+          <li>Community support</li>
+        </ul>
+      </div>
+      <div class="card-body pt-0">
+        {% if let Some(user) = shared.user %}
+          {% if user.is_free() %}
+            <button class="btn-ghost w-full" disabled>Current plan</button>
+          {% endif %}
+        {% else %}
+          <a href="/auth/google" class="btn-primary block w-full text-center">Get started</a>
+        {% endif %}
+      </div>
+    </article>
+
+    <article class="card flex flex-col justify-between">
+      <div class="card-body">
+        <h2 class="text-lg font-semibold text-gray-900">Professional</h2>
+        <p class="mt-1 text-sm text-gray-500">The full toolkit.</p>
+        <p class="mt-4 text-3xl font-bold" data-billing-price="monthly">
+          $5<span class="text-sm font-normal text-gray-500">/month</span>
+        </p>
+        <p class="mt-4 text-3xl font-bold" data-billing-price="annual" style="display: none">
+          $48<span class="text-sm font-normal text-gray-500">/year</span>
+        </p>
+        <ul class="mt-4 space-y-1 text-sm text-gray-700">
+          <li>Everything in Free</li>
+          <li>All Pro features</li>
+          <li>Priority support</li>
+        </ul>
+      </div>
+      <div class="card-body pt-0">
+        {% if let Some(user) = shared.user %}
+          {% if user.is_admin() || user.is_pro() %}
+            <button class="btn-primary w-full" disabled>Current plan</button>
+          {% else %}
+            <form hx-post="/checkout">
+              <input
+                type="hidden"
+                name="plan"
+                value="monthly_pro"
+                data-plan-monthly="monthly_pro"
+                data-plan-annual="annual_pro"
+              />
+              <button type="submit" class="btn-primary w-full">Subscribe</button>
+            </form>
+          {% endif %}
+        {% else %}
+          <a href="/auth/google" class="btn-primary block w-full text-center">Get started</a>
+        {% endif %}
+      </div>
+    </article>
+  </div>
+
+  <script>
+    function setBilling(mode) {
+      document.querySelectorAll('[data-billing-toggle]').forEach((btn) => {
+        const active = btn.dataset.billingToggle === mode;
+        btn.classList.toggle('btn-primary', active);
+        btn.classList.toggle('btn-ghost', !active);
+      });
+      document.querySelectorAll('[data-billing-price]').forEach((el) => {
+        el.style.display = el.dataset.billingPrice === mode ? '' : 'none';
+      });
+      document.querySelectorAll('input[name="plan"][data-plan-monthly]').forEach((input) => {
+        input.value = mode === 'monthly' ? input.dataset.planMonthly : input.dataset.planAnnual;
+      });
+    }
+  </script>
+{% endblock %}

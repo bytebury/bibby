@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+before_diff="$(git diff --binary | git hash-object --stdin)"
+before_sqlx_status="$(git status --porcelain --untracked-files=all .sqlx)"
+
+echo "Running cargo fmt..."
+cargo fmt --all
+
+if ! cargo sqlx --version >/dev/null 2>&1; then
+  echo "cargo-sqlx is not installed."
+  echo "Install it with: cargo install sqlx-cli --no-default-features --features postgres,rustls"
+  exit 1
+fi
+
+echo "Running cargo sqlx prepare..."
+cargo sqlx prepare
+
+after_diff="$(git diff --binary | git hash-object --stdin)"
+after_sqlx_status="$(git status --porcelain --untracked-files=all .sqlx)"
+
+if [ "$before_diff" != "$after_diff" ] || [ "$before_sqlx_status" != "$after_sqlx_status" ]; then
+  echo
+  echo "cargo fmt or cargo sqlx prepare changed files."
+  echo "Review and stage those changes, then commit again."
+  exit 1
+fi

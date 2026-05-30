@@ -70,6 +70,11 @@ else
   echo "✅ .env file found."
 fi
 
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  git config core.hooksPath .githooks
+  echo "✅ Git hooks enabled."
+fi
+
 # Install npm deps if missing (Tailwind + Playwright live here)
 if [ ! -d node_modules ]; then
   echo "📦 installing npm deps..."

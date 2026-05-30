@@ -298,3 +298,4 @@ features should have e2e coverage.
 - For risky/destructive actions (force push, `reset --hard`, dropping tables, deleting branches), stop and confirm with
   the user.
 - Prefer creating a new commit over amending. Never skip hooks (`--no-verify`) without explicit permission.
+- ALWAYS run cargo fmt when you are done making changes.

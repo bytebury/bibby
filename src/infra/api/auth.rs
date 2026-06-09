@@ -127,6 +127,13 @@ async fn sign_in_with_google_callback(
         .execute(&mut create_user)
         .await?;
 
+    // Locked accounts (banned country or an admin lock) never get a session —
+    // send them back to the homepage.
+    if user.locked {
+        let cookies = cookies.remove(Cookie::build(OAUTH_NONCE_COOKIE).path("/"));
+        return Ok((cookies, redirect!("/", &headers)).into_response());
+    }
+
     let token = Jwt::generate(&UserClaims::from(user))?;
     let auth_cookie = Cookie::build(("auth_token", token))
         .path("/")

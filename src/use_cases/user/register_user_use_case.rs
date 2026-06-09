@@ -53,8 +53,12 @@ impl RegisterUserUseCase {
 
     async fn update_audit_fields(&self, user: User, request: &CreateUser) -> Result<User> {
         let user_id = user.id;
+        // Locks only ever ratchet on: a sign-in from a locked country locks an
+        // existing account, and a later clean sign-in never clears the lock.
+        let locked = user.locked || request.locked;
 
         let mut form: UserForm = user.into();
+        form.locked = locked.then_some("on".into());
         form.last_seen_at = Utc::now();
         form.last_known_ip = request.last_known_ip.clone();
         form.country_id = request.country_id;

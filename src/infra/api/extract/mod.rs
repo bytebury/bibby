@@ -28,6 +28,11 @@ impl FromRequestParts<SharedState> for BaseUser {
         if let Ok(data) = Jwt::verify::<UserClaims>(token)
             && let Ok(user) = User::find_by_email(state.db.as_ref(), &data.claims.sub).await
         {
+            // A locked account with a still-valid cookie is treated as signed
+            // out everywhere.
+            if user.locked {
+                return Ok(BaseUser::None);
+            }
             return Ok(BaseUser::User(Box::new(user)));
         }
 

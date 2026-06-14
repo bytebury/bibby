@@ -27,9 +27,9 @@ COPY public ./public
 COPY templates ./templates
 COPY src ./src
 RUN npx tailwindcss -i ./public/styles/tailwind.css -o ./public/styles.css --minify
-RUN npm i -g terser clean-css-cli
+RUN npm i -g terser lightningcss-cli
 RUN find public -name "*.js" -exec sh -c 'terser "$1" --compress --mangle -o "$1"' _ {} \; && \
-    find public -name "*.css" -exec sh -c 'cleancss -O2 -o "$1" "$1"' _ {} \;
+    find public -name "*.css" -exec sh -c 'lightningcss --minify --targets ">= 0.25%" -o "$1" "$1"' _ {} \;
 
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \

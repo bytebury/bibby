@@ -43,6 +43,11 @@ jobs:
       # Startup-time .expect()s in AppState::new — dummy values keep the
       # binary alive long enough for wait-on to see the port.
       STRIPE_SECRET_KEY: sk_test_dummy
+      # Signs session cookies and keys the HMAC on emailed sign-in codes.
+      JWT_SECRET: e2e-jwt-secret
+      # Mounts the test-auth shim so specs can read emailed codes back.
+      ENABLE_TEST_AUTH: "true"
+      TEST_AUTH_TOKEN: ci-e2e-token
 
     steps:
       - uses: actions/checkout@v4

@@ -1,0 +1,40 @@
+{% extends "_layouts/base.html" %}
+
+{% block content %}
+<div class="card mx-auto max-w-md">
+  <div class="card-body space-y-5 px-6 py-8">
+    <div class="text-center">
+      <p class="text-sm font-semibold text-blue-600">Welcome back</p>
+      <h1 class="page-title">Sign in to {{ shared.app_name }}</h1>
+    </div>
+
+    {% let label = "Continue with Google" %}
+    {% include "_partials/google_button.html" %}
+
+    <div id="sign_in_form" class="space-y-4">
+      {% if let Some(error_message) = error_message %}
+      <div class="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-center text-sm text-red-900" role="alert">{{ error_message }}</div>
+      {% endif %}
+
+      {% if code_sent %}
+      {% include "_partials/sign_in_code.html" %}
+      {% else %}
+      <form hx-post="/sign-in/code" hx-target="#sign_in_form" hx-select="#sign_in_form" hx-swap="outerHTML" class="space-y-4">
+        <label class="block">
+          <span class="label">Email</span>
+          <input id="email" name="email" type="email" autocomplete="email" value="{{ email }}" placeholder="you@example.com" class="input mt-1" required />
+        </label>
+        <button class="btn-primary w-full py-2" type="submit">Email Me a Sign-in Code</button>
+      </form>
+      {% endif %}
+    </div>
+
+    <p class="text-center text-xs text-gray-500">
+      New to {{ shared.app_name }}?
+      <a href="/sign-up" class="underline hover:text-gray-700">Create an account</a>.
+      By signing in you agree to our <a href="/terms" class="underline hover:text-gray-700">Terms</a> and
+      <a href="/privacy" class="underline hover:text-gray-700">Privacy Policy</a>.
+    </p>
+  </div>
+</div>
+{% endblock %}

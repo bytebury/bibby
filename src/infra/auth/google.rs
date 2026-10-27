@@ -1,4 +1,4 @@
-use crate::domain::user::{CreateUser, Role};
+use crate::domain::user::{AuthProvider, CreateUser, Role};
 use crate::infra::auth::OAuthProvider;
 use crate::infra::auth::oauth_state::OAuthState;
 use crate::prelude::*;
@@ -127,7 +127,10 @@ impl From<GoogleUser> for CreateUser {
     fn from(google_user: GoogleUser) -> Self {
         Self {
             email: google_user.email,
+            // Only an address Google has verified proves who owns it; an
+            // unverified one can still verify itself with an emailed code.
             verified: google_user.email_verified,
+            auth_provider: AuthProvider::Google,
             first_name: google_user.given_name.unwrap_or(google_user.name.clone()),
             last_name: google_user.family_name,
             full_name: google_user.name,

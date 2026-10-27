@@ -1,6 +1,8 @@
 pub mod announcement;
+pub mod avatar;
 pub mod blog;
 pub mod country;
+pub mod one_time_passcode;
 pub mod region;
 pub mod user;
 pub mod value_objects;

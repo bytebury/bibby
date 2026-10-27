@@ -29,8 +29,10 @@ impl FromRequestParts<SharedState> for BaseUser {
             && let Ok(user) = User::find_by_email(state.db.as_ref(), &data.claims.sub).await
         {
             // A locked account with a still-valid cookie is treated as signed
-            // out everywhere.
-            if user.locked {
+            // out everywhere. So is one that hasn't verified its email —
+            // sign-in never mints a session for those, so a cookie for one
+            // shouldn't exist anyway.
+            if user.locked || !user.verified {
                 return Ok(BaseUser::None);
             }
             return Ok(BaseUser::User(Box::new(user)));

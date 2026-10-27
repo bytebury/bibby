@@ -37,6 +37,7 @@ macro_rules! refresh {
 
 pub mod announcements;
 pub mod auth;
+mod auth_test;
 pub mod blogs;
 pub mod core;
 pub mod countries;
@@ -45,14 +46,20 @@ pub mod payments;
 pub mod users;
 
 pub fn routes() -> Router<SharedState> {
-    Router::new()
+    let router = Router::new()
         .merge(core::routes())
         .merge(auth::routes())
         .merge(users::routes())
         .merge(countries::routes())
         .merge(announcements::routes())
         .merge(blogs::routes())
-        .merge(payments::routes())
+        .merge(payments::routes());
+
+    if auth_test::is_enabled() {
+        tracing::warn!("Test auth shim is enabled. Never enable this in production.");
+        return router.merge(auth_test::routes());
+    }
+    router
 }
 
 pub struct SharedContext {

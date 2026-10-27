@@ -1,0 +1,35 @@
+{#- The "enter the code we emailed you" step, shared by /sign-in and /sign-up.
+    Expects `email`, `ttl_minutes`, and `sign_up` (true when the code verifies
+    a new account rather than signing an existing one in). -#}
+{% if sign_up %}
+<p class="text-center text-sm text-gray-700">
+  We emailed a 6-digit code to <strong>{{ email }}</strong>. Enter it below to
+  verify your email. It expires in {{ ttl_minutes }} minutes.
+</p>
+{% else %}
+<p class="text-center text-sm text-gray-700">
+  If <strong>{{ email }}</strong> has an account, we just emailed it a 6-digit code.
+  It expires in {{ ttl_minutes }} minutes.
+</p>
+{% endif %}
+<div class="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900" id="otp_delivery_help">
+  <strong>Don't see it?</strong> Check your spam or junk folder. Some organizations
+  filter out email from outside senders, so if it never arrives, ask your IT team
+  to allow email from {{ shared.app_name }}, or continue with Google instead.
+</div>
+<form hx-post="/sign-in/code/verify" hx-target="#sign_in_form" hx-select="#sign_in_form" hx-swap="outerHTML" class="space-y-4">
+  <input type="hidden" name="email" value="{{ email }}" />
+  {% if sign_up %}
+  <input type="hidden" name="sign_up" value="true" />
+  {% endif %}
+  <label class="block">
+    <span class="label text-center">{% if sign_up %}Verification code{% else %}Sign-in code{% endif %}</span>
+    <input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="123456" class="input mt-1 text-center text-xl tracking-[0.25em]" autofocus required />
+  </label>
+  <button class="btn-primary w-full py-2" type="submit">{% if sign_up %}Verify Email{% else %}Sign In{% endif %}</button>
+</form>
+<div class="flex justify-center gap-4 text-sm">
+  <input type="hidden" id="resend_email" name="email" value="{{ email }}" />
+  <a href="#" class="btn-link" hx-post="/sign-in/code" hx-include="#resend_email" {% if sign_up %}hx-vals='{"sign_up": "true"}'{% endif %} hx-target="#sign_in_form" hx-select="#sign_in_form" hx-swap="outerHTML">Send a new code</a>
+  <a href="{% if sign_up %}/sign-up{% else %}/sign-in{% endif %}" class="btn-link">Use a different email</a>
+</div>

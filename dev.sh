@@ -61,6 +61,11 @@ OAUTH_ALLOWED_TARGETS=localhost:${APP_PORT}
 # users register against the auto-created "Unknown" country.
 GEODUDE_URL=http://localhost:8081
 
+# \`mailman\` microservice that sends email (sign-in and verification codes).
+# Leave MAILMAN_URL empty locally and codes fail to send (the error is logged).
+MAILMAN_URL=
+MAILMAN_API_TOKEN=
+
 # Include your stripe secrets
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=

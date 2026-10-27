@@ -10,7 +10,10 @@
         {% when Some with (user) %}
           <p class="mt-6 text-gray-700">Signed in as <strong>{{ user.full_name }}</strong></p>
         {% when None %}
-          <a href="/auth/google" class="btn-primary mt-6">Sign in with Google</a>
+          <div class="mt-6 flex justify-center gap-2">
+            <a href="/sign-up" class="btn-primary">Get started</a>
+            <a href="/sign-in" class="btn-secondary">Sign in</a>
+          </div>
       {% endmatch %}
     </div>
   </div>

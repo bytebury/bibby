@@ -1,4 +1,8 @@
+use crate::domain::one_time_passcode;
+use crate::domain::user::{CreateUser, SignUp, SignUpForm, User};
+use crate::domain::value_objects::email::Email;
 use crate::infra::api::SharedContext;
+use crate::infra::api::extract::maybe_current_user::MaybeCurrentUser;
 use crate::infra::api::extract::real_ip::RealIp;
 use crate::infra::auth::OAuthProvider;
 use crate::infra::auth::google::GoogleOAuth;
@@ -10,9 +14,9 @@ use axum::Router;
 use axum::extract::{Query, State};
 use axum::http::HeaderMap;
 use axum::response::IntoResponse;
-use axum::routing::{delete, get};
-use axum_extra::extract::CookieJar;
+use axum::routing::{delete, get, post};
 use axum_extra::extract::cookie::{self, Cookie};
+use axum_extra::extract::{CookieJar, Form};
 
 const OAUTH_NONCE_COOKIE: &str = "oauth_nonce";
 
@@ -20,6 +24,81 @@ const OAUTH_NONCE_COOKIE: &str = "oauth_nonce";
 #[template(path = "finish_sign_in.html")]
 struct FinishSignInTemplate {
     shared: SharedContext,
+}
+
+#[derive(Template, WebTemplate)]
+#[template(path = "sign_in.html")]
+struct SignInTemplate {
+    shared: SharedContext,
+    /// `true` once a code has (maybe) been emailed — swaps the email field
+    /// for the code field.
+    code_sent: bool,
+    /// The code being entered verifies a new email sign-up rather than
+    /// signing an existing account in — only the copy changes.
+    sign_up: bool,
+    email: String,
+    error_message: Option<String>,
+    ttl_minutes: i64,
+}
+
+impl SignInTemplate {
+    fn new(state: &SharedState) -> Self {
+        Self {
+            shared: SharedContext::new(state)
+                .with_canonical_path("/sign-in")
+                .with_meta(PageMeta::new().title("Sign in")),
+            code_sent: false,
+            sign_up: false,
+            email: String::new(),
+            error_message: None,
+            ttl_minutes: one_time_passcode::TTL_MINUTES,
+        }
+    }
+}
+
+#[derive(Template, WebTemplate)]
+#[template(path = "sign_up.html")]
+struct SignUpTemplate {
+    shared: SharedContext,
+    /// `true` once the account exists and a code has (maybe) been emailed —
+    /// swaps the sign-up form for the code field.
+    code_sent: bool,
+    first_name: String,
+    last_name: String,
+    email: String,
+    error_message: Option<String>,
+    ttl_minutes: i64,
+}
+
+impl SignUpTemplate {
+    fn new(state: &SharedState) -> Self {
+        Self {
+            shared: SharedContext::new(state)
+                .with_canonical_path("/sign-up")
+                .with_meta(PageMeta::new().title("Sign up")),
+            code_sent: false,
+            first_name: String::new(),
+            last_name: String::new(),
+            email: String::new(),
+            error_message: None,
+            ttl_minutes: one_time_passcode::TTL_MINUTES,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct SendCodeForm {
+    email: String,
+    #[serde(default)]
+    sign_up: bool,
+}
+
+#[derive(Debug, Deserialize)]
+struct VerifyCodeForm {
+    email: String,
+    code: String,
+    #[serde(default)]
+    sign_up: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -35,9 +114,155 @@ struct SignOutQuery {
 
 pub fn routes() -> Router<SharedState> {
     Router::new()
+        .route("/sign-in", get(sign_in_page))
+        .route("/sign-in/code", post(send_sign_in_code))
+        .route("/sign-in/code/verify", post(verify_sign_in_code))
+        .route("/sign-up", get(sign_up_page).post(sign_up_with_email))
         .route("/auth/google", get(sign_in_with_google))
         .route("/auth/google/callback", get(sign_in_with_google_callback))
         .route("/auth", delete(sign_out))
+}
+
+async fn sign_in_page(
+    State(state): State<SharedState>,
+    MaybeCurrentUser(user): MaybeCurrentUser,
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    if user.is_some() {
+        return redirect!("/", &headers);
+    }
+    SignInTemplate::new(&state).into_response()
+}
+
+async fn sign_up_page(
+    State(state): State<SharedState>,
+    MaybeCurrentUser(user): MaybeCurrentUser,
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    if user.is_some() {
+        return redirect!("/", &headers);
+    }
+    SignUpTemplate::new(&state).into_response()
+}
+
+/// Creates an unverified account and emails it a code. Entering the code on
+/// `/sign-in/code/verify` verifies the account and signs it in. As with
+/// `send_sign_in_code`, an address that already has an account gets the same
+/// response, so this can't be used to probe for accounts.
+async fn sign_up_with_email(
+    State(state): State<SharedState>,
+    RealIp(ip_addr): RealIp,
+    Form(form): Form<SignUpForm>,
+) -> Result<impl IntoResponse> {
+    let page = SignUpTemplate {
+        first_name: form.first_name.clone(),
+        last_name: form.last_name.clone(),
+        email: form.email.clone(),
+        ..SignUpTemplate::new(&state)
+    };
+
+    let sign_up = match SignUp::try_from(form) {
+        Ok(sign_up) => sign_up,
+        Err(AppError::BadRequest(message)) => {
+            return Ok(SignUpTemplate {
+                error_message: Some(message),
+                ..page
+            });
+        }
+        Err(error) => return Err(error),
+    };
+
+    state
+        .user_use_cases
+        .sign_up_with_email
+        .execute(&sign_up, &ip_addr)
+        .await?;
+
+    Ok(SignUpTemplate {
+        code_sent: true,
+        email: sign_up.email.to_string(),
+        ..page
+    })
+}
+
+/// Emails a sign-in code. The response is the same whether or not the address
+/// has an account, so this can't be used to probe for accounts.
+async fn send_sign_in_code(
+    State(state): State<SharedState>,
+    Form(form): Form<SendCodeForm>,
+) -> Result<impl IntoResponse> {
+    let page = SignInTemplate {
+        email: form.email.trim().to_string(),
+        sign_up: form.sign_up,
+        ..SignInTemplate::new(&state)
+    };
+
+    let email = match Email::parse(&form.email) {
+        Ok(email) => email,
+        Err(AppError::BadRequest(message)) => {
+            return Ok(SignInTemplate {
+                error_message: Some(message),
+                ..page
+            });
+        }
+        Err(error) => return Err(error),
+    };
+
+    state
+        .user_use_cases
+        .send_sign_in_code
+        .execute(&email)
+        .await?;
+
+    Ok(SignInTemplate {
+        code_sent: true,
+        email: email.to_string(),
+        ..page
+    })
+}
+
+async fn verify_sign_in_code(
+    State(state): State<SharedState>,
+    RealIp(ip_addr): RealIp,
+    headers: HeaderMap,
+    cookies: CookieJar,
+    Form(form): Form<VerifyCodeForm>,
+) -> Result<impl IntoResponse> {
+    let verified = match Email::parse(&form.email) {
+        Ok(email) => {
+            state
+                .user_use_cases
+                .verify_sign_in_code
+                .execute(&email, &form.code)
+                .await
+        }
+        Err(error) => Err(error),
+    };
+    let user = match verified {
+        Ok(user) => user,
+        Err(AppError::BadRequest(message)) => {
+            return Ok(SignInTemplate {
+                code_sent: true,
+                sign_up: form.sign_up,
+                email: form.email.trim().to_string(),
+                error_message: Some(message),
+                ..SignInTemplate::new(&state)
+            }
+            .into_response());
+        }
+        Err(error) => return Err(error),
+    };
+
+    // Same path a Google sign-in takes, so the location and lock signals are
+    // refreshed.
+    let mut sign_in = CreateUser::from_existing(&user, ip_addr);
+    let user = state.user_use_cases.register.execute(&mut sign_in).await?;
+
+    if user.locked || !user.verified {
+        return Ok(redirect!("/", &headers));
+    }
+
+    Ok((cookies.add(auth_cookie(&user)?), redirect!("/", &headers)).into_response())
 }
 
 async fn sign_in_with_google(headers: HeaderMap, cookies: CookieJar) -> Result<impl IntoResponse> {
@@ -128,14 +353,25 @@ async fn sign_in_with_google_callback(
         .await?;
 
     // Locked accounts (banned country or an admin lock) never get a session —
-    // send them back to the homepage.
-    if user.locked {
+    // send them back to the homepage. Neither does an address Google hasn't
+    // verified; an emailed code can verify it instead.
+    if user.locked || !user.verified {
         let cookies = cookies.remove(Cookie::build(OAUTH_NONCE_COOKIE).path("/"));
-        return Ok((cookies, redirect!("/", &headers)).into_response());
+        let target = if user.locked { "/" } else { "/sign-in" };
+        return Ok((cookies, redirect!(target, &headers)).into_response());
     }
 
-    let token = Jwt::generate(&UserClaims::from(user))?;
-    let auth_cookie = Cookie::build(("auth_token", token))
+    let cookies = cookies
+        .add(auth_cookie(&user)?)
+        .remove(Cookie::build(OAUTH_NONCE_COOKIE).path("/"));
+
+    Ok((cookies, redirect!("/", &headers)).into_response())
+}
+
+/// Mint the session cookie for `user`.
+fn auth_cookie(user: &User) -> Result<Cookie<'static>> {
+    let token = Jwt::generate(&UserClaims::from(user.clone()))?;
+    Ok(Cookie::build(("auth_token", token))
         .path("/")
         .http_only(true)
         .same_site(cookie::SameSite::Lax)
@@ -143,12 +379,8 @@ async fn sign_in_with_google_callback(
             env::var("APP_ORIGIN")
                 .unwrap_or_default()
                 .starts_with("https://"),
-        );
-    let cookies = cookies
-        .add(auth_cookie)
-        .remove(Cookie::build(OAUTH_NONCE_COOKIE).path("/"));
-
-    Ok((cookies, redirect!("/", &headers)).into_response())
+        )
+        .build())
 }
 
 async fn sign_out(

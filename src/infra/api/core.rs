@@ -88,6 +88,8 @@ async fn sitemap_xml(State(state): State<SharedState>) -> Result<impl IntoRespon
     let mut urls = vec![
         sitemap_url(&state.seo.site_url, "/", None),
         sitemap_url(&state.seo.site_url, "/blogs", None),
+        sitemap_url(&state.seo.site_url, "/sign-in", None),
+        sitemap_url(&state.seo.site_url, "/sign-up", None),
         sitemap_url(&state.seo.site_url, "/privacy", None),
         sitemap_url(&state.seo.site_url, "/terms", None),
     ];

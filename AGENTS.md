@@ -262,6 +262,22 @@ paginate_with!(User, &db, "where role = $1", vec!["admin"]);
 Google is wired by default. To add a provider, extend the `OAuthProvider` enum and add its config — endpoints
 `/auth/{provider_code}` and `/auth/{provider_code}/callback` are generated automatically.
 
+## Email sign-up and sign-in (one-time codes)
+
+Besides Google, `/sign-up` creates an account from a first name, last name, and any email
+(`users.auth_provider = 'email'`, random farm-animal avatar from `domain/avatar.rs`), and `/sign-in` signs anyone in
+with a 6-digit code emailed through `mailman` (`MAILMAN_URL`, `MAILMAN_API_TOKEN`).
+
+- Codes live in `one_time_passcodes`, stored only as an HMAC keyed with `JWT_SECRET` and bound to the address. They
+  expire after 10 minutes, allow 5 attempts, and sends are throttled per address (see `domain/one_time_passcode.rs`).
+- Email sign-ups start `verified = false`; entering the first code verifies them. **Unverified (or locked) users never
+  get a session** — `BaseUser` treats them as signed out. A verified Google sign-in converts an email account to
+  `'google'`, taking Google's name and photo.
+- The send and sign-up steps answer identically whether or not an address has an account. Keep it that way.
+- e2e specs can't read the inbox: the test-auth shim (`infra/api/auth_test.rs`, mounted only when
+  `ENABLE_TEST_AUTH=true` and guarded by `TEST_AUTH_TOKEN`) exposes `POST /auth/test/sign-in-code`, wrapped by
+  `issueSignInCode` in `e2e/fixtures.ts`.
+
 ## Stripe
 
 ```sh

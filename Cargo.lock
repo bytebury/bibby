@@ -325,13 +325,17 @@ dependencies = [
  "cookie",
  "dotenvy",
  "geodude",
+ "hmac 0.12.1",
  "jsonwebtoken",
+ "mailman",
  "num-format",
  "oauth2",
  "pulldown-cmark",
+ "rand 0.10.1",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "shima",
  "sqlx 0.9.0",
  "tokio",
@@ -1743,6 +1747,17 @@ name = "mac"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
+
+[[package]]
+name = "mailman"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "83815a41c44499d5f5f7796cfab6a11ccd57d4e282259964bbedb317bd33ae87"
+dependencies = [
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "maplit"

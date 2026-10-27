@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT COUNT(*) AS \"issued!\",\n                   COALESCE(BOOL_OR(created_at > NOW() - make_interval(secs => $2)), FALSE) AS \"cooling_down!\"\n              FROM one_time_passcodes\n             WHERE email = $1\n               AND created_at > NOW() - INTERVAL '1 hour'\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "issued!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "cooling_down!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Float8"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "26c8c8291b3568d84ffe7d28845758d93fab437b67e9b0e4358985bd839db7a3"
+}

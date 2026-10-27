@@ -72,6 +72,8 @@
             <td>
               {% if u.locked %}
                 <span class="badge-danger">locked</span>
+              {% else if !u.verified %}
+                <span class="badge-warning" data-tooltip="Hasn't entered the code we emailed yet">unverified</span>
               {% else %}
                 <span class="badge-neutral">active</span>
               {% endif %}
@@ -140,6 +142,8 @@
           {% endif %}
           {% if u.locked %}
             <span class="badge-danger">locked</span>
+          {% else if !u.verified %}
+            <span class="badge-warning">unverified</span>
           {% else %}
             <span class="badge-neutral">active</span>
           {% endif %}

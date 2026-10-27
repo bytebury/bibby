@@ -29,10 +29,10 @@
     <meta name="apple-mobile-web-app-title" content="{{ shared.web_app_short_name }}" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <link rel="manifest" href="/site.webmanifest" />
-    <link rel="icon" href="/assets/images/app-icon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="/assets/images/app-icon.svg" />
+    <link rel="icon" href="{{ shared.asset("/assets/images/app-icon.svg") }}" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="{{ shared.asset("/assets/images/app-icon.svg") }}" />
     <script type="application/ld+json">{{ shared.structured_data_json()|safe }}</script>
-    <link rel="stylesheet" href="/assets/styles.css" />
+    <link rel="stylesheet" href="{{ shared.asset("/assets/styles.css") }}" />
     {% include "_partials/scripts.html" %}
     {% if shared.web_app_service_worker_enabled %}
       <script>

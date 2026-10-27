@@ -92,6 +92,7 @@ src/
     payments.rs           # Stripe client wrapper
     scheduler.rs          # the daily tick (plan expirations, sign-in pruning)
     seo.rs                # SeoConfig / WebAppConfig / PageMeta
+    assets.rs             # content-hash cache busting + Cache-Control for /assets
     auth/                 # Google OAuth, OAuth state, JWT claims
     api/                  # Axum routers, one file per resource; `extract/` for request guards
 templates/                # Askama templates; `_layouts/`, `_partials/`, `_macros/`, one folder per resource
@@ -255,6 +256,12 @@ fragment and an inline message instead — see `infra/api/auth.rs` and
   from `api/mod.rs`, never `Redirect::to`. Every handler that may redirect
   takes a `HeaderMap`.
 - Timestamps render as `<time data-utc="{{ x.created_at }}"></time>`.
+- **Link static files through `{{ shared.asset("/assets/…") }}`**, never a
+  bare `/assets/…` path. It appends `?v=<content hash>` (see
+  `infra/assets.rs`), and release builds cache only a current-hash URL
+  forever (`immutable`); anything else gets `max-age=3600`. A unit test fails
+  if a template links a `.js` or `.css` file without the helper. Dynamic
+  images such as flags may stay bare — they just get the short cache.
 
 ### Request extractors (`src/infra/api/extract/`)
 | Extractor | Meaning |

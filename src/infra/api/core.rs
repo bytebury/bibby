@@ -124,7 +124,7 @@ async fn site_webmanifest(State(state): State<SharedState>) -> impl IntoResponse
         "theme_color": state.web_app.theme_color,
         "icons": [
             {
-                "src": "/assets/images/app-icon.svg",
+                "src": state.assets.url("/assets/images/app-icon.svg"),
                 "sizes": "any",
                 "type": "image/svg+xml",
                 "purpose": "any maskable"

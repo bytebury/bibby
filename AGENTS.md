@@ -120,6 +120,14 @@ async fn sample(headers: HeaderMap) -> impl IntoResponse {
 **Implication:** every handler that *may* redirect must accept a `HeaderMap` parameter — including pure GET pages that
 gate on auth/role and bounce to `/` or `/upgrade`. There is no "this redirect can't be HTMX" exception.
 
+### Static files go through `shared.asset(...)`
+
+Link anything under `public/` with `{{ shared.asset("/assets/scripts/foo.js") }}`, not a literal `/assets/...` path. The
+helper appends `?v=<hash of the file's contents>`, so a deploy busts the cache for exactly the files that changed, and
+release builds serve that URL with `Cache-Control: immutable`. A bare path only gets `max-age=3600`. A unit test in
+`src/infra/assets.rs` fails on any template that links a `.js` or `.css` file without the helper. Don't hand-write
+`?v=` query strings.
+
 ### Timestamps render through `<time data-utc>`
 
 Every displayed timestamp in an askama template must render as:

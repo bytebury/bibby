@@ -1,0 +1,133 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                COUNT(*)                                         AS \"total!\",\n                COUNT(*) FILTER (WHERE role = 'free')            AS \"free!\",\n                COUNT(*) FILTER (WHERE role = 'professional')    AS \"pro!\",\n                COUNT(*) FILTER (WHERE role = 'admin')           AS \"admin!\",\n                COUNT(*) FILTER (WHERE locked)                   AS \"locked!\",\n                COUNT(*) FILTER (WHERE NOT verified)             AS \"unverified!\",\n                COUNT(*) FILTER (WHERE auth_provider = 'email')  AS \"email!\",\n                COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days')                                                AS \"new_30d!\",\n                COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '60 days' AND created_at < NOW() - INTERVAL '30 days')   AS \"new_prev_30d!\",\n                COUNT(*) FILTER (WHERE role = 'professional' AND created_at >= NOW() - INTERVAL '30 days')                      AS \"new_pro_30d!\",\n                COUNT(*) FILTER (WHERE role = 'professional' AND created_at >= NOW() - INTERVAL '60 days' AND created_at < NOW() - INTERVAL '30 days') AS \"new_pro_prev_30d!\",\n                COUNT(*) FILTER (WHERE role = 'free' AND created_at >= NOW() - INTERVAL '30 days')                              AS \"new_free_30d!\",\n                COUNT(*) FILTER (WHERE role = 'free' AND created_at >= NOW() - INTERVAL '60 days' AND created_at < NOW() - INTERVAL '30 days') AS \"new_free_prev_30d!\",\n                COUNT(*) FILTER (WHERE auth_provider = 'email' AND created_at >= NOW() - INTERVAL '30 days')                    AS \"new_email_30d!\",\n                COUNT(*) FILTER (WHERE auth_provider = 'email' AND created_at >= NOW() - INTERVAL '60 days' AND created_at < NOW() - INTERVAL '30 days') AS \"new_email_prev_30d!\",\n                (SELECT COUNT(*) FROM user_flags)                AS \"flagged!\",\n                (SELECT COUNT(*) FROM account_group_members)     AS \"linked!\"\n            FROM users\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "total!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "free!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "pro!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "admin!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "locked!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "unverified!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "email!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "new_30d!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "new_prev_30d!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 9,
+        "name": "new_pro_30d!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 10,
+        "name": "new_pro_prev_30d!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 11,
+        "name": "new_free_30d!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 12,
+        "name": "new_free_prev_30d!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 13,
+        "name": "new_email_30d!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 14,
+        "name": "new_email_prev_30d!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 15,
+        "name": "flagged!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 16,
+        "name": "linked!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "c97d0eedad1f35269d2275882d7ca020be9f590921b9ea3e963a08f6932be67c"
+}

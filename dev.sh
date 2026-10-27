@@ -66,6 +66,11 @@ GEODUDE_URL=http://localhost:8081
 MAILMAN_URL=
 MAILMAN_API_TOKEN=
 
+# Shared secret for POST /_internal/cron/tick, which runs the daily jobs (plan
+# expirations, sign-in pruning). Point a daily cron at it with the header
+# \`X-Cron-Secret: <this value>\`.
+CRON_SECRET=
+
 # Include your stripe secrets
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=

@@ -1,0 +1,68 @@
+<div class="card-header">
+  <div>
+    <h2 class="card-title">Linked accounts</h2>
+    <p class="card-subtitle">Accounts you've marked as the same person. Only admins can see these.</p>
+  </div>
+</div>
+<div class="card-body space-y-4">
+  {% if linked.is_empty() %}
+    <p class="text-sm text-gray-500">Not linked to any other accounts.</p>
+  {% else %}
+    <ul class="divide-y divide-gray-100">
+      {% for other in linked %}
+        <li class="flex items-center justify-between gap-3 py-2">
+          <a href="/users/{{ other.id }}" class="flex min-w-0 items-center gap-2 user-row-name">
+            <img src="{{ other.image_url }}" alt="" width="24" height="24" class="h-6 w-6 rounded-full" referrerpolicy="no-referrer" />
+            <span class="min-w-0">
+              <span class="block truncate text-sm font-medium">{{ other.full_name }}{% if other.locked %} <span class="badge-danger">locked</span>{% endif %}</span>
+              <span class="block truncate text-xs text-gray-500">{{ other.email }}</span>
+            </span>
+          </a>
+          <button type="button" class="btn-ghost" hx-delete="/users/{{ user.id }}/links/{{ other.id }}" hx-target="#links"
+                  hx-confirm="Unlink {{ other.email }} from this account?">Unlink</button>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  <form hx-post="/users/{{ user.id }}/links" hx-target="#links" class="space-y-1">
+    <label for="link_email" class="label">Link another account</label>
+    <div class="flex gap-2">
+      <input id="link_email" name="email" type="email" required placeholder="their@email.com" value="{{ link_email }}" class="input" />
+      <button type="submit" class="btn-primary whitespace-nowrap">Link</button>
+    </div>
+    {% if let Some(error) = link_error %}
+      <p class="text-sm text-red-600" role="alert">{{ error }}</p>
+    {% endif %}
+  </form>
+
+  <div class="space-y-2">
+    <p class="text-sm font-medium">Same IP as this account{% if suggestion_total > 0 %} ({{ suggestion_total }}){% endif %}</p>
+    {% if suggestions.is_empty() %}
+      <p class="text-sm text-gray-500">No other accounts have used their IPs.</p>
+    {% else %}
+      <p class="text-xs text-gray-500">Other accounts that signed in from, or were last seen on, one of their IPs. A shared IP can also be an office network or a VPN.</p>
+      <ul class="divide-y divide-gray-100">
+        {% for suggestion in suggestions %}
+          <li class="flex items-center justify-between gap-3 py-2">
+            <a href="/users/{{ suggestion.user.id }}" class="flex min-w-0 items-center gap-2 user-row-name">
+              <img src="{{ suggestion.user.image_url }}" alt="" width="24" height="24" class="h-6 w-6 rounded-full" referrerpolicy="no-referrer" />
+              <span class="min-w-0">
+                <span class="block truncate text-sm font-medium">{{ suggestion.user.full_name }}{% if suggestion.user.locked %} <span class="badge-danger">locked</span>{% endif %}</span>
+                <span class="block truncate text-xs text-gray-500">{{ suggestion.user.email }}</span>
+                <span class="block truncate font-mono text-xs text-gray-500">{{ suggestion.shared_ips.join(", ") }}</span>
+              </span>
+            </a>
+            <form hx-post="/users/{{ user.id }}/links" hx-target="#links">
+              <input type="hidden" name="email" value="{{ suggestion.user.email }}" />
+              <button type="submit" class="btn-ghost">Link</button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+      {% if suggestion_total > suggestions.len() as i64 %}
+        <p class="text-xs text-gray-500">Showing the {{ suggestions.len() }} newest of {{ suggestion_total }}.</p>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>

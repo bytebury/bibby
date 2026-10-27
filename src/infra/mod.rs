@@ -6,4 +6,5 @@ pub mod geolocation;
 pub mod markdown;
 pub mod pagination;
 pub mod payments;
+pub mod scheduler;
 pub mod seo;

@@ -1,4 +1,5 @@
 {% extends "_layouts/base.html" %}
+{% import "users/_macros.html" as users_ui %}
 
 {% block title %}{{ shared.title_tag() }}{% endblock %}
 
@@ -6,179 +7,121 @@
   <header class="page-header">
     <div>
       <h1 class="page-title">Manage Users</h1>
-      <p class="page-subtitle">{{ users.total_formatted() }} total</p>
+      <p class="page-subtitle">{{ users.total_formatted() }} {% if users.total == 1 %}match{% else %}matches{% endif %}</p>
     </div>
+    <a href="/admin/analytics" class="btn-secondary">Site analytics</a>
   </header>
 
-  <form method="get" action="/users" class="mb-4">
-    <input
-      type="search"
-      name="q"
-      value="{{ search_query }}"
-      placeholder="Search by email, name, or IP"
-      class="input"
-    />
+  <form id="user_filters" method="get" action="/users" class="mb-4 space-y-3"
+        hx-get="/users" hx-trigger="input delay:200ms, change" hx-select="#list" hx-target="#list" hx-swap="outerHTML" hx-push-url="true">
+    <input type="search" name="q" value="{{ search_query }}" aria-label="Search users"
+           placeholder="Search by email, name, or IP" class="input" />
+    <div class="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Filter by plan">
+      {% for option in role_filters %}
+        <label class="filter-chip">
+          <input type="radio" name="role" value="{{ option.as_str() }}" class="sr-only" {% if *option == role_filter %}checked{% endif %} />
+          {{ option.label() }}
+        </label>
+      {% endfor %}
+      <span class="mx-1 h-5 w-px bg-gray-300" aria-hidden="true"></span>
+      <label class="filter-chip">
+        <input type="checkbox" name="flagged" class="sr-only" {% if flagged_only %}checked{% endif %} />
+        Flagged
+      </label>
+    </div>
   </form>
 
-  <div class="hidden md:block table-wrap">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Email</th>
-          <th>Role</th>
-          <th>Status</th>
-          <th>Stripe</th>
-          <th>Last seen</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for u in users.data %}
+  <div id="list">
+    <div class="hidden md:block table-wrap">
+      <table class="table">
+        <thead>
           <tr>
-            <td>
-              <div class="flex items-center gap-3">
-                <div class="relative shrink-0">
-                  <img
-                    src="{{ u.image_url }}"
-                    alt="{{ u.full_name }}"
-                    width="40"
-                    height="40"
-                    class="h-10 w-10 rounded-full border border-gray-200 object-cover"
-                    referrerpolicy="no-referrer"
-                  />
-                  <img
-                    src="/assets/images/flags/{{ u.country_code }}.svg"
-                    alt="{{ u.country_code }}"
-                    data-tooltip="{% if let Some(region) = u.region_name %}{{ region }}, {% endif %}{{ u.country_name }}"
-                    width="20"
-                    height="16"
-                    class="absolute -bottom-1 -right-1 rounded-sm border border-white shadow-sm"
-                  />
-                </div>
-                <span>{{ u.full_name }}</span>
-              </div>
-            </td>
-            <td class="text-gray-600">{{ u.email }}</td>
-            <td>
-              {% if u.role.to_string() == "admin" %}
-                <span class="badge-warning">{{ u.role }}</span>
-              {% else if u.role.to_string() == "professional" %}
-                <span class="badge-success">{{ u.role }}</span>
-              {% else %}
-                <span class="badge-neutral">{{ u.role }}</span>
-              {% endif %}
-            </td>
-            <td>
-              {% if u.locked %}
-                <span class="badge-danger">locked</span>
-              {% else if !u.verified %}
-                <span class="badge-warning" data-tooltip="Hasn't entered the code we emailed yet">unverified</span>
-              {% else %}
-                <span class="badge-neutral">active</span>
-              {% endif %}
-            </td>
-            <td class="text-gray-500">
-              {% if let Some(cid) = u.stripe_customer_id %}
-                <a
-                  href="https://dashboard.stripe.com/customers/{{ cid }}"
-                  target="_blank"
-                  rel="noopener"
-                  class="btn-link font-mono text-xs"
-                  data-tooltip="Open in Stripe dashboard"
-                >{{ cid }}</a>
-              {% else %}
-                <span class="text-gray-400">—</span>
-              {% endif %}
-            </td>
-            <td class="text-gray-500"><time data-utc="{{ u.last_seen_at }}"></time></td>
-            <td class="text-right">
-              <button hx-get="/users/{{ u.id }}/edit" hx-target="#modal" class="btn-link">Edit</button>
-            </td>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Stripe</th>
+            <th>Last seen</th>
           </tr>
-        {% endfor %}
-        {% if users.data.is_empty() %}
-          <tr><td colspan="7" class="table-empty">No users found.</td></tr>
-        {% endif %}
-      </tbody>
-    </table>
-  </div>
-
-  <div class="md:hidden space-y-3">
-    {% for u in users.data %}
-      <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-        <div class="flex items-start gap-3">
-          <div class="relative shrink-0">
-            <img
-              src="{{ u.image_url }}"
-              alt="{{ u.full_name }}"
-              width="40"
-              height="40"
-              class="h-10 w-10 rounded-full border border-gray-200 object-cover"
-              referrerpolicy="no-referrer"
-            />
-            <img
-              src="/assets/images/flags/{{ u.country_code }}.svg"
-              alt="{{ u.country_code }}"
-              data-tooltip="{% if let Some(region) = u.region_name %}{{ region }}, {% endif %}{{ u.country_name }}"
-              width="20"
-              height="16"
-              class="absolute -bottom-1 -right-1 rounded-sm border border-white shadow-sm"
-            />
-          </div>
-          <div class="min-w-0 flex-1">
-            <p class="truncate font-medium">{{ u.full_name }}</p>
-            <p class="truncate text-sm text-gray-600">{{ u.email }}</p>
-          </div>
-          <button hx-get="/users/{{ u.id }}/edit" hx-target="#modal" class="btn-link shrink-0">Edit</button>
-        </div>
-        <div class="mt-3 flex flex-wrap items-center gap-2">
-          {% if u.role.to_string() == "admin" %}
-            <span class="badge-warning">{{ u.role }}</span>
-          {% else if u.role.to_string() == "professional" %}
-            <span class="badge-success">{{ u.role }}</span>
-          {% else %}
-            <span class="badge-neutral">{{ u.role }}</span>
+        </thead>
+        <tbody>
+          {% for u in users.data %}
+            {% let linked_count = linked_counts.get(u.id).copied().unwrap_or(0) %}
+            <tr class="cursor-pointer" onclick="if (!event.target.closest('a')) location.href = '/users/{{ u.id }}'">
+              <td>
+                <div class="flex items-center gap-3">
+                  <div class="relative shrink-0">
+                    <img src="{{ u.image_url }}" alt="" width="40" height="40"
+                         class="h-10 w-10 rounded-full border border-gray-200 object-cover" referrerpolicy="no-referrer" />
+                    <img src="/assets/images/flags/{{ u.country_code }}.svg" alt="{{ u.country_code }}"
+                         data-tooltip="{% if let Some(city) = u.city_name %}{{ city }}, {% endif %}{% if let Some(region) = u.region_name %}{{ region }}, {% endif %}{{ u.country_name }}"
+                         width="20" height="16" class="absolute -bottom-1 -right-1 rounded-sm border border-white shadow-sm" />
+                  </div>
+                  <a href="/users/{{ u.id }}" class="user-row-name whitespace-nowrap font-medium hover:underline">{{ u.full_name }}</a>
+                  {% call users_ui::status_icons(u, flagged.contains(u.id), linked_count) %}{% endcall %}
+                </div>
+              </td>
+              <td class="text-gray-600">{{ u.email }}</td>
+              <td>{% call users_ui::role_badge(u.role) %}{% endcall %}</td>
+              <td class="text-gray-500">
+                {% if let Some(cid) = u.stripe_customer_id %}
+                  <a href="https://dashboard.stripe.com/customers/{{ cid }}" target="_blank" rel="noopener"
+                     class="btn-link font-mono text-xs" data-tooltip="Open in Stripe dashboard">{{ cid }}</a>
+                {% else %}
+                  <span class="text-gray-400">—</span>
+                {% endif %}
+              </td>
+              <td class="text-gray-500"><time data-utc="{{ u.last_seen_at }}"></time></td>
+            </tr>
+          {% endfor %}
+          {% if users.data.is_empty() %}
+            <tr><td colspan="5" class="table-empty">No users found.</td></tr>
           {% endif %}
-          {% if u.locked %}
-            <span class="badge-danger">locked</span>
-          {% else if !u.verified %}
-            <span class="badge-warning">unverified</span>
-          {% else %}
-            <span class="badge-neutral">active</span>
-          {% endif %}
-          <span class="text-xs text-gray-500">
-            Last seen <time data-utc="{{ u.last_seen_at }}"></time>
-          </span>
-        </div>
-        {% if let Some(cid) = u.stripe_customer_id %}
-          <div class="mt-2 truncate">
-            <a
-              href="https://dashboard.stripe.com/customers/{{ cid }}"
-              target="_blank"
-              rel="noopener"
-              class="btn-link font-mono text-xs"
-            >{{ cid }}</a>
-          </div>
-        {% endif %}
-      </div>
-    {% endfor %}
-    {% if users.data.is_empty() %}
-      <div class="rounded-lg border border-gray-200 bg-white px-4 py-8 text-center text-gray-500 shadow-sm">
-        No users found.
-      </div>
-    {% endif %}
-  </div>
+        </tbody>
+      </table>
+    </div>
 
-  <nav class="mt-4 flex items-center justify-between text-sm">
-    <span class="text-gray-500">Page {{ users.page }} of {{ users.total_pages() }}</span>
-    <div class="flex gap-2">
-      {% if users.has_previous_page %}
-        <a class="btn-link" href="{{ pagination_base }}page={{ users.page - 1 }}">Previous</a>
-      {% endif %}
-      {% if users.has_next_page %}
-        <a class="btn-link" href="{{ pagination_base }}page={{ users.page + 1 }}">Next</a>
+    <div class="md:hidden space-y-3">
+      {% for u in users.data %}
+        {% let linked_count = linked_counts.get(u.id).copied().unwrap_or(0) %}
+        <a href="/users/{{ u.id }}" class="block rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <div class="flex items-start gap-3">
+            <div class="relative shrink-0">
+              <img src="{{ u.image_url }}" alt="" width="40" height="40"
+                   class="h-10 w-10 rounded-full border border-gray-200 object-cover" referrerpolicy="no-referrer" />
+              <img src="/assets/images/flags/{{ u.country_code }}.svg" alt="{{ u.country_code }}" width="20" height="16"
+                   class="absolute -bottom-1 -right-1 rounded-sm border border-white shadow-sm" />
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <p class="truncate font-medium">{{ u.full_name }}</p>
+                {% call users_ui::status_icons(u, flagged.contains(u.id), linked_count) %}{% endcall %}
+              </div>
+              <p class="truncate text-sm text-gray-600">{{ u.email }}</p>
+              <div class="mt-1 flex flex-wrap items-center gap-2">
+                {% call users_ui::role_badge(u.role) %}{% endcall %}
+                <span class="text-xs text-gray-500">Last seen <time data-utc="{{ u.last_seen_at }}"></time></span>
+              </div>
+            </div>
+          </div>
+        </a>
+      {% endfor %}
+      {% if users.data.is_empty() %}
+        <div class="rounded-lg border border-gray-200 bg-white px-4 py-8 text-center text-gray-500 shadow-sm">
+          No users found.
+        </div>
       {% endif %}
     </div>
-  </nav>
+
+    <nav class="mt-4 flex items-center justify-between text-sm">
+      <span class="text-gray-500">Page {{ users.page }} of {{ users.total_pages() }}</span>
+      <div class="flex gap-2">
+        {% if users.has_previous_page %}
+          <a class="btn-link" href="{{ pagination_base }}page={{ users.page - 1 }}">Previous</a>
+        {% endif %}
+        {% if users.has_next_page %}
+          <a class="btn-link" href="{{ pagination_base }}page={{ users.page + 1 }}">Next</a>
+        {% endif %}
+      </div>
+    </nav>
+  </div>
 {% endblock %}

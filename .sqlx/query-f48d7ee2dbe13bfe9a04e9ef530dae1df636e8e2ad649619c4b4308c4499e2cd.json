@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                UPDATE users\n                   SET plan_expiry_reminder_days = $1\n                 WHERE id = $2\n                   AND plan_expiry_date = $3\n                   AND (plan_expiry_reminder_days IS NULL OR plan_expiry_reminder_days > $1)\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4",
+        "Date"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f48d7ee2dbe13bfe9a04e9ef530dae1df636e8e2ad649619c4b4308c4499e2cd"
+}

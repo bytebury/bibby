@@ -1,0 +1,121 @@
+{% extends "_layouts/base.html" %}
+{% import "users/_macros.html" as users_ui %}
+
+{% block title %}{{ shared.title_tag() }}{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+  <a href="/users" class="btn-link">&larr; Manage Users</a>
+
+  <section class="card">
+    <div class="card-body flex items-start justify-between gap-4">
+      <div class="flex min-w-0 items-start gap-4">
+        <div class="relative shrink-0">
+          <img src="{{ user.image_url }}" alt="" width="64" height="64"
+               class="h-16 w-16 rounded-full border border-gray-200 object-cover" referrerpolicy="no-referrer" />
+          <img src="/assets/images/flags/{{ user.country_code }}.svg" alt="{{ user.country_code }}" width="24" height="18"
+               data-tooltip="{{ user.country_name }}"
+               class="absolute -bottom-1 -right-1 rounded-sm border border-white shadow-sm" />
+        </div>
+        <div class="min-w-0 space-y-1">
+          <h1 class="page-title truncate">{{ user.full_name }}</h1>
+          <div class="flex flex-wrap items-center gap-2">
+            {% call users_ui::role_badge(user.role) %}{% endcall %}
+            {% if user.verified %}
+              <span class="badge-success verified-badge" data-tooltip="Signs in with {% if user.signs_in_with_email() %}an emailed code{% else %}Google{% endif %}">verified</span>
+            {% else %}
+              <span class="badge-warning unverified-badge" data-tooltip="Hasn't entered the code we emailed yet">unverified</span>
+            {% endif %}
+            {% if user.stripe_customer_id.is_some() %}<span class="badge-neutral">Stripe customer</span>{% endif %}
+            {% if user.locked %}<span class="badge-danger">locked</span>{% endif %}
+            {% if let Some(flag) = flag %}
+              <span class="badge-danger flagged-badge"
+                    data-tooltip="Flagged by {% if let Some(name) = flag.flagged_by_name %}{{ name }}{% else %}a former admin{% endif %} on {{ flag.created_at.format("%B %-d, %Y") }}">flagged</span>
+            {% endif %}
+            {% if !linked.is_empty() %}
+              <a href="#links" class="badge-warning linked-badge">Linked to {{ linked.len() }} {% if linked.len() == 1 %}account{% else %}accounts{% endif %}</a>
+            {% endif %}
+          </div>
+          <a href="mailto:{{ user.email }}" class="btn-link user-email">{{ user.email }}</a>
+        </div>
+      </div>
+
+      <details class="menu relative shrink-0">
+        <summary class="btn-ghost h-9 w-9 cursor-pointer list-none [&::-webkit-details-marker]:hidden" aria-label="More actions">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="5" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="12" cy="19" r="1" />
+          </svg>
+        </summary>
+        <div class="menu-items absolute right-0 top-full z-30 mt-2 flex w-52 flex-col gap-1 rounded-md border border-gray-200 bg-white p-2 shadow-md">
+          <button type="button" class="btn-ghost justify-start" hx-get="/users/{{ user.id }}/edit" hx-target="#modal">Edit</button>
+          {% if let Some(cid) = user.stripe_customer_id %}
+            <a class="btn-ghost justify-start" href="https://dashboard.stripe.com/customers/{{ cid }}" target="_blank" rel="noopener">View in Stripe</a>
+          {% endif %}
+          {% if flag.is_some() %}
+            <button type="button" class="btn-ghost justify-start" hx-delete="/users/{{ user.id }}/flag" hx-swap="none">Unflag</button>
+          {% else %}
+            <button type="button" class="btn-ghost justify-start" hx-post="/users/{{ user.id }}/flag" hx-swap="none">Flag</button>
+          {% endif %}
+          {% if !user.is_admin() %}
+            <button type="button" class="btn-ghost justify-start text-red-600"
+                    hx-confirm="Permanently delete {{ user.full_name }}? This also cancels any active Stripe subscription and cannot be undone."
+                    hx-delete="/users/{{ user.id }}" hx-swap="none">Delete user</button>
+          {% endif %}
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="grid gap-4 sm:grid-cols-3">
+    <div class="card card-body">
+      <p class="text-xs text-gray-500">Days active</p>
+      <p class="text-2xl font-semibold">{{ self.active_day_count() }} <span class="text-sm font-normal text-gray-500">of {{ activity_window_days }}</span></p>
+      <div class="activity-strip" aria-label="Signed-in days over the last {{ activity_window_days }} days">
+        {% for day in activity %}
+          <span class="{% if day.active %}active{% endif %}" data-tooltip="{{ day.day.format("%B %-d, %Y") }}{% if day.active %} · active{% endif %}"></span>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="card card-body">
+      <p class="text-xs text-gray-500">Last seen</p>
+      <p class="text-lg font-semibold"><time data-utc="{{ user.last_seen_at }}"></time></p>
+    </div>
+    <div class="card card-body">
+      <p class="text-xs text-gray-500">Joined</p>
+      <p class="text-lg font-semibold"><time data-utc="{{ user.created_at }}"></time></p>
+    </div>
+  </section>
+
+  <div class="grid items-start gap-4 md:grid-cols-2">
+    <div class="space-y-4">
+      <section class="card">
+        <div class="card-header"><h2 class="card-title">Account</h2></div>
+        <dl class="card-body grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+          <dt class="text-gray-500">Signs in with</dt>
+          <dd>{% if user.signs_in_with_email() %}Emailed code{% else %}Google{% endif %}</dd>
+          <dt class="text-gray-500">Plan ends</dt>
+          <dd>{% if let Some(plan_expiry_date) = user.plan_expiry_date %}<time datetime="{{ plan_expiry_date }}">{{ plan_expiry_date.format("%B %-d, %Y") }}</time>{% else if user.stripe_customer_id.is_some() %}Billed through Stripe{% else %}No end date{% endif %}</dd>
+          <dt class="text-gray-500">Location</dt>
+          <dd>
+            {% if let Some(city) = user.city_name %}{{ city }}, {% endif %}{% if let Some(region) = user.region_name %}{{ region }}, {% endif %}{{ user.country_name }}
+          </dd>
+          <dt class="text-gray-500">Last known IP</dt>
+          <dd><a class="btn-link font-mono text-xs" target="_blank" rel="noopener noreferrer" href="https://ip-api.com/#{{ user.last_known_ip }}">{{ user.last_known_ip }}</a></dd>
+        </dl>
+      </section>
+
+      {% include "users/_sign_ins.html" %}
+    </div>
+
+    <div class="space-y-4">
+      <section class="card" id="links">
+        {% include "users/_links.html" %}
+      </section>
+
+      <section class="card" id="notes">
+        {% include "users/_notes.html" %}
+      </section>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            DELETE FROM user_sign_ins s\n            WHERE s.created_at < NOW() - make_interval(days => $1)\n              AND s.id <> (SELECT MAX(latest.id) FROM user_sign_ins latest\n                           WHERE latest.user_id = s.user_id)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "251ed82e9b1bd8c27bbf36cf3a3d9fdbdfba9effc08eb02445668c9dff8ea07b"
+}

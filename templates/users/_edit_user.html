@@ -1,31 +1,10 @@
-{% import "_macros/buttons.html" as ui %}
 <div class="card-header gap-3">
-  <div class="flex items-center gap-3 min-w-0 flex-1">
-    <div class="relative shrink-0">
-      <img
-        src="{{ user.image_url }}"
-        alt="{{ user.full_name }}"
-        width="48"
-        height="48"
-        class="h-12 w-12 rounded-full border border-gray-200 object-cover"
-        referrerpolicy="no-referrer"
-      />
-      <img
-        src="/assets/images/flags/{{ user.country_code }}.svg"
-        alt="{{ user.country_code }}"
-        data-tooltip="{% if let Some(region) = user.region_name %}{{ region }}, {% endif %}{{ user.country_name }}"
-        width="20"
-        height="16"
-        class="absolute -bottom-1 -right-1 rounded-sm border border-white shadow-sm"
-      />
-    </div>
+  <div class="flex min-w-0 flex-1 items-center gap-3">
+    <img src="{{ user.image_url }}" alt="" width="48" height="48"
+         class="h-12 w-12 shrink-0 rounded-full border border-gray-200 object-cover" referrerpolicy="no-referrer" />
     <div class="min-w-0 flex-1">
-      <h2 class="card-title truncate">{{ user.full_name }}</h2>
+      <h2 class="card-title truncate">Edit {{ user.full_name }}</h2>
       <p class="card-subtitle truncate">{{ user.email }}</p>
-      <p class="card-subtitle font-mono text-xs truncate">
-        <a class="font-medium text-blue-600 underline underline-offset-2" href="https://ip-api.com/#{{ user.last_known_ip }}" rel="noopener noreferrer"
-           target="_blank">{{ user.last_known_ip }}</a>
-      </p>
     </div>
   </div>
   <button type="button" class="btn-ghost shrink-0" onclick="closeModal()">&times;</button>
@@ -33,12 +12,25 @@
 
 <form hx-patch="/users/{{ user.id }}" hx-swap="none" class="card-body space-y-4">
   <label class="block">
+    <span class="label">Email</span>
+    <input type="email" name="email" required autocomplete="off" maxlength="254" value="{{ user.email }}" class="input mt-1" />
+    <span class="mt-1 block text-xs text-gray-500">Changing this points the account at a different login. The old address stops working right away.</span>
+  </label>
+
+  <label class="block">
     <span class="label">Role</span>
     <select name="role" class="input mt-1">
-      <option value="free" {% if user.role.to_string() == "free" %}selected{% endif %}>Free</option>
-      <option value="professional" {% if user.role.to_string() == "professional" %}selected{% endif %}>Professional</option>
-      <option value="admin" {% if user.role.to_string() == "admin" %}selected{% endif %}>Admin</option>
+      <option value="free" {% if user.role == Role::Free %}selected{% endif %}>Free</option>
+      <option value="professional" {% if user.role == Role::Professional %}selected{% endif %}>Professional</option>
+      <option value="admin" {% if user.role == Role::Admin %}selected{% endif %}>Admin</option>
     </select>
+  </label>
+
+  <label class="block">
+    <span class="label">Plan end date <span class="font-normal text-gray-400">(optional)</span></span>
+    <input type="date" name="plan_expiry_date" class="input mt-1"
+           value="{% if let Some(plan_expiry_date) = user.plan_expiry_date %}{{ plan_expiry_date }}{% endif %}" />
+    <span class="mt-1 block text-xs text-gray-500">Last day of a Professional plan granted by hand. They're emailed a month, a week, and a day before, then moved to Free. Ignored for Free and Admin, and cleared if the plan moves to Stripe.</span>
   </label>
 
   <label class="flex items-center gap-2">
@@ -46,15 +38,7 @@
     <span class="text-sm">Locked (cannot sign in)</span>
   </label>
 
-  <input type="hidden" name="last_known_ip" value="{{ user.last_known_ip }}" />
-  <input type="hidden" name="last_seen_at" value="{{ user.last_seen_at }}" />
-  {% if let Some(cid) = user.country_id %}<input type="hidden" name="country_id" value="{{ cid }}" />{% endif %}
-  {% if let Some(rid) = user.region_id %}<input type="hidden" name="region_id" value="{{ rid }}" />{% endif %}
-
-  <div class="flex justify-between pt-2">
-    {% let user_path = format!("/users/{}", self.user.id) %}
-    {% let confirm_text = format!("Delete {}? This cannot be undone.", self.user.email) %}
-    {% call ui::spinner_button("delete", user_path.as_str(), "Delete user", "btn-danger", confirm_text.as_str()) %}{% endcall %}
+  <div class="flex justify-end pt-2">
     <button type="submit" class="btn-primary">Save</button>
   </div>
 </form>

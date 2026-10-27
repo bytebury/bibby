@@ -369,7 +369,7 @@ async fn sign_in_with_google_callback(
 }
 
 /// Mint the session cookie for `user`.
-fn auth_cookie(user: &User) -> Result<Cookie<'static>> {
+pub fn auth_cookie(user: &User) -> Result<Cookie<'static>> {
     let token = Jwt::generate(&UserClaims::from(user.clone()))?;
     Ok(Cookie::build(("auth_token", token))
         .path("/")

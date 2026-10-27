@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            WITH mine AS (\n                SELECT ip FROM user_sign_ins WHERE user_id = $1\n                UNION\n                SELECT last_known_ip FROM users WHERE id = $1\n            ),\n            linked AS (\n                SELECT other.user_id\n                FROM account_group_members me\n                JOIN account_group_members other ON other.group_id = me.group_id\n                WHERE me.user_id = $1\n            ),\n            matches AS (\n                SELECT s.user_id, s.ip\n                FROM user_sign_ins s\n                JOIN mine m ON m.ip = s.ip\n                UNION\n                SELECT u.id, u.last_known_ip\n                FROM users u\n                JOIN mine m ON m.ip = u.last_known_ip\n            )\n            SELECT user_id AS \"user_id!\",\n                   array_agg(DISTINCT ip ORDER BY ip) AS \"shared_ips!\",\n                   COUNT(*) OVER () AS \"total!\"\n            FROM matches\n            WHERE user_id <> $1\n              AND ip NOT IN ('', 'unknown')\n              AND user_id NOT IN (SELECT user_id FROM linked)\n            GROUP BY user_id\n            ORDER BY user_id DESC\n            LIMIT $2\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id!",
+        "type_info": "Int4",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "shared_ips!",
+        "type_info": "TextArray",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "total!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "4c576265b6fe10264728265d5682c08350657a6aff56c7b6e544a8519545cafd"
+}

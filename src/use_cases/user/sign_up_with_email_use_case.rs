@@ -54,6 +54,7 @@ impl SignUpWithEmailUseCase {
         let mut request = CreateUser {
             country_id: None,
             region_id: None,
+            city_id: None,
             email: sign_up.email.to_string(),
             first_name: sign_up.first_name.clone(),
             last_name: Some(sign_up.last_name.clone()),

@@ -17,6 +17,7 @@
           {% when Some with (user) %}
             {% if user.is_admin() %}
               <a href="/users" class="navbar-link">Users</a>
+              <a href="/admin/analytics" class="navbar-link">Analytics</a>
               <a href="/countries" class="navbar-link">Countries</a>
               <a href="/announcements" class="navbar-link">Announcements</a>
             {% endif %}
@@ -39,6 +40,7 @@
         {% when Some with (user) %}
           {% if user.is_admin() %}
             <a href="/users" class="navbar-link">Users</a>
+              <a href="/admin/analytics" class="navbar-link">Analytics</a>
             <a href="/countries" class="navbar-link">Countries</a>
             <a href="/announcements" class="navbar-link">Announcements</a>
           {% endif %}

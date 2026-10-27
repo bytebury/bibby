@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM account_groups g\n                 WHERE g.id = $1\n                   AND (SELECT COUNT(*) FROM account_group_members m WHERE m.group_id = g.id) < 2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7755844318723d1c7daf3d34b503e53cb255881888d0b8e516a40bb07d258282"
+}

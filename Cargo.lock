@@ -2819,9 +2819,9 @@ dependencies = [
 
 [[package]]
 name = "shima"
-version = "0.6.5"
+version = "0.6.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15e65bb5109d5c091a68c92198c6c6301c774008e9c556b67b963b82349c3ec4"
+checksum = "e7930ecab2eba856d7c4f36dded775e20da2fea97bd5ddfb6bb95ea8fec4b581"
 dependencies = [
  "hex",
  "hmac 0.12.1",

@@ -1,10 +1,17 @@
+pub mod account_group;
+pub mod admin_analytics;
 pub mod announcement;
 pub mod avatar;
 pub mod blog;
+pub mod city;
 pub mod country;
 pub mod one_time_passcode;
 pub mod region;
+pub mod sign_in;
 pub mod user;
+pub mod user_activity;
+pub mod user_flag;
+pub mod user_note;
 pub mod value_objects;
 
 use crate::prelude::*;

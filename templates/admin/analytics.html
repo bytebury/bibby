@@ -1,0 +1,143 @@
+{% extends "_layouts/base.html" %}
+
+{% block title %}{{ shared.title_tag() }}{% endblock %}
+
+{% macro delta_badge(delta) %}
+{% if let Some(pct) = delta.formatted() %}
+<span class="inline-flex items-center gap-1 text-xs font-semibold {% if delta.is_up() %}text-emerald-700{% else if delta.is_down() %}text-red-700{% else %}text-gray-500{% endif %}">
+  {% if delta.is_up() %}
+  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M3 17l6 -6l4 4l8 -8"/><path d="M14 7l7 0l0 7"/></g></svg>
+  {% else if delta.is_down() %}
+  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M3 7l6 6l4 -4l8 8"/><path d="M14 17l7 0l0 -7"/></g></svg>
+  {% else %}
+  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M5 12l14 0"/></svg>
+  {% endif %}
+  {{ pct }}
+</span>
+{% endif %}
+{% endmacro %}
+
+{% block content %}
+<div class="space-y-4">
+  <header class="page-header mb-0">
+    <div>
+      <h1 class="page-title">Site Analytics</h1>
+      <p class="page-subtitle">A snapshot of the user base. Deltas compare the last 30 days to the prior 30 days.</p>
+    </div>
+    <a href="/users" class="btn-secondary">Manage users</a>
+  </header>
+
+  <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div class="card card-body kpi">
+      <div class="flex items-start justify-between"><p class="text-xs text-gray-500">Total users</p>{% call delta_badge(analytics.users_delta()) %}{% endcall %}</div>
+      <p class="text-2xl font-semibold">{{ self.int(analytics.total_users) }}</p>
+      <p class="text-xs text-gray-500">+{{ self.int(analytics.new_users_last_30d) }} in last 30d (prev {{ self.int(analytics.new_users_prev_30d) }})</p>
+    </div>
+    <div class="card card-body kpi">
+      <div class="flex items-start justify-between"><p class="text-xs text-gray-500">Professional users</p>{% call delta_badge(analytics.pro_users_delta()) %}{% endcall %}</div>
+      <p class="text-2xl font-semibold">{{ self.int(analytics.pro_users) }}</p>
+      <p class="text-xs text-gray-500">Paid through Stripe or granted by an admin</p>
+    </div>
+    <div class="card card-body kpi">
+      <div class="flex items-start justify-between"><p class="text-xs text-gray-500">Free users</p>{% call delta_badge(analytics.free_users_delta()) %}{% endcall %}</div>
+      <p class="text-2xl font-semibold">{{ self.int(analytics.free_users) }}</p>
+      <p class="text-xs text-gray-500">{{ self.int(analytics.admin_users) }} admin · {{ self.int(analytics.locked_users) }} locked</p>
+    </div>
+    <div class="card card-body kpi">
+      <div class="flex items-start justify-between"><p class="text-xs text-gray-500">Active users</p>{% call delta_badge(analytics.active_users_delta()) %}{% endcall %}</div>
+      <p class="text-2xl font-semibold">{{ self.int(analytics.active_users_last_30d) }}</p>
+      <p class="text-xs text-gray-500">Signed in during the last 30d (prev {{ self.int(analytics.active_users_prev_30d) }})</p>
+    </div>
+    <div class="card card-body kpi">
+      <div class="flex items-start justify-between"><p class="text-xs text-gray-500">Email sign-ups</p>{% call delta_badge(analytics.email_users_delta()) %}{% endcall %}</div>
+      <p class="text-2xl font-semibold">{{ self.int(analytics.email_users) }}</p>
+      <p class="text-xs text-gray-500">{{ self.int(analytics.unverified_users) }} still unverified</p>
+    </div>
+    <div class="card card-body kpi">
+      <div class="flex items-start justify-between"><p class="text-xs text-gray-500">Flagged users</p></div>
+      <p class="text-2xl font-semibold">{{ self.int(analytics.flagged_users) }}</p>
+      <p class="text-xs text-gray-500">{{ self.int(analytics.linked_users) }} accounts linked to another</p>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title">Daily active users</h2>
+        <p class="card-subtitle">Distinct users with at least one signed-in request that day.</p>
+      </div>
+      <div class="text-right">
+        <div class="flex items-center justify-end gap-2">
+          <strong class="text-lg">{{ self.int(analytics.current_window_total) }}</strong>
+          {% call delta_badge(analytics.dau_delta()) %}{% endcall %}
+        </div>
+        <p class="text-xs text-gray-500">vs {{ self.int(analytics.previous_window_total) }} prior 30d</p>
+      </div>
+    </div>
+    <div class="card-body"><div class="h-80"><canvas id="dau-chart" aria-label="Daily active users, last 30 days compared to the prior 30 days" role="img"></canvas></div></div>
+  </section>
+
+  <section class="card">
+    <div class="card-header"><h2 class="card-title">Top countries by user count</h2></div>
+    {% if analytics.top_countries.is_empty() %}
+      <p class="card-body text-sm text-gray-500">No users yet.</p>
+    {% else %}
+      <table class="table">
+        <thead><tr><th>Country</th><th class="text-right">Users</th></tr></thead>
+        <tbody>
+          {% for country in analytics.top_countries %}
+            <tr>
+              <td>
+                <div class="flex items-center gap-3">
+                  <img src="/assets/images/flags/{{ country.code }}.svg" alt="{{ country.code }}" width="24" height="18" />
+                  <strong>{{ country.name }}</strong>
+                </div>
+              </td>
+              <td class="text-right">{{ self.int(country.user_count) }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
+  </section>
+</div>
+
+<script src="/assets/scripts/chart@4.4.1.umd.min.js"></script>
+<script>
+  (function () {
+    const CURRENT_COLOR = "rgba(37, 99, 235, 0.9)";
+    const PREVIOUS_COLOR = "rgba(107, 114, 128, 0.6)";
+    const dau = {{ analytics.chart_json()|safe }}.dau;
+    const el = document.getElementById("dau-chart");
+    if (!el || typeof Chart === "undefined") return;
+    new Chart(el.getContext("2d"), {
+      type: "line",
+      data: {
+        labels: dau.labels,
+        datasets: [
+          { label: "Last 30 days", data: dau.current, borderColor: CURRENT_COLOR, backgroundColor: CURRENT_COLOR, tension: 0.25, fill: false },
+          { label: "Prior 30 days", data: dau.previous, borderColor: PREVIOUS_COLOR, backgroundColor: PREVIOUS_COLOR, borderDash: [4, 4], tension: 0.25, fill: false },
+        ],
+      },
+      options: {
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        scales: {
+          y: { beginAtZero: true, ticks: { precision: 0 } },
+          x: { ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 10 } },
+        },
+        plugins: {
+          tooltip: {
+            callbacks: {
+              title: function (items) {
+                const i = items[0].dataIndex;
+                return "Current: " + dau.labels[i] + "  ·  Prior: " + dau.previousLabels[i];
+              },
+            },
+          },
+        },
+      },
+    });
+  })();
+</script>
+{% endblock %}

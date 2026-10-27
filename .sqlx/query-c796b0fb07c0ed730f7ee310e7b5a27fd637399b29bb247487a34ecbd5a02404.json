@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE scheduler_locks SET held_until = NOW() - INTERVAL '1 second' WHERE key = 'daily'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "c796b0fb07c0ed730f7ee310e7b5a27fd637399b29bb247487a34ecbd5a02404"
+}

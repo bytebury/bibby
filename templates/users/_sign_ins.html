@@ -1,0 +1,46 @@
+<section class="card" id="sign-ins">
+  <div class="card-header">
+    <div>
+      <h2 class="card-title">Sign-ins</h2>
+      <p class="card-subtitle">Last {{ sign_in_retention_days }} days, plus their most recent sign-in.</p>
+    </div>
+  </div>
+  <div class="card-body">
+    {% if sign_ins.data.is_empty() %}
+      <p class="text-sm text-gray-500">No sign-ins recorded yet.</p>
+    {% else %}
+      <ul class="divide-y divide-gray-100">
+        {% for sign_in in sign_ins.data %}
+          <li class="sign-in-row flex items-start justify-between gap-3 py-2 text-sm">
+            <div class="flex min-w-0 items-start gap-2">
+              {% if let Some(country_code) = sign_in.country_code %}
+                <img src="/assets/images/flags/{{ country_code }}.svg" alt="{{ country_code }}" width="16" height="12" class="mt-1" />
+              {% endif %}
+              <div class="min-w-0">
+                <p class="truncate">{% if sign_in.place().is_empty() %}Unknown location{% else %}{{ sign_in.place() }}{% endif %}</p>
+                <a class="btn-link font-mono text-xs" target="_blank" rel="noopener noreferrer" href="https://ip-api.com/#{{ sign_in.ip }}">{{ sign_in.ip }}</a>
+              </div>
+            </div>
+            <div class="shrink-0 text-right text-xs text-gray-500">
+              <p>{{ sign_in.sign_in_count }} {% if sign_in.sign_in_count == 1 %}sign-in{% else %}sign-ins{% endif %}</p>
+              <time data-utc="{{ sign_in.last_signed_in_at }}"></time>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+      {% if sign_ins.has_previous_page || sign_ins.has_next_page %}
+        <nav class="mt-3 flex items-center justify-between text-xs">
+          <span class="text-gray-500">Page {{ sign_ins.page }} of {{ sign_ins.total_pages() }}</span>
+          <div class="flex gap-2">
+            {% if sign_ins.has_previous_page %}
+              <button type="button" class="btn-link" hx-get="{{ sign_ins_base }}page={{ sign_ins.page - 1 }}" hx-target="#sign-ins" hx-swap="outerHTML">Previous</button>
+            {% endif %}
+            {% if sign_ins.has_next_page %}
+              <button type="button" class="btn-link" hx-get="{{ sign_ins_base }}page={{ sign_ins.page + 1 }}" hx-target="#sign-ins" hx-swap="outerHTML">Next</button>
+            {% endif %}
+          </div>
+        </nav>
+      {% endif %}
+    {% endif %}
+  </div>
+</section>

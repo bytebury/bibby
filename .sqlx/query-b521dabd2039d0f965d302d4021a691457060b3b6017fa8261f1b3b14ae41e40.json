@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE users SET plan_expiry_date = NULL, plan_expiry_reminder_days = NULL WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b521dabd2039d0f965d302d4021a691457060b3b6017fa8261f1b3b14ae41e40"
+}

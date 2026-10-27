@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT n.id,\n                   a.full_name AS \"author_name?\",\n                   a.image_url AS \"author_image_url?\",\n                   n.body,\n                   n.created_at\n            FROM user_notes n\n            LEFT JOIN users a ON a.id = n.author_id\n            WHERE n.user_id = $1\n            ORDER BY n.created_at DESC, n.id DESC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "user_notes",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "author_name?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "full_name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "author_image_url?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "image_url"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "body",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "user_notes",
+            "name": "body"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "user_notes",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "69bbfb9f0cda04366ff83f0a11c95a38ce43122948afb87223f57a10d8fe497f"
+}

@@ -35,12 +35,14 @@ macro_rules! refresh {
     }};
 }
 
+pub mod admin;
 pub mod announcements;
 pub mod auth;
 mod auth_test;
 pub mod blogs;
 pub mod core;
 pub mod countries;
+pub mod cron;
 pub mod extract;
 pub mod payments;
 pub mod users;
@@ -48,6 +50,8 @@ pub mod users;
 pub fn routes() -> Router<SharedState> {
     let router = Router::new()
         .merge(core::routes())
+        .merge(admin::routes())
+        .merge(cron::routes())
         .merge(auth::routes())
         .merge(users::routes())
         .merge(countries::routes())

@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT user_id, group_id FROM account_group_members\n             WHERE user_id = ANY($1) FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "account_group_members",
+            "name": "user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "group_id",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "account_group_members",
+            "name": "group_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4Array"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "91b791dd9c319ca21bb366830d31219b13e666d52c8dbff69ed9c63f2ae07031"
+}

@@ -5,6 +5,7 @@ use crate::domain::one_time_passcode;
 use crate::domain::value_objects::email::Email;
 use crate::domain::value_objects::one_time_code::OneTimeCode;
 use crate::prelude::*;
+use chrono::NaiveDate;
 use std::time::Duration;
 
 /// Emails a sign-in code. The caller needs to know whether this landed: an
@@ -18,9 +19,12 @@ pub async fn send_sign_in_code(
     code: &OneTimeCode,
     verifying: bool,
 ) -> Result<()> {
-    let app_name = env::var("APP_NAME").unwrap_or_else(|_| "Bibby".to_string());
     send(&sign_in_code_request(
-        recipient, first_name, code, verifying, &app_name,
+        recipient,
+        first_name,
+        code,
+        verifying,
+        &app_name(),
     ))
     .await
 }
@@ -67,6 +71,112 @@ fn sign_in_code_request(
     );
 
     mailman::SendEmailRequest::new(subject, body, [recipient.as_str()]).html(true)
+}
+
+/// Warns someone that their admin-granted Professional access is about to
+/// lapse. Sent from the daily scheduler tick a month, a week, and a day out.
+/// Delivery failures are logged — a bounced reminder must not stop the tick
+/// from recording that the reminder was attempted, or every later tick would
+/// retry it forever.
+pub async fn send_plan_expiry_reminder(
+    recipient: &str,
+    first_name: &str,
+    days_remaining: i64,
+    expires_on: NaiveDate,
+) {
+    let request = plan_expiry_reminder_request(
+        recipient,
+        first_name,
+        days_remaining,
+        expires_on,
+        &app_name(),
+        &app_origin(),
+    );
+    if let Err(error) = send(&request).await {
+        error!(%error, email = %recipient, "could not send plan expiry reminder");
+    }
+}
+
+fn plan_expiry_reminder_request(
+    recipient: &str,
+    first_name: &str,
+    days_remaining: i64,
+    expires_on: NaiveDate,
+    app_name: &str,
+    app_origin: &str,
+) -> mailman::SendEmailRequest {
+    let window = match days_remaining {
+        d if d <= 0 => "today".to_string(),
+        1 => "tomorrow".to_string(),
+        d => format!("in {d} days"),
+    };
+    let subject = format!("Your {app_name} plan ends {window}");
+    let body = format!(
+        "<h1>Your {} plan ends {}</h1>\
+         <p>Hi {}, your Professional access ends on <strong>{}</strong>.</p>\
+         <p>When it does, your account moves back to the Free plan. Nothing is \
+            deleted — you just lose access to Professional features until you \
+            upgrade again.</p>\
+         <p style=\"margin: 32px 0; text-align: center;\">\
+             <a href=\"{}/upgrade\" style=\"display: inline-block; font-size: 24px; font-weight: bold;\">\
+                 Keep My Access\
+             </a>\
+         </p>\
+         <p>If you already arranged an extension with us, you can ignore this email.</p>",
+        escape_html(app_name),
+        escape_html(&window),
+        escape_html(first_name),
+        expires_on.format("%B %-d, %Y"),
+        escape_html(app_origin),
+    );
+
+    mailman::SendEmailRequest::new(subject, body, [recipient]).html(true)
+}
+
+/// Confirms that an admin-granted plan has lapsed and the account is back on
+/// the Free plan. Sent by the same tick that performs the downgrade.
+pub async fn send_plan_expired_notice(recipient: &str, first_name: &str) {
+    let request = plan_expired_notice_request(recipient, first_name, &app_name(), &app_origin());
+    if let Err(error) = send(&request).await {
+        error!(%error, email = %recipient, "could not send plan expired notice");
+    }
+}
+
+fn plan_expired_notice_request(
+    recipient: &str,
+    first_name: &str,
+    app_name: &str,
+    app_origin: &str,
+) -> mailman::SendEmailRequest {
+    let subject = format!("Your {app_name} plan has ended");
+    let body = format!(
+        "<h1>Your {} plan has ended</h1>\
+         <p>Hi {}, your Professional access has ended and your account is back \
+            on the Free plan.</p>\
+         <p>Nothing was deleted. Upgrading again restores full access to \
+            everything exactly as you left it.</p>\
+         <p style=\"margin: 32px 0; text-align: center;\">\
+             <a href=\"{}/upgrade\" style=\"display: inline-block; font-size: 24px; font-weight: bold;\">\
+                 Upgrade Again\
+             </a>\
+         </p>",
+        escape_html(app_name),
+        escape_html(first_name),
+        escape_html(app_origin),
+    );
+
+    mailman::SendEmailRequest::new(subject, body, [recipient]).html(true)
+}
+
+fn app_name() -> String {
+    env::var("APP_NAME").unwrap_or_else(|_| "Bibby".to_string())
+}
+
+fn app_origin() -> String {
+    env::var("APP_ORIGIN")
+        .unwrap_or_default()
+        .trim_end_matches('/')
+        .to_string()
 }
 
 async fn send(request: &mailman::SendEmailRequest) -> Result<()> {
@@ -120,6 +230,56 @@ mod tests {
         assert!(request.body.contains("use this code to sign in to Bibby"));
         assert!(request.body.contains("042137"));
         assert!(request.body.contains("expires in 10 minutes"));
+    }
+
+    #[test]
+    fn phrases_each_reminder_window_in_the_subject() {
+        let expires_on = NaiveDate::from_ymd_opt(2026, 9, 30).unwrap();
+        let subject_for = |days| {
+            plan_expiry_reminder_request(
+                "someone@example.com",
+                "Sam",
+                days,
+                expires_on,
+                "Bibby",
+                "https://bibby.example",
+            )
+            .subject
+        };
+
+        assert_eq!(subject_for(30), "Your Bibby plan ends in 30 days");
+        assert_eq!(subject_for(7), "Your Bibby plan ends in 7 days");
+        assert_eq!(subject_for(1), "Your Bibby plan ends tomorrow");
+        assert_eq!(subject_for(0), "Your Bibby plan ends today");
+    }
+
+    #[test]
+    fn builds_plan_expiry_emails() {
+        let reminder = plan_expiry_reminder_request(
+            "someone@example.com",
+            "Sam & Co.",
+            7,
+            NaiveDate::from_ymd_opt(2026, 9, 30).unwrap(),
+            "Bibby",
+            "https://bibby.example",
+        );
+        assert_eq!(reminder.to, ["someone@example.com"]);
+        assert!(reminder.body.contains("Hi Sam &amp; Co."));
+        assert!(reminder.body.contains("September 30, 2026"));
+        assert!(
+            reminder
+                .body
+                .contains("href=\"https://bibby.example/upgrade\"")
+        );
+
+        let notice = plan_expired_notice_request(
+            "someone@example.com",
+            "Sam",
+            "Bibby",
+            "https://bibby.example",
+        );
+        assert_eq!(notice.subject, "Your Bibby plan has ended");
+        assert!(notice.body.contains("back on the Free plan"));
     }
 
     #[test]

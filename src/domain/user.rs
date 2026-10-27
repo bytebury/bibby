@@ -2,12 +2,14 @@ use crate::domain::Access;
 use crate::domain::value_objects::email::Email;
 use crate::infra::pagination::Paginate;
 use crate::prelude::*;
+use chrono::NaiveDate;
 
 #[derive(Debug, Deserialize, Serialize, Clone, FromRow)]
 pub struct User {
     pub id: PrimaryKey,
     pub country_id: Option<PrimaryKey>,
     pub region_id: Option<PrimaryKey>,
+    pub city_id: Option<PrimaryKey>,
     pub full_name: String,
     pub first_name: String,
     pub last_name: Option<String>,
@@ -20,14 +22,32 @@ pub struct User {
     pub verified: bool,
     pub auth_provider: AuthProvider,
     pub locked: bool,
+    /// Last day an admin-granted Professional plan stays active (inclusive).
+    /// `None` means the plan does not expire — either because it is billed
+    /// through Stripe or because the admin granted it indefinitely.
+    pub plan_expiry_date: Option<NaiveDate>,
     pub last_known_ip: String,
     pub stripe_customer_id: Option<String>,
     pub country_code: String,
     pub country_name: String,
     pub region_name: Option<String>,
+    pub city_name: Option<String>,
     pub last_seen_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+/// The `users.email` column is `UNIQUE`, so pointing an account at an address
+/// another account already uses trips constraint `users_email_key`. The
+/// generic 23505 mapping only says "This record already exists.", which gives
+/// an admin nothing to act on.
+fn map_email_conflict(e: sqlx::Error) -> AppError {
+    let constraint = e.as_database_error().and_then(|de| de.constraint());
+    if constraint.is_some_and(|c| c == "users_email_key") {
+        AppError::Conflict("Another account already uses that email address.".to_string())
+    } else {
+        AppError::from(e)
+    }
 }
 
 impl User {
@@ -37,8 +57,8 @@ impl User {
     {
         let user_id: PrimaryKey = sqlx::query_scalar(
             r#"
-            INSERT INTO users (full_name, first_name, last_name, email, image_url, role, verified, locked, last_known_ip, country_id, region_id, auth_provider)
-            VALUES ($1, $2, $3, $4, $5, COALESCE((SELECT 'admin' WHERE NOT EXISTS (SELECT 1 FROM users)), $6), $7, $8, $9, $10, $11, $12)
+            INSERT INTO users (full_name, first_name, last_name, email, image_url, role, verified, locked, last_known_ip, country_id, region_id, auth_provider, city_id)
+            VALUES ($1, $2, $3, $4, $5, COALESCE((SELECT 'admin' WHERE NOT EXISTS (SELECT 1 FROM users)), $6), $7, $8, $9, $10, $11, $12, $13)
             RETURNING id
             "#,
         )
@@ -54,6 +74,7 @@ impl User {
         .bind(request.country_id)
         .bind(request.region_id)
         .bind(request.auth_provider.to_string())
+        .bind(request.city_id)
         .fetch_one(exec.clone())
         .await?;
 
@@ -71,6 +92,7 @@ impl User {
                 id as "id!",
                 country_id,
                 region_id,
+                city_id,
                 full_name as "full_name!",
                 first_name as "first_name!",
                 last_name,
@@ -80,11 +102,13 @@ impl User {
                 verified as "verified!",
                 auth_provider as "auth_provider!: AuthProvider",
                 locked as "locked!",
+                plan_expiry_date,
                 last_known_ip as "last_known_ip!",
                 stripe_customer_id,
                 country_code as "country_code!",
                 country_name as "country_name!",
                 region_name,
+                city_name,
                 last_seen_at as "last_seen_at!",
                 created_at as "created_at!",
                 updated_at as "updated_at!"
@@ -108,6 +132,7 @@ impl User {
                 id as "id!",
                 country_id,
                 region_id,
+                city_id,
                 full_name as "full_name!",
                 first_name as "first_name!",
                 last_name,
@@ -117,11 +142,13 @@ impl User {
                 verified as "verified!",
                 auth_provider as "auth_provider!: AuthProvider",
                 locked as "locked!",
+                plan_expiry_date,
                 last_known_ip as "last_known_ip!",
                 stripe_customer_id,
                 country_code as "country_code!",
                 country_name as "country_name!",
                 region_name,
+                city_name,
                 last_seen_at as "last_seen_at!",
                 created_at as "created_at!",
                 updated_at as "updated_at!"
@@ -134,28 +161,155 @@ impl User {
         Ok(user)
     }
 
-    pub async fn update<'e, E>(exec: E, id: PrimaryKey, request: &UserForm) -> Result<User>
+    /// Per-request audit + lookup in a single statement. This runs on every
+    /// authenticated request (see `BaseUser::from_request_parts`), so the CTE
+    /// folds the lookup, the audit UPDATE, and the re-read into one round
+    /// trip. Only the columns the audit actually changes (`last_known_ip`,
+    /// `last_seen_at`) are written, which avoids racily writing back stale
+    /// copies of `role`/`locked`/etc.
+    ///
+    /// The same CTE also records a (user_id, UTC day) row in
+    /// `user_daily_activity` — at most one per user per day, thanks to the
+    /// composite primary key and `ON CONFLICT DO NOTHING`. This feeds the Site
+    /// Analytics DAU chart and the admin user page's activity strip.
+    pub async fn audit_and_find_by_email<'e, E>(exec: E, email: &str, ip: &str) -> Result<User>
+    where
+        E: Executor<'e, Database = sqlx::Postgres>,
+    {
+        let user = sqlx::query_as(
+            r#"
+            WITH audited AS (
+                UPDATE users
+                   SET last_known_ip = $2, last_seen_at = NOW()
+                 WHERE email = $1
+             RETURNING id
+            ),
+            _activity AS (
+                INSERT INTO user_daily_activity (user_id, day)
+                SELECT id, (NOW() AT TIME ZONE 'UTC')::DATE FROM audited
+                ON CONFLICT DO NOTHING
+            )
+            SELECT ud.* FROM user_details ud JOIN audited ON audited.id = ud.id
+            "#,
+        )
+        .bind(email)
+        .bind(ip)
+        .fetch_one(exec)
+        .await?;
+        Ok(user)
+    }
+
+    /// Admin edit from the manage-users modal. Only the fields that form edits
+    /// are written: location and audit columns belong to the sign-in and
+    /// per-request audit paths, and round-tripping them through the browser
+    /// would write back a stale copy.
+    pub async fn update<'e, E>(exec: E, id: PrimaryKey, request: &UserUpdate) -> Result<User>
     where
         E: Executor<'e, Database = sqlx::Postgres> + Clone,
     {
-        sqlx::query(
+        // An expiry date only means something for an admin-granted paid plan.
+        // Free and Admin accounts have nothing to expire, so a stale date left
+        // over from a previous role is dropped rather than kept around for
+        // the scheduler to act on later.
+        let plan_expiry_date = match request.role {
+            Role::Professional => request.plan_expiry_date,
+            Role::Free | Role::Admin => None,
+        };
+
+        sqlx::query!(
             r#"
             UPDATE users
-            SET role = $1, locked = $2, last_known_ip = $3, last_seen_at = $4, country_id = $5, region_id = $6
-            WHERE id = $7
+               SET role = $1,
+                   locked = $2,
+                   plan_expiry_date = $3,
+                   email = $4,
+                   -- Moving the deadline re-arms the reminder ladder; the
+                   -- CASE reads the pre-UPDATE value, so an unchanged date
+                   -- keeps whatever reminders have already gone out.
+                   plan_expiry_reminder_days = CASE
+                       WHEN plan_expiry_date IS DISTINCT FROM $3 THEN NULL
+                       ELSE plan_expiry_reminder_days
+                   END
+             WHERE id = $5
             "#,
+            request.role.to_string(),
+            request.locked,
+            plan_expiry_date,
+            request.email.as_str(),
+            id,
         )
-        .bind(request.role.to_string())
-        .bind(request.locked.is_some())
-        .bind(&request.last_known_ip)
-        .bind(request.last_seen_at)
-        .bind(request.country_id)
-        .bind(request.region_id)
-        .bind(id)
+        .execute(exec.clone())
+        .await
+        .map_err(map_email_conflict)?;
+
+        User::find_by_id(exec, id).await
+    }
+
+    /// Refreshes what a sign-in learns about an existing account: where it
+    /// came from, when, and whether the automatic lock signals fired.
+    pub async fn update_sign_in_fields<'e, E>(
+        exec: E,
+        id: PrimaryKey,
+        request: &CreateUser,
+        locked: bool,
+    ) -> Result<User>
+    where
+        E: Executor<'e, Database = sqlx::Postgres> + Clone,
+    {
+        sqlx::query!(
+            r#"
+            UPDATE users
+               SET last_known_ip = $1,
+                   last_seen_at = NOW(),
+                   country_id = $2,
+                   region_id = $3,
+                   city_id = $4,
+                   locked = $5
+             WHERE id = $6
+            "#,
+            request.last_known_ip,
+            request.country_id,
+            request.region_id,
+            request.city_id,
+            locked,
+            id,
+        )
         .execute(exec.clone())
         .await?;
 
         User::find_by_id(exec, id).await
+    }
+
+    /// Drop an admin-granted expiry date without touching the role. Called
+    /// whenever Stripe takes over the plan (checkout completed) or ends it
+    /// (subscription deleted / payment failed) so the scheduler never
+    /// downgrades an account that billing is now responsible for.
+    pub async fn clear_plan_expiry<'e, E>(exec: E, id: PrimaryKey) -> Result<()>
+    where
+        E: Executor<'e, Database = sqlx::Postgres>,
+    {
+        sqlx::query!(
+            "UPDATE users SET plan_expiry_date = NULL, plan_expiry_reminder_days = NULL WHERE id = $1",
+            id,
+        )
+        .execute(exec)
+        .await?;
+        Ok(())
+    }
+
+    /// Whether a locked account was last seen on `ip` — one of the automatic
+    /// lock signals at sign-in.
+    pub async fn any_locked_with_ip<'e, E>(exec: E, ip: &str) -> Result<bool>
+    where
+        E: Executor<'e, Database = sqlx::Postgres>,
+    {
+        let exists = sqlx::query_scalar!(
+            r#"SELECT EXISTS(SELECT 1 FROM users WHERE locked = true AND last_known_ip = $1) AS "exists!""#,
+            ip,
+        )
+        .fetch_one(exec)
+        .await?;
+        Ok(exists)
     }
 
     pub async fn destroy<'e, E>(exec: E, id: PrimaryKey) -> Result<()>
@@ -196,6 +350,7 @@ impl User {
                 id as "id!",
                 country_id,
                 region_id,
+                city_id,
                 full_name as "full_name!",
                 first_name as "first_name!",
                 last_name,
@@ -205,11 +360,13 @@ impl User {
                 verified as "verified!",
                 auth_provider as "auth_provider!: AuthProvider",
                 locked as "locked!",
+                plan_expiry_date,
                 last_known_ip as "last_known_ip!",
                 stripe_customer_id,
                 country_code as "country_code!",
                 country_name as "country_name!",
                 region_name,
+                city_name,
                 last_seen_at as "last_seen_at!",
                 created_at as "created_at!",
                 updated_at as "updated_at!"
@@ -371,6 +528,7 @@ impl Paginate for User {
 pub struct CreateUser {
     pub country_id: Option<PrimaryKey>,
     pub region_id: Option<PrimaryKey>,
+    pub city_id: Option<PrimaryKey>,
     pub email: String,
     pub first_name: String,
     pub last_name: Option<String>,
@@ -392,6 +550,7 @@ impl CreateUser {
         Self {
             country_id: user.country_id,
             region_id: user.region_id,
+            city_id: user.city_id,
             email: user.email.clone(),
             first_name: user.first_name.clone(),
             last_name: user.last_name.clone(),
@@ -505,26 +664,55 @@ fn required_name(raw: &str, field: &str) -> Result<String> {
     Ok(name.to_string())
 }
 
+/// The admin manage-users modal, as submitted. Parse it into a `UserUpdate`
+/// before use.
 #[derive(Deserialize)]
 pub struct UserForm {
+    /// The address the account signs in with. Admins can rewrite this to point
+    /// an existing account at a different login — see `edit_user` in
+    /// `src/infra/api/users.rs`.
+    pub email: String,
     pub role: Role,
     pub locked: Option<String>,
-    pub country_id: Option<PrimaryKey>,
-    pub region_id: Option<PrimaryKey>,
-    pub last_known_ip: String,
-    pub last_seen_at: DateTime<Utc>,
+    /// Blank means "no expiry" — the browser submits an empty string for an
+    /// untouched `<input type="date">`.
+    #[serde(default, deserialize_with = "deserialize_optional_naive_date")]
+    pub plan_expiry_date: Option<NaiveDate>,
 }
 
-impl From<User> for UserForm {
-    fn from(user: User) -> Self {
-        Self {
-            role: user.role,
-            locked: user.locked.then_some("on".into()),
-            country_id: user.country_id,
-            region_id: user.region_id,
-            last_seen_at: user.last_seen_at,
-            last_known_ip: user.last_known_ip,
-        }
+/// A `UserForm` whose email is well-formed and lowercased.
+pub struct UserUpdate {
+    pub email: Email,
+    pub role: Role,
+    pub locked: bool,
+    pub plan_expiry_date: Option<NaiveDate>,
+}
+
+impl TryFrom<UserForm> for UserUpdate {
+    type Error = AppError;
+
+    fn try_from(form: UserForm) -> Result<Self> {
+        Ok(UserUpdate {
+            email: Email::parse(&form.email)?,
+            role: form.role,
+            locked: form.locked.is_some(),
+            plan_expiry_date: form.plan_expiry_date,
+        })
+    }
+}
+
+fn deserialize_optional_naive_date<'de, D>(
+    deserializer: D,
+) -> std::result::Result<Option<NaiveDate>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s: Option<String> = Option::deserialize(deserializer)?;
+    match s.as_deref() {
+        None | Some("") => Ok(None),
+        Some(val) => NaiveDate::parse_from_str(val, "%Y-%m-%d")
+            .map(Some)
+            .map_err(serde::de::Error::custom),
     }
 }
 

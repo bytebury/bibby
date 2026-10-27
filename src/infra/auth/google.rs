@@ -139,6 +139,7 @@ impl From<GoogleUser> for CreateUser {
             locked: false,
             country_id: None,
             region_id: None,
+            city_id: None,
             last_known_ip: "".to_string(),
         }
     }

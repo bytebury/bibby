@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE users\n               SET last_known_ip = $1,\n                   last_seen_at = NOW(),\n                   country_id = $2,\n                   region_id = $3,\n                   city_id = $4,\n                   locked = $5\n             WHERE id = $6\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Bool",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e6a760528486cb96542090193f0b6ce2025be0bdefcda0036f385757dbffd312"
+}

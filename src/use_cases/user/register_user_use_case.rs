@@ -78,6 +78,33 @@ impl RegisterUserUseCase {
         Ok(())
     }
 
+    /// Whether `ip` resolves to a locked country. Unlike `resolve_location`
+    /// this writes nothing, so a blocked visitor leaves no trace in the
+    /// database. Only the country lock counts here, not the shared-IP signal.
+    pub async fn country_locked(&self, ip: &str) -> Result<bool> {
+        let Some(ip) = self.parse_ip(ip) else {
+            return Ok(false);
+        };
+        let location = LocationDetails::lookup(ip).await.unwrap_or_default();
+
+        match Country::find_by_code(self.db.as_ref(), &location.country.code).await {
+            Ok(country) => Ok(country.locked),
+            Err(AppError::NotFound(_)) => Ok(false),
+            Err(error) => Err(error),
+        }
+    }
+
+    /// Whether a sign-in with `email` from `ip` must not create an account:
+    /// the address has none yet and the visitor is in a locked country.
+    /// Existing accounts are untouched; they are locked by `execute` instead.
+    pub async fn blocks_new_account(&self, email: &str, ip: &str) -> Result<bool> {
+        match User::find_by_email(self.db.as_ref(), email).await {
+            Ok(_) => Ok(false),
+            Err(AppError::NotFound(_)) => self.country_locked(ip).await,
+            Err(error) => Err(error),
+        }
+    }
+
     fn parse_ip(&self, ip_address: &str) -> Option<IpAddr> {
         ip_address.parse::<IpAddr>().ok()
     }

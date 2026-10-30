@@ -149,11 +149,25 @@ async fn sign_up_page(
 /// `/sign-in/code/verify` verifies the account and signs it in. As with
 /// `send_sign_in_code`, an address that already has an account gets the same
 /// response, so this can't be used to probe for accounts.
+///
+/// A visitor from a locked country is sent home before anything is validated,
+/// created, or emailed, and with no message. The check keys on the IP alone,
+/// so it can't be used to probe for accounts either.
 async fn sign_up_with_email(
     State(state): State<SharedState>,
     RealIp(ip_addr): RealIp,
+    headers: HeaderMap,
     Form(form): Form<SignUpForm>,
 ) -> Result<impl IntoResponse> {
+    if state
+        .user_use_cases
+        .register
+        .country_locked(&ip_addr)
+        .await?
+    {
+        return Ok(redirect!("/", &headers));
+    }
+
     let page = SignUpTemplate {
         first_name: form.first_name.clone(),
         last_name: form.last_name.clone(),
@@ -167,7 +181,8 @@ async fn sign_up_with_email(
             return Ok(SignUpTemplate {
                 error_message: Some(message),
                 ..page
-            });
+            }
+            .into_response());
         }
         Err(error) => return Err(error),
     };
@@ -182,7 +197,8 @@ async fn sign_up_with_email(
         code_sent: true,
         email: sign_up.email.to_string(),
         ..page
-    })
+    }
+    .into_response())
 }
 
 /// Emails a sign-in code. The response is the same whether or not the address
@@ -345,6 +361,18 @@ async fn sign_in_with_google_callback(
         .exchange_code_for_user(&params.code)
         .await?;
     create_user.last_known_ip = ip_addr;
+
+    // A first-time sign-in from a locked country never creates an account.
+    // Existing accounts fall through to `execute`, which locks them instead.
+    if state
+        .user_use_cases
+        .register
+        .blocks_new_account(&create_user.email, &create_user.last_known_ip)
+        .await?
+    {
+        let cookies = cookies.remove(Cookie::build(OAUTH_NONCE_COOKIE).path("/"));
+        return Ok((cookies, redirect!("/", &headers)).into_response());
+    }
 
     let user = state
         .user_use_cases

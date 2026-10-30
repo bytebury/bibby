@@ -78,29 +78,30 @@ impl RegisterUserUseCase {
         Ok(())
     }
 
-    /// Whether `ip` resolves to a locked country. Unlike `resolve_location`
-    /// this writes nothing, so a blocked visitor leaves no trace in the
-    /// database. Only the country lock counts here, not the shared-IP signal.
-    pub async fn country_locked(&self, ip: &str) -> Result<bool> {
-        let Some(ip) = self.parse_ip(ip) else {
-            return Ok(false);
-        };
-        let location = LocationDetails::lookup(ip).await.unwrap_or_default();
-
-        match Country::find_by_code(self.db.as_ref(), &location.country.code).await {
-            Ok(country) => Ok(country.locked),
-            Err(AppError::NotFound(_)) => Ok(false),
-            Err(error) => Err(error),
+    /// Whether `ip` trips either automatic lock signal: it resolves to a
+    /// locked country, or a locked account was last seen on it. The same two
+    /// signals `resolve_location` uses, but this writes nothing, so a blocked
+    /// visitor leaves no trace in the database.
+    pub async fn blocks_sign_up(&self, ip: &str) -> Result<bool> {
+        if let Some(addr) = self.parse_ip(ip) {
+            let location = LocationDetails::lookup(addr).await.unwrap_or_default();
+            match Country::find_by_code(self.db.as_ref(), &location.country.code).await {
+                Ok(country) if country.locked => return Ok(true),
+                Ok(_) | Err(AppError::NotFound(_)) => {}
+                Err(error) => return Err(error),
+            }
         }
+
+        Ok(!ip.is_empty() && User::any_locked_with_ip(self.db.as_ref(), ip).await?)
     }
 
     /// Whether a sign-in with `email` from `ip` must not create an account:
-    /// the address has none yet and the visitor is in a locked country.
+    /// the address has none yet and `blocks_sign_up` fires for the visitor.
     /// Existing accounts are untouched; they are locked by `execute` instead.
     pub async fn blocks_new_account(&self, email: &str, ip: &str) -> Result<bool> {
         match User::find_by_email(self.db.as_ref(), email).await {
             Ok(_) => Ok(false),
-            Err(AppError::NotFound(_)) => self.country_locked(ip).await,
+            Err(AppError::NotFound(_)) => self.blocks_sign_up(ip).await,
             Err(error) => Err(error),
         }
     }

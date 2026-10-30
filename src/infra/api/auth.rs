@@ -150,7 +150,7 @@ async fn sign_up_page(
 /// `send_sign_in_code`, an address that already has an account gets the same
 /// response, so this can't be used to probe for accounts.
 ///
-/// A visitor from a locked country is sent home before anything is validated,
+/// A visitor from a locked country, or on an IP a locked account uses, is sent home before anything is validated,
 /// created, or emailed, and with no message. The check keys on the IP alone,
 /// so it can't be used to probe for accounts either.
 async fn sign_up_with_email(
@@ -162,7 +162,7 @@ async fn sign_up_with_email(
     if state
         .user_use_cases
         .register
-        .country_locked(&ip_addr)
+        .blocks_sign_up(&ip_addr)
         .await?
     {
         return Ok(redirect!("/", &headers));
@@ -362,7 +362,7 @@ async fn sign_in_with_google_callback(
         .await?;
     create_user.last_known_ip = ip_addr;
 
-    // A first-time sign-in from a locked country never creates an account.
+    // A first-time sign-in that trips a lock signal never creates an account.
     // Existing accounts fall through to `execute`, which locks them instead.
     if state
         .user_use_cases

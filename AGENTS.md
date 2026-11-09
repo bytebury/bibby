@@ -9,7 +9,7 @@ PRs that get rejected.
 Bibby is the Bytebury full-stack template, written in Rust. Stack:
 
 - **axum 0.8** — HTTP framework
-- **sqlx 0.9** with PostgreSQL — database (note: `0.9`, not `0.8` — see [shima caveat](#shimasqlx-version-mismatch))
+- **sqlx 0.9** with PostgreSQL — database (note: `0.9`, not `0.8` — see [shima IDs on models](#shima-ids-on-models))
 - **askama 0.16** + `askama_web` — server-rendered templates
 - **htmx** — interactivity without an SPA
 - **tailwindcss v4** — styling
@@ -201,15 +201,12 @@ emit:
 If you see `cannot find value 'x'` originating from a `Template` derive after editing a template, the fix is almost
 always to prefix with `self.` inside whatever expression you just wrote.
 
-### shima/sqlx version mismatch
+### shima IDs on models
 
-`shima 0.6.x` derives `sqlx::Type` against **sqlx 0.8 only**. Bibby is on sqlx **0.9**. If you put `shima::CustomerId` (
-or any other shima value object) directly on a struct that derives `FromRow`, the build breaks with two distinct
-`sqlx_core` versions in the dep tree.
-
-**Workaround until shima publishes a sqlx 0.9 build:** store shima-typed columns as `Option<String>` on the model (see
-`User::stripe_customer_id`) and convert with `CustomerId::try_from(...)` at the use-case boundary. Do **not** copy the
-`Option<CustomerId>` pattern from theschoolbank into bibby.
+shima 0.8+ implements `sqlx::Type` for sqlx 0.9, so shima IDs go directly on models
+(`User::stripe_customer_id: Option<CustomerId>`). In `query_as!`, give the column a type override:
+`stripe_customer_id as "stripe_customer_id: CustomerId"`. Don't drop shima below 0.8 — 0.7 and earlier target sqlx 0.8
+and put two `sqlx_core` versions in the dep tree.
 
 ### dev.sh tailwind watch flag
 

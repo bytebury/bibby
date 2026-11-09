@@ -3,6 +3,7 @@ use crate::domain::value_objects::email::Email;
 use crate::infra::pagination::Paginate;
 use crate::prelude::*;
 use chrono::NaiveDate;
+use shima::CustomerId;
 
 #[derive(Debug, Deserialize, Serialize, Clone, FromRow)]
 pub struct User {
@@ -27,7 +28,7 @@ pub struct User {
     /// through Stripe or because the admin granted it indefinitely.
     pub plan_expiry_date: Option<NaiveDate>,
     pub last_known_ip: String,
-    pub stripe_customer_id: Option<String>,
+    pub stripe_customer_id: Option<CustomerId>,
     pub country_code: String,
     pub country_name: String,
     pub region_name: Option<String>,
@@ -104,7 +105,7 @@ impl User {
                 locked as "locked!",
                 plan_expiry_date,
                 last_known_ip as "last_known_ip!",
-                stripe_customer_id,
+                stripe_customer_id as "stripe_customer_id: CustomerId",
                 country_code as "country_code!",
                 country_name as "country_name!",
                 region_name,
@@ -144,7 +145,7 @@ impl User {
                 locked as "locked!",
                 plan_expiry_date,
                 last_known_ip as "last_known_ip!",
-                stripe_customer_id,
+                stripe_customer_id as "stripe_customer_id: CustomerId",
                 country_code as "country_code!",
                 country_name as "country_name!",
                 region_name,
@@ -326,20 +327,23 @@ impl User {
     pub async fn set_stripe_customer_id<'e, E>(
         exec: E,
         id: PrimaryKey,
-        customer_id: &shima::CustomerId,
+        customer_id: &CustomerId,
     ) -> Result<()>
     where
         E: Executor<'e, Database = sqlx::Postgres>,
     {
         sqlx::query("UPDATE users SET stripe_customer_id = $1 WHERE id = $2")
-            .bind(customer_id.as_ref())
+            .bind(customer_id)
             .bind(id)
             .execute(exec)
             .await?;
         Ok(())
     }
 
-    pub async fn find_by_stripe_customer_id<'e, E>(exec: E, customer_id: &str) -> Result<User>
+    pub async fn find_by_stripe_customer_id<'e, E>(
+        exec: E,
+        customer_id: &CustomerId,
+    ) -> Result<User>
     where
         E: Executor<'e, Database = sqlx::Postgres>,
     {
@@ -362,7 +366,7 @@ impl User {
                 locked as "locked!",
                 plan_expiry_date,
                 last_known_ip as "last_known_ip!",
-                stripe_customer_id,
+                stripe_customer_id as "stripe_customer_id: CustomerId",
                 country_code as "country_code!",
                 country_name as "country_name!",
                 region_name,
@@ -372,7 +376,7 @@ impl User {
                 updated_at as "updated_at!"
             FROM user_details WHERE stripe_customer_id = $1
             "#,
-            customer_id,
+            customer_id.as_str(),
         )
         .fetch_one(exec)
         .await?;

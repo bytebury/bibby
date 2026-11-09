@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT\n                id as \"id!\",\n                country_id,\n                region_id,\n                city_id,\n                full_name as \"full_name!\",\n                first_name as \"first_name!\",\n                last_name,\n                email as \"email!\",\n                image_url as \"image_url!\",\n                role as \"role!: Role\",\n                verified as \"verified!\",\n                auth_provider as \"auth_provider!: AuthProvider\",\n                locked as \"locked!\",\n                plan_expiry_date,\n                last_known_ip as \"last_known_ip!\",\n                stripe_customer_id,\n                country_code as \"country_code!\",\n                country_name as \"country_name!\",\n                region_name,\n                city_name,\n                last_seen_at as \"last_seen_at!\",\n                created_at as \"created_at!\",\n                updated_at as \"updated_at!\"\n            FROM user_details WHERE id = $1\n            ",
+  "query": "\n            SELECT\n                id as \"id!\",\n                country_id,\n                region_id,\n                city_id,\n                full_name as \"full_name!\",\n                first_name as \"first_name!\",\n                last_name,\n                email as \"email!\",\n                image_url as \"image_url!\",\n                role as \"role!: Role\",\n                verified as \"verified!\",\n                auth_provider as \"auth_provider!: AuthProvider\",\n                locked as \"locked!\",\n                plan_expiry_date,\n                last_known_ip as \"last_known_ip!\",\n                stripe_customer_id as \"stripe_customer_id: CustomerId\",\n                country_code as \"country_code!\",\n                country_name as \"country_name!\",\n                region_name,\n                city_name,\n                last_seen_at as \"last_seen_at!\",\n                created_at as \"created_at!\",\n                updated_at as \"updated_at!\"\n            FROM user_details WHERE stripe_customer_id = $1\n            ",
   "describe": {
     "columns": [
       {
@@ -170,7 +170,7 @@
       },
       {
         "ordinal": 15,
-        "name": "stripe_customer_id",
+        "name": "stripe_customer_id: CustomerId",
         "type_info": "Text",
         "origin": {
           "Table": {
@@ -259,7 +259,7 @@
     ],
     "parameters": {
       "Left": [
-        "Int4"
+        "Text"
       ]
     },
     "nullable": [
@@ -288,5 +288,5 @@
       true
     ]
   },
-  "hash": "3cc6815b0d5d4aa48efc539f5a87ca9e9b4b5e0449788c838e37bd32e6dcf6d8"
+  "hash": "2e314d7f3085750c171ed3b6e928adb92cf2fe57153f2f96bb88287069d82422"
 }

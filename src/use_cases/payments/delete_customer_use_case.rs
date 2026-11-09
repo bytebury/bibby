@@ -15,13 +15,12 @@ impl DeleteCustomerUseCase {
 
     /// Deletes a Stripe customer, which also cancels every subscription tied
     /// to that customer.
-    pub async fn execute(&self, customer_id: &str) -> Result<()> {
-        // A blank id would hit `DELETE /v1/customers/`, which Stripe rejects.
-        if customer_id.trim().is_empty() {
+    pub async fn execute(&self, customer_id: &CustomerId) -> Result<()> {
+        // Ids decoded from the database skip shima's validation, so a blank
+        // legacy row would otherwise hit `DELETE /v1/customers/`.
+        if customer_id.as_str().trim().is_empty() {
             return Ok(());
         }
-        let customer_id = CustomerId::try_from(customer_id.to_string())
-            .map_err(|e| AppError::Internal(format!("Invalid stored Stripe customer id: {e}")))?;
         delete_customer!(&self.stripe.client, customer_id)?;
         Ok(())
     }

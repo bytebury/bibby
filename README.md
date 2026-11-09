@@ -253,7 +253,7 @@ Bytebury provides a few libraries and microservices that bibby can incorporate i
 | Name | Description |
 | --- | --- |
 | geodude | A geolocation microservice built on top of ip2location. Supports auto-updates from ip2location. |
-| paperboy | A mailer microservice. Send e-mails on your behalf. |
+| mailman | A mailer microservice. Send e-mails on your behalf. |
 
 ## Listening to Stripe Webhooks
 ```sh

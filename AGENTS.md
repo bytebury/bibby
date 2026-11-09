@@ -15,7 +15,7 @@ Bibby is the Bytebury full-stack template, written in Rust. Stack:
 - **tailwindcss v4** — styling
 - **Playwright** — e2e tests (`./e2e.sh`)
 
-Out-of-the-box integrations: Stripe, OAuth (Google by default), Postgres, Geolocation (`geodude`), Mailers (`paperboy`),
+Out-of-the-box integrations: Stripe, OAuth (Google by default), Postgres, Geolocation (`geodude`), Mailers (`mailman`),
 Blogs, Announcements, User Management, Privacy/ToS pages.
 
 Run locally with `./dev.sh` (debug build, file-watch for Rust + HTML + CSS).
@@ -278,7 +278,7 @@ platform-agnostic.
 | Name     | Description                                                                    |
 |----------|--------------------------------------------------------------------------------|
 | geodude  | Geolocation microservice on top of ip2location. Auto-updates from ip2location. |
-| paperboy | Mailer microservice.                                                           |
+| mailman  | Mailer microservice.                                                           |
 
 ## Tests
 

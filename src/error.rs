@@ -54,6 +54,9 @@ impl From<geodude::Error> for AppError {
 
 impl From<shima::Error> for AppError {
     fn from(err: shima::Error) -> Self {
+        if err.is_webhook_error() {
+            return AppError::BadRequest(format!("Invalid stripe webhook: {}", err));
+        }
         AppError::Internal(format!("Error with stripe: {}", err))
     }
 }

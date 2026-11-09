@@ -3,56 +3,52 @@
   <div class="navbar-inner">
     <a href="/" class="navbar-brand">{{ shared.app_name }}</a>
 
-    <details class="menu relative md:hidden">
-      <summary class="btn-ghost h-9 w-9 cursor-pointer list-none [&::-webkit-details-marker]:hidden" aria-label="Menu">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="3" y1="6" x2="21" y2="6" />
-          <line x1="3" y1="12" x2="21" y2="12" />
-          <line x1="3" y1="18" x2="21" y2="18" />
-        </svg>
-      </summary>
-      <div class="menu-items absolute right-0 top-full z-50 mt-2 flex w-56 flex-col gap-1 rounded-md border border-gray-200 bg-white p-2 shadow-md">
-        <a href="/blogs" class="navbar-link">Blog</a>
-        {% match shared.user %}
-          {% when Some with (user) %}
-            {% if user.is_admin() %}
-              <a href="/users" class="navbar-link">Users</a>
-              <a href="/admin/analytics" class="navbar-link">Analytics</a>
-              <a href="/countries" class="navbar-link">Countries</a>
-              <a href="/announcements" class="navbar-link">Announcements</a>
-            {% endif %}
-            {% if user.is_free() %}
-              <a href="/upgrade" class="navbar-link">Upgrade</a>
-            {% else if user.is_pro() %}
-              {% call ui::spinner_button("post", "/manage-subscriptions", "Billing", "btn-ghost") %}{% endcall %}
-            {% endif %}
-            <div class="mt-1 truncate border-t border-gray-100 px-3 pt-2 text-sm text-gray-500">{{ user.email }}</div>
-            {% call ui::spinner_button("delete", "/auth", "Sign out", "btn-ghost") %}{% endcall %}
-          {% when None %}
-            <a href="/sign-in" class="btn-primary">Sign in</a>
-        {% endmatch %}
-      </div>
-    </details>
-
-    <div class="navbar-links hidden md:flex">
-      <a href="/blogs" class="navbar-link">Blog</a>
+    <div class="navbar-links">
+      <a href="/blogs" class="navbar-link hidden md:inline-block">Blog</a>
       {% match shared.user %}
         {% when Some with (user) %}
-          {% if user.is_admin() %}
-            <a href="/users" class="navbar-link">Users</a>
-              <a href="/admin/analytics" class="navbar-link">Analytics</a>
-            <a href="/countries" class="navbar-link">Countries</a>
-            <a href="/announcements" class="navbar-link">Announcements</a>
-          {% endif %}
           {% if user.is_free() %}
-            <a href="/upgrade" class="navbar-link">Upgrade</a>
+            <a href="/upgrade" class="navbar-link hidden md:inline-block">Upgrade</a>
           {% else if user.is_pro() %}
-            {% call ui::spinner_button("post", "/manage-subscriptions", "Billing", "btn-ghost") %}{% endcall %}
+            {% call ui::spinner_button("post", "/manage-subscriptions", "Billing", "btn-ghost hidden md:inline-flex") %}{% endcall %}
           {% endif %}
-          <span class="hidden lg:inline text-sm text-gray-500 px-2">{{ user.email }}</span>
-          {% call ui::spinner_button("delete", "/auth", "Sign out", "btn-ghost") %}{% endcall %}
+
+          <details class="menu account-menu relative ml-1">
+            <summary class="flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-full hover:ring-2 hover:ring-gray-200 focus-visible:ring-2 focus-visible:ring-gray-300 [&::-webkit-details-marker]:hidden" aria-label="Account menu">
+              <img src="{{ user.image_url }}" alt="" width="32" height="32" class="h-8 w-8 rounded-full object-cover" referrerpolicy="no-referrer" />
+            </summary>
+            <div class="menu-items absolute right-0 top-full z-50 mt-2 flex w-64 flex-col gap-1 rounded-md border border-gray-200 bg-white p-2 shadow-md">
+              <div class="border-b border-gray-100 px-3 pb-2 text-sm">
+                <div class="truncate font-medium text-gray-900">{{ user.full_name }}</div>
+                <div class="truncate text-gray-500">{{ user.email }}</div>
+              </div>
+
+              {# The navbar hides these on small screens, so the menu carries them there. #}
+              <div class="flex flex-col gap-1 border-b border-gray-100 pb-1 md:hidden">
+                <a href="/blogs" class="navbar-link">Blog</a>
+                {% if user.is_free() %}
+                  <a href="/upgrade" class="navbar-link">Upgrade</a>
+                {% else if user.is_pro() %}
+                  {% call ui::spinner_button("post", "/manage-subscriptions", "Billing", "btn-ghost justify-start") %}{% endcall %}
+                {% endif %}
+              </div>
+
+              {% if user.is_admin() %}
+                <div class="px-3 pt-1 text-xs font-medium uppercase tracking-wide text-gray-400">Admin</div>
+                <a href="/users" class="navbar-link">Users</a>
+                <a href="/admin/analytics" class="navbar-link">Analytics</a>
+                <a href="/countries" class="navbar-link">Countries</a>
+                <a href="/announcements" class="navbar-link">Announcements</a>
+                <div class="border-t border-gray-100"></div>
+              {% endif %}
+
+              <a href="/settings" class="navbar-link">Settings</a>
+              {% call ui::spinner_button("delete", "/auth", "Sign out", "btn-ghost justify-start") %}{% endcall %}
+            </div>
+          </details>
         {% when None %}
-          <a href="/sign-in" class="btn-primary">Sign in</a>
+          <a href="/blogs" class="navbar-link md:hidden">Blog</a>
+          <a href="/sign-in" class="btn-primary ml-1">Sign in</a>
       {% endmatch %}
     </div>
   </div>

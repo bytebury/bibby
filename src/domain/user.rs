@@ -439,6 +439,28 @@ impl User {
         Ok(())
     }
 
+    /// The account owner renaming themselves from the settings page.
+    pub async fn update_name<'e, E>(exec: E, id: PrimaryKey, request: &NameUpdate) -> Result<()>
+    where
+        E: Executor<'e, Database = sqlx::Postgres>,
+    {
+        sqlx::query!(
+            r#"
+            UPDATE users
+               SET first_name = $1,
+                   last_name = $2,
+                   full_name = $1 || ' ' || $2
+             WHERE id = $3
+            "#,
+            request.first_name,
+            request.last_name,
+            id,
+        )
+        .execute(exec)
+        .await?;
+        Ok(())
+    }
+
     /// Turns an email sign-up into a Google account once Google has proven
     /// who owns the address: it is verified and takes Google's name and photo.
     pub async fn convert_to_google<'e, E>(
@@ -655,6 +677,32 @@ impl TryFrom<SignUpForm> for SignUp {
     }
 }
 
+/// The settings-page name form, as submitted. Parse it into a `NameUpdate`
+/// before use.
+#[derive(Debug, Clone, Deserialize)]
+pub struct NameForm {
+    pub first_name: String,
+    pub last_name: String,
+}
+
+/// A `NameForm` whose names are trimmed, present, and within `MAX_NAME_LEN`.
+#[derive(Debug, Clone)]
+pub struct NameUpdate {
+    pub first_name: String,
+    pub last_name: String,
+}
+
+impl TryFrom<NameForm> for NameUpdate {
+    type Error = AppError;
+
+    fn try_from(form: NameForm) -> Result<Self> {
+        Ok(NameUpdate {
+            first_name: required_name(&form.first_name, "First name")?,
+            last_name: required_name(&form.last_name, "Last name")?,
+        })
+    }
+}
+
 fn required_name(raw: &str, field: &str) -> Result<String> {
     let name = raw.trim();
     if name.is_empty() {
@@ -763,6 +811,23 @@ mod tests {
                 "ada@example.com"
             )),
             "First name must be 100 characters or fewer."
+        );
+    }
+
+    #[test]
+    fn name_update_trims_and_requires_both_names() {
+        let parse = |first: &str, last: &str| {
+            NameUpdate::try_from(NameForm {
+                first_name: first.to_string(),
+                last_name: last.to_string(),
+            })
+        };
+        let update = parse(" Ada ", " Lovelace ").unwrap();
+        assert_eq!(update.first_name, "Ada");
+        assert_eq!(update.last_name, "Lovelace");
+        assert_eq!(
+            parse("Ada", "  ").unwrap_err().to_string(),
+            "Last name is required."
         );
     }
 }

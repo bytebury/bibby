@@ -20,9 +20,7 @@ impl CreateCustomerUseCase {
 
     pub async fn execute(&self, user: &User) -> Result<CustomerId> {
         if let Some(existing) = &user.stripe_customer_id {
-            return CustomerId::try_from(existing.clone()).map_err(|e| {
-                AppError::Internal(format!("Invalid stored Stripe customer id: {e}"))
-            });
+            return Ok(existing.clone());
         }
         let customer = CreateCustomer::new(&user.full_name, &user.email);
         let customer_id = create_customer!(&self.stripe.client, customer)?.id;

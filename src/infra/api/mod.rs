@@ -46,6 +46,7 @@ pub mod countries;
 pub mod cron;
 pub mod extract;
 pub mod payments;
+pub mod settings;
 pub mod users;
 
 pub fn routes() -> Router<SharedState> {
@@ -55,6 +56,7 @@ pub fn routes() -> Router<SharedState> {
         .merge(cron::routes())
         .merge(auth::routes())
         .merge(users::routes())
+        .merge(settings::routes())
         .merge(countries::routes())
         .merge(announcements::routes())
         .merge(blogs::routes())

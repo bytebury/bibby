@@ -1,0 +1,94 @@
+{% extends "_layouts/base.html" %}
+{% import "_macros/buttons.html" as ui %}
+
+{% block title %}{{ shared.title_tag() }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-2xl space-y-4">
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">Settings</h1>
+      <p class="page-subtitle">Manage your profile and plan.</p>
+    </div>
+  </header>
+
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">Profile</h2>
+    </div>
+    <div class="card-body space-y-5">
+      <div class="flex items-center gap-4">
+        <img src="{{ user.image_url }}" alt="" width="64" height="64"
+             class="h-16 w-16 shrink-0 rounded-full border border-gray-200 object-cover" referrerpolicy="no-referrer" />
+        <div class="min-w-0 text-sm">
+          <div class="truncate font-medium text-gray-900">{{ user.full_name }}</div>
+          <div class="text-gray-500">Member since <time data-utc="{{ user.created_at }}"></time></div>
+        </div>
+      </div>
+
+      <form hx-patch="/settings" hx-swap="none" hx-disabled-elt="find button" class="space-y-4">
+        <div class="grid grid-cols-2 gap-3">
+          <label class="block">
+            <span class="label">First name</span>
+            <input name="first_name" type="text" autocomplete="given-name" value="{{ user.first_name }}" maxlength="100" class="input mt-1" required />
+          </label>
+          <label class="block">
+            <span class="label">Last name</span>
+            <input name="last_name" type="text" autocomplete="family-name" value="{% if let Some(last_name) = user.last_name %}{{ last_name }}{% endif %}" maxlength="100" class="input mt-1" required />
+          </label>
+        </div>
+        <label class="block">
+          <span class="label">Email</span>
+          <input type="email" value="{{ user.email }}" class="input mt-1 bg-gray-50 text-gray-500" disabled />
+          <span class="mt-1 block text-xs text-gray-500">
+            You sign in {% if user.signs_in_with_email() %}with a code we email to this address{% else %}with Google{% endif %}.
+          </span>
+        </label>
+        <div class="flex justify-end">
+          <button type="submit" class="btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">Plan</h2>
+    </div>
+    <div class="card-body flex flex-wrap items-center justify-between gap-4">
+      <div class="text-sm">
+        <div class="font-medium text-gray-900 plan-name">
+          {% if user.is_admin() %}Admin{% else if user.is_pro() %}Professional{% else %}Free{% endif %}
+        </div>
+        <div class="text-gray-500">
+          {% if user.is_pro() %}
+            {% if let Some(plan_expiry_date) = user.plan_expiry_date %}
+              Active through <time datetime="{{ plan_expiry_date }}">{{ plan_expiry_date.format("%B %-d, %Y") }}</time>.
+            {% else if user.stripe_customer_id.is_some() %}
+              Billed through Stripe.
+            {% else %}
+              No end date.
+            {% endif %}
+          {% else if user.is_free() %}
+            Upgrade for the full toolkit.
+          {% else %}
+            Admins have every feature.
+          {% endif %}
+        </div>
+      </div>
+      {% if user.is_free() %}
+        <a href="/upgrade" class="btn-primary">Upgrade</a>
+      {% else if user.stripe_customer_id.is_some() %}
+        {% call ui::spinner_button("post", "/manage-subscriptions", "Manage billing", "btn-ghost") %}{% endcall %}
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-body flex items-center justify-between gap-4">
+      <div class="text-sm text-gray-500">Signed in as {{ user.email }}</div>
+      {% call ui::spinner_button("delete", "/auth", "Sign out", "btn-ghost") %}{% endcall %}
+    </div>
+  </section>
+</div>
+{% endblock %}

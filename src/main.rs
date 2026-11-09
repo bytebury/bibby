@@ -1,16 +1,13 @@
 use axum::Router;
-use axum::http::HeaderValue;
-use axum::http::header::CACHE_CONTROL;
 use axum::response::IntoResponse;
-use bibby::infra::api;
 use bibby::infra::db::Database;
+use bibby::infra::{api, assets};
 use bibby::{AppError, AppState};
 use std::env;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tower_http::compression::CompressionLayer;
 use tower_http::services::ServeDir;
-use tower_http::set_header::SetResponseHeaderLayer;
 
 #[tokio::main]
 async fn main() {
@@ -24,16 +21,11 @@ async fn main() {
     let db = Arc::new(Database::init().await);
     let state = Arc::new(AppState::new(db));
 
-    let cache_control = if cfg!(debug_assertions) {
-        "no-cache"
-    } else {
-        "public, max-age=31536000"
-    };
     let serve_static = Router::new()
         .nest_service("/assets", ServeDir::new("public"))
-        .layer(SetResponseHeaderLayer::if_not_present(
-            CACHE_CONTROL,
-            HeaderValue::from_static(cache_control),
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            assets::cache_control,
         ));
 
     let pool_for_shutdown = state.db.clone();

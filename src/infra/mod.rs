@@ -1,8 +1,11 @@
 pub mod api;
+pub mod assets;
 pub mod auth;
 pub mod db;
+pub mod email;
 pub mod geolocation;
 pub mod markdown;
 pub mod pagination;
 pub mod payments;
+pub mod scheduler;
 pub mod seo;

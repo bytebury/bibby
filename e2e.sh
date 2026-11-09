@@ -15,6 +15,9 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 PORT="${E2E_PORT:-8090}"
+# Shared secret for the test-auth shim (src/infra/api/auth_test.rs); the
+# Playwright fixtures read the same variable.
+export TEST_AUTH_TOKEN="${TEST_AUTH_TOKEN:-local-e2e-token}"
 
 APP_LOG="$(mktemp -t bibby-e2e-XXXXXX.log)"
 APP_PID=""
@@ -58,6 +61,9 @@ npx playwright install chromium >/dev/null
 echo "🚀 starting app on http://127.0.0.1:${PORT}"
 PORT="${PORT}" \
 APP_NAME="Bibby" \
+JWT_SECRET="${JWT_SECRET:-e2e-jwt-secret}" \
+ENABLE_TEST_AUTH=true \
+TEST_AUTH_TOKEN="${TEST_AUTH_TOKEN}" \
 GIT_HASH="$(git rev-parse HEAD 2>/dev/null || echo unknown)" \
 ./target/debug/bibby >"${APP_LOG}" 2>&1 &
 APP_PID=$!

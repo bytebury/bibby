@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE users\n               SET first_name = $1,\n                   last_name = $2,\n                   full_name = $1 || ' ' || $2\n             WHERE id = $3\n               AND verified = FALSE\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5d76c59a81c4407038ba8fa60cd166890cfa8e0a227e336b9c037d3943e2cd38"
+}

@@ -1,0 +1,93 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT s.ip,\n                   c.code AS \"country_code?\",\n                   c.name AS \"country_name?\",\n                   r.name AS \"region_name?\",\n                   ci.name AS \"city_name?\",\n                   COUNT(*) AS \"sign_in_count!\",\n                   MAX(s.created_at) AS \"last_signed_in_at!\"\n            FROM user_sign_ins s\n            LEFT JOIN countries c ON c.id = s.country_id\n            LEFT JOIN regions r ON r.id = s.region_id\n            LEFT JOIN cities ci ON ci.id = s.city_id\n            WHERE s.user_id = $1\n              AND (s.created_at >= NOW() - make_interval(days => $2)\n                   OR s.id = (SELECT MAX(id) FROM user_sign_ins WHERE user_id = $1))\n            GROUP BY s.ip, s.country_id, s.region_id, s.city_id, c.code, c.name, r.name, ci.name\n            ORDER BY MAX(s.created_at) DESC, s.ip\n            LIMIT $3 OFFSET $4\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "ip",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "user_sign_ins",
+            "name": "ip"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "country_code?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "countries",
+            "name": "code"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "country_name?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "countries",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "region_name?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "regions",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "city_name?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "cities",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "sign_in_count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "last_signed_in_at!",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "8d2350a062f0e4a6815ba8e22ac6bebb4309baf6d2d9e510bdfa56613fc005e6"
+}

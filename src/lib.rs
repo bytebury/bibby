@@ -1,3 +1,4 @@
+use crate::infra::assets::AssetManifest;
 use crate::infra::db::SharedDatabase;
 use crate::infra::payments::Stripe;
 use crate::infra::seo::{SeoConfig, WebAppConfig};
@@ -17,7 +18,7 @@ pub use error::AppError;
 pub struct AppState {
     pub db: SharedDatabase,
     pub app_name: String,
-    pub app_version: String,
+    pub assets: AssetManifest,
     pub seo: SeoConfig,
     pub web_app: WebAppConfig,
     pub user_use_cases: UserUseCases,
@@ -34,7 +35,7 @@ impl AppState {
             seo: SeoConfig::from_env(&app_name),
             web_app: WebAppConfig::from_env(&app_name),
             app_name,
-            app_version: uuid::Uuid::new_v4().simple().to_string(),
+            assets: AssetManifest::load("public"),
             db,
         }
     }

@@ -22,6 +22,7 @@ impl Default for CountryDetails {
 pub struct LocationDetails {
     pub country: CountryDetails,
     pub region: Option<String>,
+    pub city: Option<String>,
 }
 
 impl LocationDetails {
@@ -45,6 +46,7 @@ impl LocationDetails {
         Ok(LocationDetails {
             country,
             region: clean(location.region),
+            city: clean(location.city),
         })
     }
 }

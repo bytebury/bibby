@@ -357,6 +357,28 @@
     .prose th, .prose td { @apply border border-gray-200 px-3 py-2 text-left; }
     .prose th { @apply bg-gray-50 font-semibold; }
 
+    /* Filter chips (radio/checkbox labels styled as pills) */
+    .filter-chip {
+        @apply inline-flex cursor-pointer select-none items-center rounded-full border border-gray-300 bg-white px-3 py-1 text-sm text-gray-700 hover:bg-gray-50;
+    }
+    .filter-chip:has(input:checked) {
+        @apply border-blue-600 bg-blue-600 text-white hover:bg-blue-700;
+    }
+    .filter-chip:has(input:focus-visible) {
+        @apply ring-2 ring-blue-400 ring-offset-1;
+    }
+
+    /* Admin user page: one square per day, filled when the user was active */
+    .activity-strip {
+        @apply mt-1 grid grid-cols-[repeat(30,minmax(0,1fr))] gap-0.5;
+    }
+    .activity-strip > span {
+        @apply h-4 rounded-sm bg-gray-200;
+    }
+    .activity-strip > span.active {
+        @apply bg-emerald-500;
+    }
+
     /* Page header strip */
     .page-header {
         @apply mb-6 flex items-end justify-between;

@@ -1,5 +1,6 @@
 use crate::SharedState;
 use crate::domain::user::User;
+use crate::infra::assets::AssetManifest;
 use crate::infra::seo::PageMeta;
 use axum::Router;
 use chrono::Datelike;
@@ -35,30 +36,41 @@ macro_rules! refresh {
     }};
 }
 
+pub mod admin;
 pub mod announcements;
 pub mod auth;
+mod auth_test;
 pub mod blogs;
 pub mod core;
 pub mod countries;
+pub mod cron;
 pub mod extract;
 pub mod payments;
 pub mod users;
 
 pub fn routes() -> Router<SharedState> {
-    Router::new()
+    let router = Router::new()
         .merge(core::routes())
+        .merge(admin::routes())
+        .merge(cron::routes())
         .merge(auth::routes())
         .merge(users::routes())
         .merge(countries::routes())
         .merge(announcements::routes())
         .merge(blogs::routes())
-        .merge(payments::routes())
+        .merge(payments::routes());
+
+    if auth_test::is_enabled() {
+        tracing::warn!("Test auth shim is enabled. Never enable this in production.");
+        return router.merge(auth_test::routes());
+    }
+    router
 }
 
 pub struct SharedContext {
     pub user: Option<User>,
     pub app_name: String,
-    pub app_version: String,
+    pub assets: AssetManifest,
     pub canonical_path: Option<String>,
     pub site_url: String,
     pub page_meta: PageMeta,
@@ -80,7 +92,7 @@ impl SharedContext {
     pub fn new(state: &SharedState) -> Self {
         Self {
             app_name: state.app_name.clone(),
-            app_version: state.app_version.clone(),
+            assets: state.assets.clone(),
             user: None,
             canonical_path: None,
             site_url: state.seo.site_url.clone(),
@@ -111,6 +123,12 @@ impl SharedContext {
 
     pub fn with_meta(self, page_meta: PageMeta) -> Self {
         Self { page_meta, ..self }
+    }
+
+    /// URL for a file under `/assets/` with its content hash appended, so
+    /// browsers cache it until it changes. See `infra/assets.rs`.
+    pub fn asset(&self, path: &str) -> String {
+        self.assets.url(path)
     }
 
     pub fn page_title(&self) -> &str {

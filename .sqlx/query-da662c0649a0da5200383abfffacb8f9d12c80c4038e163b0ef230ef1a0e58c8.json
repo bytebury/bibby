@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                COALESCE(c.name, 'Unknown') AS \"name!\",\n                COALESCE(c.code, 'unknown') AS \"code!\",\n                COUNT(u.id)                 AS \"user_count!\"\n            FROM users u\n            LEFT JOIN countries c ON c.id = u.country_id\n            -- Users with no country and those in the auto-created \"unknown\"\n            -- country are the same thing to an admin, so group on the\n            -- displayed values.\n            GROUP BY 1, 2\n            ORDER BY COUNT(u.id) DESC\n            LIMIT 5\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "code!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "user_count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "da662c0649a0da5200383abfffacb8f9d12c80c4038e163b0ef230ef1a0e58c8"
+}

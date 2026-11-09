@@ -56,13 +56,22 @@ impl HandleStripeEventUseCase {
         })?;
         let plan = Plan::from_str(plan_str)?;
         let user = User::find_by_stripe_customer_id(self.db.as_ref(), customer.as_str()).await?;
-        User::set_role(self.db.as_ref(), user.id, &plan.role()).await?;
+        let mut tx = self.db.begin().await?;
+        User::set_role(&mut *tx, user.id, &plan.role()).await?;
+        // Stripe now owns this plan's lifecycle, so any admin-granted expiry
+        // date must go — otherwise the scheduler would downgrade a paying
+        // customer on the old deadline.
+        User::clear_plan_expiry(&mut *tx, user.id).await?;
+        tx.commit().await?;
         Ok(())
     }
 
     async fn downgrade_to_free(&self, customer: &CustomerId) -> Result<()> {
         let user = User::find_by_stripe_customer_id(self.db.as_ref(), customer.as_str()).await?;
-        User::set_role(self.db.as_ref(), user.id, &Role::Free).await?;
+        let mut tx = self.db.begin().await?;
+        User::set_role(&mut *tx, user.id, &Role::Free).await?;
+        User::clear_plan_expiry(&mut *tx, user.id).await?;
+        tx.commit().await?;
         Ok(())
     }
 }

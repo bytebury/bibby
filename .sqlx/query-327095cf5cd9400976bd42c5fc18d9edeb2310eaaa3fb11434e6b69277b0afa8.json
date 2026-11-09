@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT COUNT(*) AS \"count!\" FROM (\n                SELECT 1\n                FROM user_sign_ins s\n                WHERE s.user_id = $1\n                  AND (s.created_at >= NOW() - make_interval(days => $2)\n                       OR s.id = (SELECT MAX(id) FROM user_sign_ins WHERE user_id = $1))\n                GROUP BY s.ip, s.country_id, s.region_id, s.city_id\n            ) grouped\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "327095cf5cd9400976bd42c5fc18d9edeb2310eaaa3fb11434e6b69277b0afa8"
+}

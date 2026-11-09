@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT id,\n                   first_name,\n                   email,\n                   plan_expiry_date AS \"plan_expiry_date!\",\n                   plan_expiry_reminder_days\n              FROM users\n             WHERE plan_expiry_date IS NOT NULL\n               AND plan_expiry_date >= CURRENT_DATE\n               AND plan_expiry_date <= CURRENT_DATE + $1::INT\n               AND role = 'professional'\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "first_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "first_name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "email",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "email"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "plan_expiry_date!",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "plan_expiry_date"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "plan_expiry_reminder_days",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "plan_expiry_reminder_days"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "9a8d8f6e0e0f98fb6a7985a30a3429769d21c9764dc3bbda46e95cb3339669eb"
+}

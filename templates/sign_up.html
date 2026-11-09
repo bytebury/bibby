@@ -1,0 +1,54 @@
+{% extends "_layouts/base.html" %}
+
+{% block content %}
+<div class="card mx-auto max-w-md">
+  <div class="card-body space-y-5 px-6 py-8">
+    <div class="text-center">
+      <p class="text-sm font-semibold text-blue-600">Get started for free</p>
+      <h1 class="page-title">Create your {{ shared.app_name }} account</h1>
+    </div>
+
+    {% let label = "Sign up with Google" %}
+    {% include "_partials/google_button.html" %}
+
+    <div id="sign_in_form" class="space-y-4">
+      {% if let Some(error_message) = error_message %}
+      <div class="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-center text-sm text-red-900" role="alert">{{ error_message }}</div>
+      {% endif %}
+
+      {% if code_sent %}
+      {% let sign_up = true %}
+      {% include "_partials/sign_in_code.html" %}
+      {% else %}
+      <form hx-post="/sign-up" hx-target="#sign_in_form" hx-select="#sign_in_form" hx-swap="outerHTML" class="space-y-4">
+        <div class="grid grid-cols-2 gap-3">
+          <label class="block">
+            <span class="label">First name</span>
+            <input id="first_name" name="first_name" type="text" autocomplete="given-name" value="{{ first_name }}" maxlength="100" class="input mt-1" required />
+          </label>
+          <label class="block">
+            <span class="label">Last name</span>
+            <input id="last_name" name="last_name" type="text" autocomplete="family-name" value="{{ last_name }}" maxlength="100" class="input mt-1" required />
+          </label>
+        </div>
+        <label class="block">
+          <span class="label">Email</span>
+          <input id="email" name="email" type="email" autocomplete="email" value="{{ email }}" placeholder="you@example.com" class="input mt-1" required />
+        </label>
+        <button class="btn-primary w-full py-2" type="submit">Sign Up with Email</button>
+      </form>
+      <p class="text-center text-xs text-gray-500">
+        We'll email you a code to verify your address, and send you a new code
+        each time you sign in.
+      </p>
+      {% endif %}
+    </div>
+
+    <p class="text-center text-xs text-gray-500">
+      Already have an account? <a href="/sign-in" class="underline hover:text-gray-700">Sign in</a>.
+      By signing up you agree to our <a href="/terms" class="underline hover:text-gray-700">Terms</a> and
+      <a href="/privacy" class="underline hover:text-gray-700">Privacy Policy</a>.
+    </p>
+  </div>
+</div>
+{% endblock %}

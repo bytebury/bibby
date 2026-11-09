@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT d.day::DATE AS \"day!\",\n                   (uda.user_id IS NOT NULL) AS \"active!\"\n            FROM generate_series(\n                     (NOW() AT TIME ZONE 'UTC')::DATE - ($2::INT - 1),\n                     (NOW() AT TIME ZONE 'UTC')::DATE,\n                     INTERVAL '1 day'\n                 ) AS d(day)\n            LEFT JOIN user_daily_activity uda\n                   ON uda.user_id = $1 AND uda.day = d.day::DATE\n            ORDER BY d.day\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "day!",
+        "type_info": "Date",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "active!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "17fce7810694f63663a6f9bcbbee7f1011be70ac86bb5dc4424c902a6b6bb963"
+}

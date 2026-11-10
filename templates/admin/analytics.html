@@ -27,7 +27,7 @@
     <a href="/users" class="btn-secondary">Manage users</a>
   </header>
 
-  <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+  <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
     <div class="card card-body kpi">
       <div class="flex items-start justify-between"><p class="text-xs text-gray-500">Total users</p>{% call delta_badge(analytics.users_delta()) %}{% endcall %}</div>
       <p class="text-2xl font-semibold">{{ self.int(analytics.total_users) }}</p>

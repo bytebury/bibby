@@ -63,7 +63,7 @@
     </div>
   </section>
 
-  <section class="grid gap-4 sm:grid-cols-3">
+  <section class="grid grid-cols-1 gap-4 sm:grid-cols-3">
     <div class="card card-body">
       <p class="text-xs text-gray-500">Days active</p>
       <p class="text-2xl font-semibold">{{ self.active_day_count() }} <span class="text-sm font-normal text-gray-500">of {{ activity_window_days }}</span></p>
@@ -83,11 +83,11 @@
     </div>
   </section>
 
-  <div class="grid items-start gap-4 md:grid-cols-2">
+  <div class="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
     <div class="space-y-4">
       <section class="card">
         <div class="card-header"><h2 class="card-title">Account</h2></div>
-        <dl class="card-body grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+        <dl class="card-body grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
           <dt class="text-gray-500">Signs in with</dt>
           <dd>{% if user.signs_in_with_email() %}Emailed code{% else %}Google{% endif %}</dd>
           <dt class="text-gray-500">Plan ends</dt>

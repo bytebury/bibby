@@ -1,10 +1,8 @@
-use crate::domain::account_group::AccountGroup;
-use crate::domain::sign_in::{SIGN_IN_RETENTION_DAYS, SharedIpAccount, SignIn, SignInLocation};
+use crate::domain::sign_in::{SIGN_IN_RETENTION_DAYS, SignIn, SignInLocation};
 use crate::domain::user::{Role, User, UserForm, UserUpdate};
 use crate::domain::user_activity::{ACTIVITY_WINDOW_DAYS, ActiveDay};
 use crate::domain::user_flag::UserFlag;
 use crate::domain::user_note::{UserNote, UserNoteForm};
-use crate::domain::value_objects::email::Email;
 use crate::infra::api::SharedContext;
 use crate::infra::api::auth::auth_cookie;
 use crate::infra::api::extract::admin::Admin;
@@ -19,7 +17,7 @@ use axum::http::HeaderMap;
 use axum::response::IntoResponse;
 use axum::routing::{delete, get, post};
 use axum_extra::extract::{CookieJar, Form};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 pub fn routes() -> Router<SharedState> {
     Router::new()
@@ -33,8 +31,6 @@ pub fn routes() -> Router<SharedState> {
         .route("/users/{id}/notes/{note_id}", delete(destroy_note))
         .route("/users/{id}/sign-ins", get(sign_ins_card))
         .route("/users/{id}/flag", post(flag_user).delete(unflag_user))
-        .route("/users/{id}/links", post(link_account))
-        .route("/users/{id}/links/{other_id}", delete(unlink_account))
 }
 
 #[derive(Template, WebTemplate)]
@@ -46,8 +42,6 @@ struct ManageUsersTemplate {
     role_filter: RoleFilter,
     role_filters: [RoleFilter; 4],
     pagination_base: String,
-    /// How many other accounts each listed user is linked to (linked only).
-    linked_counts: HashMap<PrimaryKey, i64>,
     flagged_only: bool,
     /// Which listed users are flagged.
     flagged: HashSet<PrimaryKey>,
@@ -65,11 +59,6 @@ struct UserPageTemplate {
     sign_ins: Paginated<SignInLocation>,
     sign_ins_base: String,
     sign_in_retention_days: i32,
-    linked: Vec<User>,
-    suggestions: Vec<SharedIpAccount>,
-    suggestion_total: i64,
-    link_email: String,
-    link_error: Option<String>,
 }
 
 impl UserPageTemplate {
@@ -98,44 +87,6 @@ struct SignInsQuery {
 
 fn sign_ins_base(user_id: PrimaryKey) -> String {
     format!("/users/{user_id}/sign-ins?")
-}
-
-/// The "Linked accounts" card, swapped in place after a link or unlink.
-#[derive(Template, WebTemplate)]
-#[template(path = "users/_links.html")]
-struct LinksPartial {
-    user: User,
-    linked: Vec<User>,
-    suggestions: Vec<SharedIpAccount>,
-    suggestion_total: i64,
-    link_email: String,
-    link_error: Option<String>,
-}
-
-/// How many same-IP accounts the user page lists before summarising.
-const SUGGESTION_LIMIT: i64 = 10;
-
-impl LinksPartial {
-    async fn load(db: &sqlx::PgPool, user: User) -> Result<Self> {
-        let (linked, suggestions) = tokio::join!(
-            AccountGroup::linked_accounts(db, user.id),
-            SignIn::accounts_sharing_ips(db, user.id, SUGGESTION_LIMIT),
-        );
-        let (suggestions, suggestion_total) = suggestions?;
-        Ok(Self {
-            user,
-            linked: linked?,
-            suggestions,
-            suggestion_total,
-            link_email: String::new(),
-            link_error: None,
-        })
-    }
-}
-
-#[derive(Deserialize)]
-struct LinkAccountForm {
-    email: String,
 }
 
 #[derive(Template, WebTemplate)]
@@ -190,10 +141,7 @@ async fn users(
         .execute(&search_query, role_filter, flagged_only, &paging)
         .await?;
     let ids: Vec<PrimaryKey> = users.data.iter().map(|u| u.id).collect();
-    let (linked_counts, flagged) = tokio::join!(
-        AccountGroup::linked_counts(state.db.as_ref(), &ids),
-        UserFlag::flagged_among(state.db.as_ref(), &ids),
-    );
+    let flagged = UserFlag::flagged_among(state.db.as_ref(), &ids).await;
     Ok(ManageUsersTemplate {
         shared: SharedContext::new(&state)
             .with_user(Some(user))
@@ -208,7 +156,6 @@ async fn users(
         role_filter,
         role_filters: RoleFilter::ALL,
         pagination_base,
-        linked_counts: linked_counts?,
         flagged_only,
         flagged: flagged?,
     })
@@ -230,7 +177,7 @@ fn encode_query_value(value: &str) -> String {
 }
 
 /// The admin's one-stop view of an account: account facts, activity, sign-in
-/// history, linked accounts, and private admin notes. Editing still happens
+/// history, and private admin notes. Editing still happens
 /// in the modal (`edit_user_modal`), opened from this page.
 async fn user_page(
     State(state): State<SharedState>,
@@ -240,15 +187,12 @@ async fn user_page(
     let db = state.db.as_ref();
     let user = User::find_by_id(db, id).await?;
     admin.ensure_can_read(&user)?;
-    let (activity, notes, sign_ins, linked, suggestions, flag) = tokio::join!(
+    let (activity, notes, sign_ins, flag) = tokio::join!(
         ActiveDay::recent_for_user(db, user.id),
         UserNote::find_by_user_id(db, user.id),
         SignIn::locations_for_user(db, user.id, 1, SIGN_INS_PAGE_SIZE),
-        AccountGroup::linked_accounts(db, user.id),
-        SignIn::accounts_sharing_ips(db, user.id, SUGGESTION_LIMIT),
         UserFlag::find(db, user.id),
     );
-    let (suggestions, suggestion_total) = suggestions?;
     let page_title = user.full_name.clone();
     Ok(UserPageTemplate {
         shared: SharedContext::new(&state)
@@ -263,11 +207,6 @@ async fn user_page(
         flag: flag?,
         sign_ins: sign_ins?,
         sign_in_retention_days: SIGN_IN_RETENTION_DAYS,
-        linked: linked?,
-        suggestions,
-        suggestion_total,
-        link_email: String::new(),
-        link_error: None,
     })
 }
 
@@ -312,53 +251,6 @@ async fn sign_ins_card(
         sign_ins_base: sign_ins_base(user.id),
         sign_in_retention_days: SIGN_IN_RETENTION_DAYS,
     })
-}
-
-async fn link_account(
-    State(state): State<SharedState>,
-    Path(id): Path<PrimaryKey>,
-    Admin(admin): Admin,
-    Form(form): Form<LinkAccountForm>,
-) -> Result<impl IntoResponse> {
-    let db = state.db.as_ref();
-    let user = User::find_by_id(db, id).await?;
-    admin.ensure_can_write(&user)?;
-    let result = match Email::parse(&form.email) {
-        Ok(email) => state
-            .user_use_cases
-            .link_accounts
-            .execute(&admin, &user, &email)
-            .await
-            .map(|_| ()),
-        Err(error) => Err(error),
-    };
-    let mut partial = LinksPartial::load(db, user).await?;
-    match result {
-        Ok(()) => {}
-        // Shown inline, next to the field the admin just typed into.
-        Err(AppError::NotFound(message)) | Err(AppError::BadRequest(message)) => {
-            partial.link_email = form.email.trim().to_string();
-            partial.link_error = Some(message);
-        }
-        Err(error) => return Err(error),
-    }
-    Ok(partial)
-}
-
-async fn unlink_account(
-    State(state): State<SharedState>,
-    Path((id, other_id)): Path<(PrimaryKey, PrimaryKey)>,
-    Admin(admin): Admin,
-) -> Result<impl IntoResponse> {
-    let db = state.db.as_ref();
-    let user = User::find_by_id(db, id).await?;
-    admin.ensure_can_write(&user)?;
-    state
-        .user_use_cases
-        .unlink_account
-        .execute(&admin, &user, other_id)
-        .await?;
-    LinksPartial::load(db, user).await
 }
 
 async fn create_note(

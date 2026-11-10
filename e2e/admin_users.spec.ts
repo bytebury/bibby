@@ -2,7 +2,7 @@ import { test, expect, signInAs } from "./fixtures";
 import type { Page } from "@playwright/test";
 
 // Admin user management: the Manage Users list, the per-user admin page
-// (notes, flags, sign-ins, linked accounts, edit/delete), and Site Analytics.
+// (notes, flags, sign-ins, edit/delete), and Site Analytics.
 //
 // The database is shared across specs, so every account is derived from the
 // test id. Accounts that are never browsed as keep the sign-in IP the shim
@@ -73,14 +73,13 @@ test("admins filter the user list by plan and flag", async ({
   await expect(page).toHaveURL(/role=professional/);
 });
 
-test("admins leave notes, flag accounts, and link duplicates", async ({
+test("admins leave notes and flag accounts", async ({
   page,
   request,
 }, testInfo) => {
-  const { admin, user, other } = emails(testInfo.testId);
+  const { admin, user } = emails(testInfo.testId);
   const sharedIp = ipFor(testInfo.testId);
   await signInAs(request, null, user, "free", { ip: sharedIp });
-  await signInAs(request, null, other, "free", { ip: sharedIp });
   await signInAs(request, page.context(), admin, "admin");
 
   await openUserPage(page, user);
@@ -102,35 +101,6 @@ test("admins leave notes, flag accounts, and link duplicates", async ({
   await expect(page.locator(".flagged-badge")).toBeVisible();
   await page.goto(`/users?flagged=on&q=${encodeURIComponent(user)}`);
   await expect(page.locator("#list table .flag-icon")).toBeVisible();
-
-  // The other account shared an IP, so it's suggested and can be linked.
-  await openUserPage(page, user);
-  const links = page.locator("#links");
-  await expect(links).toContainText(other);
-  await links
-    .locator("li", { hasText: other })
-    .getByRole("button", { name: "Link" })
-    .click();
-  await expect(page.locator("#links")).toContainText("Unlink");
-  await page.reload();
-  await expect(page.locator(".linked-badge")).toHaveText("Linked to 1 account");
-
-  // Linking by a typo'd address explains itself inline.
-  await page.getByLabel("Link another account").fill("nobody@example.com");
-  await page
-    .locator("#links form")
-    .first()
-    .getByRole("button", { name: "Link" })
-    .click();
-  await expect(page.locator("#links [role=alert]")).toHaveText(
-    "No account uses that email address.",
-  );
-
-  page.once("dialog", (dialog) => dialog.accept());
-  await page.locator("#links").getByRole("button", { name: "Unlink" }).click();
-  await expect(page.locator("#links")).toContainText(
-    "Not linked to any other accounts.",
-  );
 });
 
 test("admins edit a plan with an end date and delete accounts", async ({

@@ -17,7 +17,6 @@ pub struct AdminAnalytics {
     pub unverified_users: i64,
     pub email_users: i64,
     pub flagged_users: i64,
-    pub linked_users: i64,
     pub new_users_last_30d: i64,
     pub new_users_prev_30d: i64,
     /// Distinct users with at least one authenticated request in the window.
@@ -173,8 +172,7 @@ impl AdminAnalytics {
                 COUNT(*) FILTER (WHERE role = 'free' AND created_at >= NOW() - INTERVAL '60 days' AND created_at < NOW() - INTERVAL '30 days') AS "new_free_prev_30d!",
                 COUNT(*) FILTER (WHERE auth_provider = 'email' AND created_at >= NOW() - INTERVAL '30 days')                    AS "new_email_30d!",
                 COUNT(*) FILTER (WHERE auth_provider = 'email' AND created_at >= NOW() - INTERVAL '60 days' AND created_at < NOW() - INTERVAL '30 days') AS "new_email_prev_30d!",
-                (SELECT COUNT(*) FROM user_flags)                AS "flagged!",
-                (SELECT COUNT(*) FROM account_group_members)     AS "linked!"
+                (SELECT COUNT(*) FROM user_flags)                AS "flagged!"
             FROM users
             "#,
         )
@@ -191,7 +189,6 @@ impl AdminAnalytics {
                 analytics.unverified_users = r.unverified;
                 analytics.email_users = r.email;
                 analytics.flagged_users = r.flagged;
-                analytics.linked_users = r.linked;
                 analytics.new_users_last_30d = r.new_30d;
                 analytics.new_users_prev_30d = r.new_prev_30d;
                 analytics.new_pro_users_last_30d = r.new_pro_30d;

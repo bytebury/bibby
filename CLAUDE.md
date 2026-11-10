@@ -80,7 +80,7 @@ src/
     mod.rs                # Access<T> and Validate traits
     user.rs, country.rs, region.rs, city.rs, announcement.rs, blog.rs,
     one_time_passcode.rs, sign_in.rs, user_note.rs, user_flag.rs,
-    account_group.rs, user_activity.rs, admin_analytics.rs, avatar.rs
+    user_activity.rs, admin_analytics.rs, avatar.rs
     value_objects/        # Email, OneTimeCode, Markdown, Severity, Toggle
   use_cases/              # application logic, grouped by aggregate
     user/, payments/      # each exposes a `<Name>UseCases` bundle mounted on AppState
@@ -126,12 +126,12 @@ a struct holding a `SharedDatabase` (and any infra clients) with a single
 `execute` method returning `Result<…>`. They're aggregated into per-aggregate
 bundles (`UserUseCases`, `PaymentsUseCases`) and mounted on `AppState` in
 `AppState::new` (`src/lib.rs`). Handlers reach them via
-`state.user_use_cases.link_accounts.execute(…)`.
+`state.user_use_cases.search.execute(…)`.
 
 When an operation touches multiple rows or entities, open a transaction at the
 top of the use-case (`self.db.begin().await?`), thread `&mut *tx` through the
 domain calls, and `tx.commit().await?` at the end. See
-`use_cases/user/link_accounts_use_case.rs` and
+`use_cases/user/send_sign_in_code_use_case.rs` and
 `use_cases/payments/handle_stripe_event.rs`.
 
 ### Authorization
@@ -184,8 +184,8 @@ impl Access<User> for User {
 ```
 
 #### Check against the owning aggregate, not the leaf
-Entities that hang off another one (an admin note, a flag, a sign-in row, a
-linked-account membership all hang off a `User`) do not get their own
+Entities that hang off another one (an admin note, a flag, a sign-in row all
+hang off a `User`) do not get their own
 `Access` impl. Load the owner and check access on it, then scope the child
 query to that owner so an id from the URL can't reach someone else's row:
 
@@ -205,8 +205,7 @@ parent.
   rendering.
 - **Use-cases** — enforce **plan gating** (`user.is_free()` / `is_pro()` /
   `is_admin()`) and cross-aggregate invariants. If a use-case takes the acting
-  user, re-check ownership there too (see `LinkAccountsUseCase`) — defense in
-  depth is fine.
+  user, re-check ownership there too — defense in depth is fine.
 - **Admin-only surfaces** — use the `Admin(User)` extractor instead of
   `CurrentUser`; it rejects non-admins with 403 before the handler runs.
 - Never trust ids or roles from a form body to decide *who* the caller is;
@@ -239,9 +238,8 @@ the constraint name (see `map_email_conflict` in `domain/user.rs`).
 
 HTMX is configured **not** to swap 4xx/5xx responses; `public/scripts/toast.js`
 shows the response body in a toast instead. When an error belongs next to a
-field (sign-in codes, linking an account), return 200 with the re-rendered
-fragment and an inline message instead — see `infra/api/auth.rs` and
-`link_account` in `infra/api/users.rs`.
+field (sign-in codes), return 200 with the re-rendered
+fragment and an inline message instead — see `infra/api/auth.rs`.
 
 ### HTTP handlers (`src/infra/api/`)
 - `api::routes()` merges per-resource routers. New resource: add
@@ -311,12 +309,11 @@ as `Option<String>` (see `User::stripe_customer_id`) and convert with
 All behind `Admin`:
 
 - **`/users`** — search by name, email, or IP; filter by plan and "flagged".
-  Rows show verified / locked / flagged / linked status.
+  Rows show verified / locked / flagged status.
 - **`/users/{id}`** — the account page: activity strip (last 30 days of
   `user_daily_activity`), account facts, sign-in history (`user_sign_ins`,
   kept 30 days plus the latest), private admin notes (`user_notes`),
-  flags (`user_flags`, informational only), and linked accounts
-  (`account_groups`, with same-IP suggestions). The edit modal changes email
+  and flags (`user_flags`, informational only). The edit modal changes email
   (swaps the login behind the account), role, lock, and an optional plan end
   date. Deleting a user also deletes their Stripe customer; admins can't be
   deleted.

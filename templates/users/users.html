@@ -45,7 +45,6 @@
         </thead>
         <tbody>
           {% for u in users.data %}
-            {% let linked_count = linked_counts.get(u.id).copied().unwrap_or(0) %}
             <tr class="cursor-pointer" onclick="if (!event.target.closest('a')) location.href = '/users/{{ u.id }}'">
               <td>
                 <div class="flex items-center gap-3">
@@ -57,7 +56,7 @@
                          width="20" height="16" class="absolute -bottom-1 -right-1 rounded-sm border border-white shadow-sm" />
                   </div>
                   <a href="/users/{{ u.id }}" class="user-row-name whitespace-nowrap font-medium hover:underline">{{ u.full_name }}</a>
-                  {% call users_ui::status_icons(u, flagged.contains(u.id), linked_count) %}{% endcall %}
+                  {% call users_ui::status_icons(u, flagged.contains(u.id)) %}{% endcall %}
                 </div>
               </td>
               <td class="text-gray-600">{{ u.email }}</td>
@@ -82,7 +81,6 @@
 
     <div class="md:hidden space-y-3">
       {% for u in users.data %}
-        {% let linked_count = linked_counts.get(u.id).copied().unwrap_or(0) %}
         <a href="/users/{{ u.id }}" class="block rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
           <div class="flex items-start gap-3">
             <div class="relative shrink-0">
@@ -94,7 +92,7 @@
             <div class="min-w-0 flex-1">
               <div class="flex flex-wrap items-center gap-2">
                 <p class="truncate font-medium">{{ u.full_name }}</p>
-                {% call users_ui::status_icons(u, flagged.contains(u.id), linked_count) %}{% endcall %}
+                {% call users_ui::status_icons(u, flagged.contains(u.id)) %}{% endcall %}
               </div>
               <p class="truncate text-sm text-gray-600">{{ u.email }}</p>
               <div class="mt-1 flex flex-wrap items-center gap-2">

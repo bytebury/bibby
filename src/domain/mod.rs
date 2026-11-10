@@ -1,4 +1,3 @@
-pub mod account_group;
 pub mod admin_analytics;
 pub mod announcement;
 pub mod avatar;

@@ -164,3 +164,33 @@ test("site analytics summarises the user base", async ({
     page.getByRole("heading", { name: "Top countries by user count" }),
   ).toBeVisible();
 });
+
+test("admin pages never scroll sideways on a phone", async ({
+  page,
+  request,
+}, testInfo) => {
+  const { admin, user } = emails(testInfo.testId);
+  const long = `${"a".repeat(60)}@${"b".repeat(60)}.example.com`;
+  await signInAs(request, null, long, "free", { fullName: "W".repeat(80) });
+  await signInAs(request, null, user, "free");
+  await signInAs(request, page.context(), admin, "admin");
+  await page.setViewportSize({ width: 360, height: 800 });
+
+  for (const path of ["/users", `/users?q=${encodeURIComponent(long)}`]) {
+    await page.goto(path);
+    await expectNoSidewaysScroll(page);
+  }
+  await page.goto(`/users?q=${encodeURIComponent(long)}`);
+  await page.locator('#list a[href^="/users/"]:visible').first().click();
+  await expect(page.locator(".user-email")).toHaveText(long);
+  await expectNoSidewaysScroll(page);
+});
+
+async function expectNoSidewaysScroll(page: Page) {
+  const overflow = await page.evaluate(
+    () =>
+      document.documentElement.scrollWidth -
+      document.documentElement.clientWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(0);
+}

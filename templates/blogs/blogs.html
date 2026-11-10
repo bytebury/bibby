@@ -20,7 +20,7 @@
       <div class="card-body text-center text-gray-500">No blog posts yet.</div>
     </div>
   {% else %}
-    <div class="grid gap-4 sm:grid-cols-2">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
       {% for blog in blogs.data %}
         <a href="/blogs/{{ blog.id }}/{{ blog.slug() }}" class="card block transition hover:shadow-md">
           {% if !blog.image_url.is_empty() %}

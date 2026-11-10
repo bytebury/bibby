@@ -493,6 +493,22 @@ impl User {
         Ok(())
     }
 
+    /// Takes the photo Google reports on a sign-in, so a changed profile
+    /// picture follows the user. An empty URL never clears the stored one.
+    pub async fn refresh_image_url<'e, E>(exec: E, id: PrimaryKey, image_url: &str) -> Result<()>
+    where
+        E: Executor<'e, Database = sqlx::Postgres>,
+    {
+        sqlx::query(
+            "UPDATE users SET image_url = $1 WHERE id = $2 AND $1 <> '' AND image_url <> $1",
+        )
+        .bind(image_url)
+        .bind(id)
+        .execute(exec)
+        .await?;
+        Ok(())
+    }
+
     /// Email sign-ups that have never used Google sign in with an emailed
     /// code. Their first verified Google sign-in turns them into a Google
     /// account.

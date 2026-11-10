@@ -2,7 +2,7 @@ import { test, expect, signInAs } from "./fixtures";
 import type { Page } from "@playwright/test";
 
 // Admin user management: the Manage Users list, the per-user admin page
-// (notes, flags, sign-ins, edit/delete), and Site Analytics.
+// (notes, flags, sign-ins, same-IP accounts, edit/delete), and Site Analytics.
 //
 // The database is shared across specs, so every account is derived from the
 // test id. Accounts that are never browsed as keep the sign-in IP the shim
@@ -77,15 +77,19 @@ test("admins leave notes and flag accounts", async ({
   page,
   request,
 }, testInfo) => {
-  const { admin, user } = emails(testInfo.testId);
+  const { admin, user, other } = emails(testInfo.testId);
   const sharedIp = ipFor(testInfo.testId);
   await signInAs(request, null, user, "free", { ip: sharedIp });
+  await signInAs(request, null, other, "free", { ip: sharedIp });
   await signInAs(request, page.context(), admin, "admin");
 
   await openUserPage(page, user);
 
   // Sign-in history shows the shim's sign-in.
   await expect(page.locator("#sign-ins")).toContainText(sharedIp);
+
+  // The other account used the same IP, so it is listed.
+  await expect(page.locator("#shared-ips")).toContainText(other);
 
   // Notes are private to admins and can be removed again.
   await page.getByLabel("New note").fill("Refunded on 9/3");

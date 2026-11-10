@@ -313,7 +313,8 @@ All behind `Admin`:
 - **`/users/{id}`** — the account page: activity strip (last 30 days of
   `user_daily_activity`), account facts, sign-in history (`user_sign_ins`,
   kept 30 days plus the latest), private admin notes (`user_notes`),
-  and flags (`user_flags`, informational only). The edit modal changes email
+  flags (`user_flags`, informational only), and other accounts that
+  share one of its IPs. The edit modal changes email
   (swaps the login behind the account), role, lock, and an optional plan end
   date. Deleting a user also deletes their Stripe customer; admins can't be
   deleted.

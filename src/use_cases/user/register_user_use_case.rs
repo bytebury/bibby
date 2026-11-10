@@ -121,6 +121,9 @@ impl RegisterUserUseCase {
             && (user.signs_in_with_email() || !user.verified)
         {
             User::convert_to_google(self.db.as_ref(), user_id, request).await?;
+        } else if request.verified && request.auth_provider == AuthProvider::Google {
+            // Already a Google account: pick up the latest profile photo.
+            User::refresh_image_url(self.db.as_ref(), user_id, &request.image_url).await?;
         }
 
         let locked = locked_after_sign_in(&user, request.locked);

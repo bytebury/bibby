@@ -1,4 +1,4 @@
-use crate::domain::sign_in::{SIGN_IN_RETENTION_DAYS, SignIn, SignInLocation};
+use crate::domain::sign_in::{SIGN_IN_RETENTION_DAYS, SharedIpAccount, SignIn, SignInLocation};
 use crate::domain::user::{Role, User, UserForm, UserUpdate};
 use crate::domain::user_activity::{ACTIVITY_WINDOW_DAYS, ActiveDay};
 use crate::domain::user_flag::UserFlag;
@@ -59,7 +59,12 @@ struct UserPageTemplate {
     sign_ins: Paginated<SignInLocation>,
     sign_ins_base: String,
     sign_in_retention_days: i32,
+    suggestions: Vec<SharedIpAccount>,
+    suggestion_total: i64,
 }
+
+/// How many same-IP accounts the user page lists before summarising.
+const SUGGESTION_LIMIT: i64 = 10;
 
 impl UserPageTemplate {
     fn active_day_count(&self) -> usize {
@@ -177,7 +182,7 @@ fn encode_query_value(value: &str) -> String {
 }
 
 /// The admin's one-stop view of an account: account facts, activity, sign-in
-/// history, and private admin notes. Editing still happens
+/// history, same-IP accounts, and private admin notes. Editing still happens
 /// in the modal (`edit_user_modal`), opened from this page.
 async fn user_page(
     State(state): State<SharedState>,
@@ -187,12 +192,14 @@ async fn user_page(
     let db = state.db.as_ref();
     let user = User::find_by_id(db, id).await?;
     admin.ensure_can_read(&user)?;
-    let (activity, notes, sign_ins, flag) = tokio::join!(
+    let (activity, notes, sign_ins, suggestions, flag) = tokio::join!(
         ActiveDay::recent_for_user(db, user.id),
         UserNote::find_by_user_id(db, user.id),
         SignIn::locations_for_user(db, user.id, 1, SIGN_INS_PAGE_SIZE),
+        SignIn::accounts_sharing_ips(db, user.id, SUGGESTION_LIMIT),
         UserFlag::find(db, user.id),
     );
+    let (suggestions, suggestion_total) = suggestions?;
     let page_title = user.full_name.clone();
     Ok(UserPageTemplate {
         shared: SharedContext::new(&state)
@@ -207,6 +214,8 @@ async fn user_page(
         flag: flag?,
         sign_ins: sign_ins?,
         sign_in_retention_days: SIGN_IN_RETENTION_DAYS,
+        suggestions,
+        suggestion_total,
     })
 }
 

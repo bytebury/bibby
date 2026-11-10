@@ -1,0 +1,29 @@
+<div class="card-header">
+  <div>
+    <h2 class="card-title">Same IP as this account{% if suggestion_total > 0 %} ({{ suggestion_total }}){% endif %}</h2>
+    <p class="card-subtitle">Other accounts that signed in from, or were last seen on, one of their IPs. A shared IP can also be an office network or a VPN.</p>
+  </div>
+</div>
+<div class="card-body">
+  {% if suggestions.is_empty() %}
+    <p class="text-sm text-gray-500">No other accounts have used their IPs.</p>
+  {% else %}
+    <ul class="divide-y divide-gray-100">
+      {% for suggestion in suggestions %}
+        <li class="py-2">
+          <a href="/users/{{ suggestion.user.id }}" class="flex min-w-0 items-center gap-2 user-row-name">
+            <img src="{{ suggestion.user.image_url }}" alt="" width="24" height="24" class="h-6 w-6 rounded-full" referrerpolicy="no-referrer" />
+            <span class="min-w-0">
+              <span class="block truncate text-sm font-medium">{{ suggestion.user.full_name }}{% if suggestion.user.locked %} <span class="badge-danger">locked</span>{% endif %}</span>
+              <span class="block truncate text-xs text-gray-500">{{ suggestion.user.email }}</span>
+              <span class="block truncate font-mono text-xs text-gray-500">{{ suggestion.shared_ips.join(", ") }}</span>
+            </span>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+    {% if suggestion_total > suggestions.len() as i64 %}
+      <p class="mt-2 text-xs text-gray-500">Showing the {{ suggestions.len() }} newest of {{ suggestion_total }}.</p>
+    {% endif %}
+  {% endif %}
+</div>

@@ -1,3 +1,4 @@
+use crate::domain::user::User;
 use crate::infra::pagination::Paginated;
 use crate::prelude::*;
 
@@ -31,6 +32,13 @@ impl SignInLocation {
             .collect::<Vec<_>>()
             .join(", ")
     }
+}
+
+/// Another account that has used one of this user's IPs — a hint that they
+/// may be the same person.
+pub struct SharedIpAccount {
+    pub user: User,
+    pub shared_ips: Vec<String>,
 }
 
 impl SignIn {
@@ -119,6 +127,67 @@ impl SignIn {
         .fetch_all(db)
         .await?;
         Ok(Paginated::new(rows, total, page, page_size))
+    }
+
+    /// Other accounts that signed in from (or were last seen on) any IP this
+    /// user has. Newest accounts
+    /// first, capped at `limit`; the second value is the uncapped total.
+    pub async fn accounts_sharing_ips(
+        db: &sqlx::PgPool,
+        user_id: PrimaryKey,
+        limit: i64,
+    ) -> Result<(Vec<SharedIpAccount>, i64)> {
+        let rows = sqlx::query!(
+            r#"
+            WITH mine AS (
+                SELECT ip FROM user_sign_ins WHERE user_id = $1
+                UNION
+                SELECT last_known_ip FROM users WHERE id = $1
+            ),
+            matches AS (
+                SELECT s.user_id, s.ip
+                FROM user_sign_ins s
+                JOIN mine m ON m.ip = s.ip
+                UNION
+                SELECT u.id, u.last_known_ip
+                FROM users u
+                JOIN mine m ON m.ip = u.last_known_ip
+            )
+            SELECT user_id AS "user_id!",
+                   array_agg(DISTINCT ip ORDER BY ip) AS "shared_ips!",
+                   COUNT(*) OVER () AS "total!"
+            FROM matches
+            WHERE user_id <> $1
+              AND ip NOT IN ('', 'unknown')
+            GROUP BY user_id
+            ORDER BY user_id DESC
+            LIMIT $2
+            "#,
+            user_id,
+            limit
+        )
+        .fetch_all(db)
+        .await?;
+
+        let total = rows.first().map(|r| r.total).unwrap_or(0);
+        let ids: Vec<PrimaryKey> = rows.iter().map(|r| r.user_id).collect();
+        let users: Vec<User> = sqlx::query_as("SELECT * FROM user_details WHERE id = ANY($1)")
+            .bind(&ids)
+            .fetch_all(db)
+            .await?;
+
+        let mut accounts: Vec<SharedIpAccount> = rows
+            .into_iter()
+            .filter_map(|row| {
+                let user = users.iter().find(|u| u.id == row.user_id)?.clone();
+                Some(SharedIpAccount {
+                    user,
+                    shared_ips: row.shared_ips,
+                })
+            })
+            .collect();
+        accounts.sort_by_key(|a| std::cmp::Reverse(a.user.created_at));
+        Ok((accounts, total))
     }
 
     /// Drops sign-ins older than the retention window, keeping each user's

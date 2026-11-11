@@ -11,7 +11,7 @@
     "test:e2e:install": "playwright install --with-deps chromium"
   },
   "devDependencies": {
-    "@playwright/test": "^1.49.1",
+    "@playwright/test": "^1.65.0",
     "@tailwindcss/cli": "^4.0.0",
     "@types/node": "^22.10.0",
     "tailwindcss": "^4.0.0",

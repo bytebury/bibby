@@ -3,7 +3,7 @@ use jsonwebtoken::*;
 
 pub mod user_claims;
 
-pub use user_claims::UserClaims;
+pub use user_claims::{SESSION_DAYS, UserClaims};
 
 pub struct Jwt {}
 

@@ -68,6 +68,16 @@ test("signing up with email verifies the address, then signs in with a code", as
   await expect(page.getByText("Signed in as Ada Lovelace")).toBeVisible();
   expect(await hasSession(page)).toBe(true);
 
+  // The session cookie lasts as long as the token (a year), so it survives
+  // closing the browser. Without a Max-Age it would be a session cookie,
+  // which Playwright reports as expires === -1.
+  const auth = (await page.context().cookies()).find(
+    (c) => c.name === "auth_token",
+  )!;
+  const days = (auth.expires - Date.now() / 1000) / 86_400;
+  expect(days).toBeGreaterThan(364);
+  expect(days).toBeLessThanOrEqual(365);
+
   // A used code can't be replayed.
   await page.context().clearCookies();
   await page.goto("/sign-in");

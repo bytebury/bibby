@@ -17,9 +17,10 @@ env:
 
 jobs:
   e2e:
-    # Pinned: `ubuntu-latest` is 26.04, which Playwright 1.60 can't install
-    # Chromium's system dependencies on.
-    runs-on: ubuntu-24.04
+    # Playwright only installs Chromium and its system packages on Ubuntu
+    # releases it knows. If this step starts failing right after
+    # `ubuntu-latest` moves to a new release, upgrade `@playwright/test`.
+    runs-on: ubuntu-latest
     timeout-minutes: 20
 
     services:

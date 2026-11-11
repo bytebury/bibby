@@ -6,7 +6,7 @@ use crate::infra::api::extract::maybe_current_user::MaybeCurrentUser;
 use crate::infra::api::extract::real_ip::RealIp;
 use crate::infra::auth::OAuthProvider;
 use crate::infra::auth::google::GoogleOAuth;
-use crate::infra::auth::jwt::{Jwt, UserClaims};
+use crate::infra::auth::jwt::{Jwt, SESSION_DAYS, UserClaims};
 use crate::infra::auth::oauth_state::{OAuthState, is_allowed_target};
 use crate::infra::seo::PageMeta;
 use crate::prelude::*;
@@ -399,8 +399,11 @@ async fn sign_in_with_google_callback(
 /// Mint the session cookie for `user`.
 pub fn auth_cookie(user: &User) -> Result<Cookie<'static>> {
     let token = Jwt::generate(&UserClaims::from(user.clone()))?;
+    // Without a Max-Age this is a session cookie, which browsers drop when
+    // they close, long before the token itself expires.
     Ok(Cookie::build(("auth_token", token))
         .path("/")
+        .max_age(::cookie::time::Duration::days(SESSION_DAYS))
         .http_only(true)
         .same_site(cookie::SameSite::Lax)
         .secure(

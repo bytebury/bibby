@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT description, installed_on FROM _sqlx_migrations ORDER BY version DESC LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "description",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "_sqlx_migrations",
+            "name": "description"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "installed_on",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "_sqlx_migrations",
+            "name": "installed_on"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "e79df1c1a0a9a5c0af7428c4a17fda73410c892710f02c52156e95f694095312"
+}

@@ -1,7 +1,7 @@
 use axum::Router;
 use axum::response::IntoResponse;
 use bibby::infra::db::Database;
-use bibby::infra::{api, assets};
+use bibby::infra::{api, assets, monitoring};
 use bibby::{AppError, AppState};
 use std::env;
 use std::net::SocketAddr;
@@ -12,7 +12,8 @@ use tower_http::services::ServeDir;
 #[tokio::main]
 async fn main() {
     dotenvy::dotenv().ok();
-    tracing_subscriber::fmt::init();
+    // stdout, plus the in-memory buffer behind /admin/monitoring
+    monitoring::init_tracing();
 
     let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
     let address = format!("0.0.0.0:{}", port);
@@ -32,6 +33,7 @@ async fn main() {
     let app = api::routes()
         .merge(serve_static)
         .fallback(not_found_handler)
+        .layer(axum::middleware::from_fn(monitoring::track_requests))
         .with_state(state)
         .layer(CompressionLayer::new())
         .into_make_service_with_connect_info::<SocketAddr>();

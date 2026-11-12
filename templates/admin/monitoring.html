@@ -1,0 +1,55 @@
+{% extends "_layouts/base.html" %}
+
+{% block title %}{{ shared.title_tag() }}{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+  <header class="page-header mb-0">
+    <div>
+      <h1 class="page-title">Monitoring</h1>
+      <p class="page-subtitle">How the app is doing right now. Logs and request numbers are kept in memory on this server, so they start over when it restarts.</p>
+    </div>
+  </header>
+
+  <div id="monitoring-status"
+       hx-get="/admin/monitoring/status"
+       hx-trigger="every 15s[document.visibilityState === 'visible']"
+       hx-swap="innerHTML">
+    {% include "admin/_monitoring_status.html" %}
+  </div>
+
+  <section class="card" id="logs">
+    <div class="card-header flex-wrap gap-3">
+      <div>
+        <h2 class="card-title">Recent logs</h2>
+        <p class="card-subtitle">Newest first. Updates every 5 seconds.</p>
+      </div>
+      <form class="flex flex-wrap items-end gap-2"
+            hx-get="/admin/monitoring/logs"
+            hx-target="#log-rows"
+            hx-swap="innerHTML"
+            hx-trigger="change, input changed delay:300ms from:#log-search, every 5s[document.visibilityState === 'visible' && !document.getElementById('logs-paused').checked]"
+            onsubmit="return false">
+        <div>
+          <label for="log-level" class="label text-xs">Level</label>
+          <select id="log-level" name="level" class="input">
+            <option value="info" {% if level != "warn" && level != "error" %}selected{% endif %}>Info and up</option>
+            <option value="warn" {% if level == "warn" %}selected{% endif %}>Warnings and errors</option>
+            <option value="error" {% if level == "error" %}selected{% endif %}>Errors only</option>
+          </select>
+        </div>
+        <div>
+          <label for="log-search" class="label text-xs">Search</label>
+          <input id="log-search" name="q" type="search" value="{{ q }}" placeholder="Text or module" autocomplete="off" class="input"/>
+        </div>
+        <label class="flex items-center gap-1 pb-2 text-sm text-gray-700">
+          <input type="checkbox" id="logs-paused"/> Pause
+        </label>
+      </form>
+    </div>
+    <div class="monitoring-logs" id="log-rows">
+      {% include "admin/_monitoring_logs.html" %}
+    </div>
+  </section>
+</div>
+{% endblock %}

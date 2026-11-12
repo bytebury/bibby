@@ -304,6 +304,20 @@ Only interpolate fixed SQL fragments into the clause, never request data (see
 as `Option<String>` (see `User::stripe_customer_id`) and convert with
 `CustomerId::try_from(…)` at the use-case boundary.
 
+## Admin monitoring
+
+`/admin/monitoring` (admin only, linked from the account menu) shows an
+overall health verdict with the problems behind it, plus uptime, memory,
+database ping, size and connections, the pool, when the daily tick last
+ran, migrations, the largest tables, which env vars are set (values never
+shown), the last 24 hours of sign-ups and sign-ins, and recent logs.
+`infra/monitoring.rs` keeps the last 1,000 log lines (INFO and up) and the
+request counts in memory, so they're per server and start over on restart.
+`monitoring::init_tracing` replaces `tracing_subscriber::fmt::init()`, and
+the `track_requests` middleware skips `/assets` and the page's own polling.
+The checks, the env var list and the 24-hour counts live in
+`domain/system_status.rs`.
+
 ## Admin user management
 
 All behind `Admin`:

@@ -5,6 +5,7 @@ pub mod db;
 pub mod email;
 pub mod geolocation;
 pub mod markdown;
+pub mod monitoring;
 pub mod pagination;
 pub mod payments;
 pub mod scheduler;

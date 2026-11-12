@@ -7,6 +7,7 @@ pub mod country;
 pub mod one_time_passcode;
 pub mod region;
 pub mod sign_in;
+pub mod system_status;
 pub mod user;
 pub mod user_activity;
 pub mod user_flag;

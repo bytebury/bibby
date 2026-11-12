@@ -1,0 +1,33 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT updated_at, held_until > NOW() AS \"running!\"\n            FROM scheduler_locks\n            WHERE key = 'daily'\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "scheduler_locks",
+            "name": "updated_at"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "running!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "a8dae01645882fe11c7d397e8f341816758de7b621dbed2af7ab9a957e444d9d"
+}

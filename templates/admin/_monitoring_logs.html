@@ -1,0 +1,14 @@
+{% if logs.is_empty() %}
+<p class="table-empty">No log lines match.</p>
+{% else %}
+<ol class="monitoring-log-list">
+  {% for entry in logs %}
+  <li class="monitoring-log level-{{ entry.level_name() }}" data-seq="{{ entry.seq }}">
+    <time datetime="{{ entry.at.to_rfc3339() }}" title="{{ entry.at.format("%Y-%m-%d %H:%M:%S%.3f UTC") }}">{{ entry.at.format("%b %-d %H:%M:%S") }}</time>
+    <span class="monitoring-level">{{ entry.level_name() }}</span>
+    <span class="monitoring-target">{{ entry.target }}</span>
+    <span class="monitoring-message">{{ entry.message }}</span>
+  </li>
+  {% endfor %}
+</ol>
+{% endif %}

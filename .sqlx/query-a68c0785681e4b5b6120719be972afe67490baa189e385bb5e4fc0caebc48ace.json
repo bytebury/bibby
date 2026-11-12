@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                relname::TEXT                     AS \"name!\",\n                n_live_tup                        AS \"rows!\",\n                pg_total_relation_size(relid)     AS \"bytes!\"\n            FROM pg_stat_user_tables\n            ORDER BY pg_total_relation_size(relid) DESC\n            LIMIT 12\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "rows!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "pg_stat_user_tables",
+            "name": "n_live_tup"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "bytes!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null,
+      true,
+      null
+    ]
+  },
+  "hash": "a68c0785681e4b5b6120719be972afe67490baa189e385bb5e4fc0caebc48ace"
+}

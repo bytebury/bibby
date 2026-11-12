@@ -397,4 +397,89 @@
     .page-subtitle {
         @apply text-sm text-gray-500;
     }
+
+    /* Admin monitoring (/admin/monitoring). The health card's edge and dot
+       follow the overall state; logs are a dense monospace list. */
+    .monitoring-health {
+        @apply border-l-4 border-l-green-600;
+    }
+    .monitoring-health.is-warning {
+        @apply border-l-amber-500;
+    }
+    .monitoring-health.is-critical {
+        @apply border-l-red-600;
+    }
+    .monitoring-dot {
+        @apply inline-block h-2.5 w-2.5 rounded-full bg-green-600 ring-4 ring-green-600/20;
+    }
+    .is-warning .monitoring-dot {
+        @apply bg-amber-500 ring-amber-500/20;
+    }
+    .is-critical .monitoring-dot {
+        @apply bg-red-600 ring-red-600/20;
+    }
+    .monitoring-check {
+        @apply inline-flex h-[18px] w-[18px] items-center justify-center rounded-full bg-green-600 text-[11px] font-bold text-white;
+    }
+    .monitoring-check.is-missing {
+        @apply bg-red-600;
+    }
+    .monitoring-check.is-optional {
+        @apply bg-gray-400;
+    }
+    .monitoring-traffic {
+        @apply block h-24 w-full;
+    }
+    .monitoring-traffic .hit {
+        fill: transparent;
+    }
+    .monitoring-traffic g:hover .hit {
+        @apply fill-gray-100;
+    }
+    .monitoring-traffic .requests {
+        @apply fill-blue-600;
+    }
+    .monitoring-traffic .errors {
+        @apply fill-red-600;
+    }
+    .monitoring-logs {
+        @apply max-h-[560px] overflow-auto;
+    }
+    .monitoring-log-list {
+        @apply font-mono text-xs leading-normal;
+    }
+    .monitoring-log {
+        @apply grid gap-2 border-t border-gray-100 px-4 py-1;
+        grid-template-columns: max-content 52px minmax(0, 180px) minmax(0, 1fr);
+    }
+    .monitoring-log time,
+    .monitoring-target {
+        @apply truncate text-gray-500;
+    }
+    .monitoring-message {
+        @apply whitespace-pre-wrap break-all;
+    }
+    .monitoring-level {
+        @apply font-bold uppercase text-sky-700;
+    }
+    .monitoring-log.level-warn {
+        @apply bg-amber-50;
+    }
+    .monitoring-log.level-warn .monitoring-level {
+        @apply text-amber-700;
+    }
+    .monitoring-log.level-error {
+        @apply bg-red-50;
+    }
+    .monitoring-log.level-error .monitoring-level {
+        @apply text-red-700;
+    }
+    @media (max-width: 720px) {
+        .monitoring-log {
+            grid-template-columns: max-content 52px minmax(0, 1fr);
+        }
+        .monitoring-target {
+            @apply hidden;
+        }
+    }
 }

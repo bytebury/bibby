@@ -1,0 +1,42 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                current_setting('server_version')                      AS \"server_version!\",\n                pg_database_size(current_database())                   AS \"size_bytes!\",\n                (SELECT COUNT(*) FROM pg_stat_activity\n                  WHERE datname = current_database())                  AS \"connections!\",\n                current_setting('max_connections')::BIGINT             AS \"max_connections!\"\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "server_version!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "size_bytes!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "connections!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "max_connections!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "44a2f022d2bdb9fd9537f53cff82b753543fb6f57ac63c92e521d745d5efdc0b"
+}

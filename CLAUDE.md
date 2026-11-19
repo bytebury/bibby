@@ -111,6 +111,41 @@ database too: leftover rows from earlier runs can hide a regression.
   (`feat: …`, `fix: …`, `refactor: …`, `perf: …`, `test: …`, `docs: …`,
   `chore: …`).
 
+## Lessons learned
+
+Habits from past mistakes; each one cost a failed CI run, a bug or a wasted
+round trip.
+
+- **Reproduce before fixing, measure before optimising.** Show the bug in a
+  test or a browser first (the modal Escape bug; the navigation flicker,
+  measured as layout shifts), then show the same check passing.
+- **Run the tests once.** A failure, flaky or not, is a bug to explain: find
+  its cause. Don't rerun, add retries, or run a suite twice to look for
+  flakes.
+- **Simple and correct beats clever.** Read from the database instead of
+  adding a cache, timer or background refresh. Cache only for a measured
+  need, and then invalidate on change, never on a schedule.
+- **Don't optimise away a write something else reads.** Skipping the daily
+  activity insert to save a write lost users who signed in and left within
+  a minute.
+- **Test against an empty database.** CI's starts empty; leftover local rows
+  hid that bug. Build with `SQLX_OFFLINE=true` when `DATABASE_URL` points at
+  a fresh database, or the query macros fail to compile.
+- **Optional services never block startup.** Only `DATABASE_URL`,
+  `JWT_SECRET` and `ADMIN_EMAILS` are required; without Stripe, Google,
+  mailman or geodude their feature is hidden, not a panic.
+- **Validate or escape anything rendered inside `<script>`** (`script_json`,
+  strict tag IDs). Askama escapes HTML, not JavaScript.
+- **A green deploy isn't a running app.** Railway reported a preview that
+  crashed on boot as a success; check that it responds.
+- **Delete what nothing calls**: unused impls, macros that only forward,
+  traits with one implementation. The compiler and the tests prove it safe.
+- **Docs change with the code.** CLAUDE.md, README.md and AGENTS.md describe
+  the code as it is now, in the same commit.
+- **Never discard commits you haven't checked.** Before resetting or
+  recreating a branch, make sure it doesn't hold unmerged work, such as an
+  open PR's commits.
+
 ## Branching workflow
 
 - Always branch off `main` and open a PR back into `main`. Never commit to
@@ -142,7 +177,7 @@ src/
     markdown.rs           # Markdown → sanitized HTML (pulldown-cmark + ammonia)
     monitoring.rs         # in-memory logs and request stats for /admin/monitoring
     rate_limit.rs         # per-IP limit on the sign-up / sign-in POSTs
-    site.rs               # in-memory banner + feature toggles, refreshed every 30s
+    site.rs               # the banner + feature toggles every page reads
     csrf.rs               # refuses cross-site state-changing requests
     scheduler.rs          # the daily tick (plan expirations, sign-in pruning)
     seo.rs                # SeoConfig / WebAppConfig / PageMeta
@@ -390,10 +425,9 @@ on for everyone. A toggle is on or off and may carry a value.
   name, description, value label, `parse_value` validation) and each has a
   `feature_toggles` row, added by a migration, holding `enabled` / `value`.
 - Pages read them through `shared.site.toggles` (e.g.
-  `shared.google_analytics_tag()`), never from the database per request.
-  `infra/site.rs` keeps the toggles and the active announcement banner in
-  memory; it reloads right after an admin change on this server and every
-  30 seconds, so other replicas catch up.
+  `shared.google_analytics_tag()`). `SharedContext::new` loads them and the
+  active announcement banner with each page (`infra/site.rs`, two small
+  queries run together), so a change shows everywhere as soon as it is saved.
 - **Google Analytics** (off by default): turning it on requires a Google tag
   ID (`G-…`, `GT-…`, `AW-…`, `DC-…`). When on, `_partials/google_analytics.html`
   loads gtag on every page and the privacy policy mentions its cookies.

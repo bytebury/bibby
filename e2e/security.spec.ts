@@ -1,13 +1,7 @@
-import { test, expect, signInAs, issueSignInCode } from "./fixtures";
+import { test, expect, signInAs, issueSignInCode, testEmail } from "./fixtures";
 
 // Account security: who becomes an admin, ending sessions, cross-site
 // requests, untrusted names in admin pages, and running without Stripe.
-
-const RUN = Date.now().toString(36);
-
-function emailFor(testId: string, who: string) {
-  return `playwright+${who}+${testId}-${RUN}@example.com`.toLowerCase();
-}
 
 // Listed in ADMIN_EMAILS by e2e.sh and the Playwright workflow.
 const LISTED_ADMIN = "playwright+listed-admin@example.com";
@@ -37,7 +31,7 @@ test("an address not in ADMIN_EMAILS stays a free account", async ({
   page,
   request,
 }, testInfo) => {
-  const email = emailFor(testInfo.testId, "unlisted");
+  const email = testEmail(testInfo, "unlisted");
   await page.goto("/sign-up");
   await page.getByLabel("First name").fill("Not");
   await page.getByLabel("Last name").fill("Listed");
@@ -54,7 +48,7 @@ test("signing out everywhere ends sessions on other devices", async ({
   browser,
   request,
 }, testInfo) => {
-  const email = emailFor(testInfo.testId, "everywhere");
+  const email = testEmail(testInfo, "everywhere");
   const laptop = await browser.newContext();
   const phone = await browser.newContext();
   await signInAs(request, laptop, email, "free");
@@ -76,7 +70,7 @@ test("state-changing requests from another site are refused", async ({
   page,
   request,
 }, testInfo) => {
-  await signInAs(request, page.context(), emailFor(testInfo.testId, "csrf"), "free");
+  await signInAs(request, page.context(), testEmail(testInfo, "csrf"), "free");
   const response = await page.request.patch("/settings", {
     headers: { Origin: "https://evil.example" },
     form: { first_name: "Mallory", last_name: "Evil" },
@@ -88,11 +82,11 @@ test("a user's name can't run script on the admin user page", async ({
   page,
   request,
 }, testInfo) => {
-  const victim = emailFor(testInfo.testId, "named");
+  const victim = testEmail(testInfo, "named");
   await signInAs(request, null, victim, "free", {
     fullName: "</script><script>window.__pwned = true</script>",
   });
-  await signInAs(request, page.context(), emailFor(testInfo.testId, "admin"), "admin");
+  await signInAs(request, page.context(), testEmail(testInfo, "admin"), "admin");
 
   await page.goto(`/users?q=${encodeURIComponent(victim)}`);
   await page.locator('#list a[href^="/users/"]:visible').first().click();
@@ -101,7 +95,7 @@ test("a user's name can't run script on the admin user page", async ({
 });
 
 test("without Stripe there is no billing to reach", async ({ page, request }, testInfo) => {
-  await signInAs(request, page.context(), emailFor(testInfo.testId, "free"), "free");
+  await signInAs(request, page.context(), testEmail(testInfo, "free"), "free");
   await page.goto("/");
   await expect(page.locator("nav").getByRole("link", { name: "Upgrade" })).toHaveCount(0);
   expect((await page.goto("/upgrade"))?.status()).toBe(404);

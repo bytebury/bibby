@@ -5,7 +5,7 @@
   <div class="card-body space-y-5 px-6 py-8">
     <div class="text-center">
       <p class="text-sm font-semibold text-blue-600">Welcome back</p>
-      <h1 class="page-title">Sign in to {{ shared.app_name }}</h1>
+      <h1 class="page-title">Sign in to {{ shared.app_name() }}</h1>
     </div>
 
     {% let label = "Continue with Google" %}
@@ -30,7 +30,7 @@
     </div>
 
     <p class="text-center text-xs text-gray-500">
-      New to {{ shared.app_name }}?
+      New to {{ shared.app_name() }}?
       <a href="/sign-up" class="underline hover:text-gray-700">Create an account</a>.
       By signing in you agree to our <a href="/terms" class="underline hover:text-gray-700">Terms</a> and
       <a href="/privacy" class="underline hover:text-gray-700">Privacy Policy</a>.

@@ -1,6 +1,9 @@
-document.body.addEventListener("htmx:afterSwap", function () {
-    renderTimes();
+const timeFormat = new Intl.DateTimeFormat(navigator.language, {
+    dateStyle: 'long',
+    timeStyle: 'short'
 });
+
+document.body.addEventListener("htmx:afterSwap", renderTimes);
 
 function renderTimes() {
     document.querySelectorAll('time[data-utc]').forEach(el => {
@@ -10,10 +13,7 @@ function renderTimes() {
         const date = new Date(iso);
 
         if (!isNaN(date)) {
-            el.textContent = new Intl.DateTimeFormat(navigator.language, {
-                dateStyle: 'long',
-                timeStyle: 'short'
-            }).format(date);
+            el.textContent = timeFormat.format(date);
         }
     });
 }

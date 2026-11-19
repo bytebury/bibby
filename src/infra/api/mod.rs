@@ -1,6 +1,5 @@
 use crate::SharedState;
 use crate::domain::user::User;
-use crate::infra::assets::AssetManifest;
 use crate::infra::seo::PageMeta;
 use axum::Router;
 use chrono::Datelike;
@@ -34,6 +33,35 @@ macro_rules! refresh {
             (axum::http::StatusCode::OK, [("Refresh", "0")]).into_response()
         }
     }};
+}
+
+/// A public page that needs nothing but the shared context: defines the
+/// handler `$handler` rendering `templates/$template` at `$path`.
+///
+/// ```ignore
+/// static_page!(about, "about.html", "/about", PageMeta::new().title("About"));
+/// // then: .route("/about", get(about))
+/// ```
+#[macro_export]
+macro_rules! static_page {
+    ($handler:ident, $template:literal, $path:literal, $meta:expr) => {
+        async fn $handler(
+            $crate::infra::api::extract::maybe_current_user::MaybeCurrentUser(user): $crate::infra::api::extract::maybe_current_user::MaybeCurrentUser,
+            axum::extract::State(state): axum::extract::State<$crate::SharedState>,
+        ) -> impl axum::response::IntoResponse {
+            #[derive(askama::Template, askama_web::WebTemplate)]
+            #[template(path = $template)]
+            struct Page {
+                shared: $crate::infra::api::SharedContext,
+            }
+            Page {
+                shared: $crate::infra::api::SharedContext::new(&state)
+                    .with_user(user)
+                    .with_canonical_path($path)
+                    .with_meta($meta),
+            }
+        }
+    };
 }
 
 pub mod admin;
@@ -70,25 +98,12 @@ pub fn routes() -> Router<SharedState> {
 }
 
 pub struct SharedContext {
+    /// App-wide config (name, SEO defaults, web-app manifest, assets). An
+    /// `Arc`, so building a context per page copies nothing.
+    pub state: SharedState,
     pub user: Option<User>,
-    pub app_name: String,
-    pub assets: AssetManifest,
     pub canonical_path: Option<String>,
-    pub site_url: String,
     pub page_meta: PageMeta,
-    pub default_title: String,
-    pub default_description: String,
-    pub default_image: String,
-    pub default_robots: String,
-    pub twitter_handle: String,
-    pub web_app_name: String,
-    pub web_app_short_name: String,
-    pub theme_color: String,
-    pub web_app_service_worker_enabled: bool,
-    /// Whether Stripe is configured, so billing links can be hidden.
-    pub payments_enabled: bool,
-    /// Whether Google sign-in is configured.
-    pub google_enabled: bool,
     /// Current UTC year — stamped on each request and used by the footer
     /// copyright line so it rolls over without a code change.
     pub current_year: i32,
@@ -97,25 +112,26 @@ pub struct SharedContext {
 impl SharedContext {
     pub fn new(state: &SharedState) -> Self {
         Self {
-            app_name: state.app_name.clone(),
-            assets: state.assets.clone(),
-            payments_enabled: state.payments_use_cases.is_some(),
-            google_enabled: crate::infra::auth::google::GoogleOAuth::is_configured(),
+            state: state.clone(),
             user: None,
             canonical_path: None,
-            site_url: state.seo.site_url.clone(),
             page_meta: PageMeta::new(),
-            default_title: state.seo.default_title.clone(),
-            default_description: state.seo.default_description.clone(),
-            default_image: state.seo.default_image.clone(),
-            default_robots: state.seo.robots.clone(),
-            twitter_handle: state.seo.twitter_handle.clone(),
-            web_app_name: state.web_app.name.clone(),
-            web_app_short_name: state.web_app.short_name.clone(),
-            theme_color: state.web_app.theme_color.clone(),
-            web_app_service_worker_enabled: state.web_app.service_worker_enabled,
             current_year: chrono::Utc::now().year(),
         }
+    }
+
+    pub fn app_name(&self) -> &str {
+        &self.state.app_name
+    }
+
+    /// Whether Stripe is configured, so billing links can be hidden.
+    pub fn payments_enabled(&self) -> bool {
+        self.state.payments_use_cases.is_some()
+    }
+
+    /// Whether Google sign-in is configured.
+    pub fn google_enabled(&self) -> bool {
+        crate::infra::auth::google::is_configured()
     }
 
     pub fn with_user(self, user: Option<User>) -> Self {
@@ -136,20 +152,22 @@ impl SharedContext {
     /// URL for a file under `/assets/` with its content hash appended, so
     /// browsers cache it until it changes. See `infra/assets.rs`.
     pub fn asset(&self, path: &str) -> String {
-        self.assets.url(path)
+        self.state.assets.url(path)
     }
 
     pub fn page_title(&self) -> &str {
         self.page_meta
             .title
             .as_deref()
-            .unwrap_or(&self.default_title)
+            .unwrap_or(&self.state.seo.default_title)
     }
 
     pub fn title_tag(&self) -> String {
         match &self.page_meta.title {
-            Some(title) if title != &self.app_name => format!("{} — {}", title, self.app_name),
-            _ => self.default_title.clone(),
+            Some(title) if title != &self.state.app_name => {
+                format!("{} — {}", title, self.state.app_name)
+            }
+            _ => self.state.seo.default_title.clone(),
         }
     }
 
@@ -157,31 +175,31 @@ impl SharedContext {
         self.page_meta
             .description
             .as_deref()
-            .unwrap_or(&self.default_description)
+            .unwrap_or(&self.state.seo.default_description)
     }
 
     pub fn meta_robots(&self) -> &str {
         self.page_meta
             .robots
             .as_deref()
-            .unwrap_or(&self.default_robots)
+            .unwrap_or(&self.state.seo.robots)
     }
 
     pub fn canonical_url(&self) -> String {
         format!(
             "{}{}",
-            self.site_url,
+            self.state.seo.site_url,
             self.canonical_path.as_deref().unwrap_or("/")
         )
     }
 
     pub fn image_url(&self) -> String {
         absolute_url(
-            &self.site_url,
+            &self.state.seo.site_url,
             self.page_meta
                 .image_url
                 .as_deref()
-                .unwrap_or(&self.default_image),
+                .unwrap_or(&self.state.seo.default_image),
         )
     }
 
@@ -190,7 +208,7 @@ impl SharedContext {
     }
 
     pub fn has_twitter_handle(&self) -> bool {
-        !self.twitter_handle.is_empty()
+        !self.state.seo.twitter_handle.is_empty()
     }
 
     pub fn structured_data_json(&self) -> String {

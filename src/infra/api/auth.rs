@@ -2,10 +2,10 @@ use crate::domain::one_time_passcode;
 use crate::domain::user::{CreateUser, SignUp, SignUpForm, User};
 use crate::domain::value_objects::email::Email;
 use crate::infra::api::SharedContext;
+use crate::infra::api::auth_test;
 use crate::infra::api::extract::maybe_current_user::MaybeCurrentUser;
 use crate::infra::api::extract::real_ip::RealIp;
-use crate::infra::auth::OAuthProvider;
-use crate::infra::auth::google::GoogleOAuth;
+use crate::infra::auth::google;
 use crate::infra::auth::jwt::{Jwt, SESSION_DAYS, UserClaims};
 use crate::infra::auth::oauth_state::{OAuthState, is_allowed_target};
 use crate::infra::rate_limit;
@@ -18,6 +18,7 @@ use axum::response::IntoResponse;
 use axum::routing::{delete, get, post};
 use axum_extra::extract::cookie::{self, Cookie};
 use axum_extra::extract::{CookieJar, Form};
+use std::sync::LazyLock;
 
 const OAUTH_NONCE_COOKIE: &str = "oauth_nonce";
 
@@ -114,12 +115,16 @@ struct SignOutQuery {
 }
 
 pub fn routes() -> Router<SharedState> {
-    // Each of these sends an email or checks a code, so they're limited per IP.
-    let limited = Router::new()
+    // Each of these sends an email or checks a code, so they're limited per
+    // IP. Not while the test-auth shim is on: the Playwright suite sends
+    // every request from one IP.
+    let mut limited = Router::new()
         .route("/sign-in/code", post(send_sign_in_code))
         .route("/sign-in/code/verify", post(verify_sign_in_code))
-        .route("/sign-up", post(sign_up_with_email))
-        .route_layer(axum::middleware::from_fn(rate_limit::limit_auth));
+        .route("/sign-up", post(sign_up_with_email));
+    if !auth_test::is_enabled() {
+        limited = limited.route_layer(axum::middleware::from_fn(rate_limit::limit_auth));
+    }
     Router::new()
         .merge(limited)
         .route("/sign-in", get(sign_in_page))
@@ -278,7 +283,11 @@ async fn verify_sign_in_code(
     // Same path a Google sign-in takes, so the location and lock signals are
     // refreshed.
     let mut sign_in = CreateUser::from_existing(&user, ip_addr);
-    let user = state.user_use_cases.register.execute(&mut sign_in).await?;
+    let user = state
+        .user_use_cases
+        .register
+        .sign_in(Some(user), &mut sign_in)
+        .await?;
 
     if user.locked || !user.verified {
         return Ok(redirect!("/", &headers));
@@ -288,11 +297,11 @@ async fn verify_sign_in_code(
 }
 
 async fn sign_in_with_google(headers: HeaderMap, cookies: CookieJar) -> Result<impl IntoResponse> {
-    GoogleOAuth::ensure_configured()?;
+    google::ensure_configured()?;
     let origin =
         env::var("APP_ORIGIN").map_err(|_| AppError::Internal("APP_ORIGIN not set".to_string()))?;
     let nonce = OAuthState::new_nonce();
-    let url = GoogleOAuth::default().auth_url_for_target(&origin, &nonce)?;
+    let url = google::auth_url(&origin, &nonce)?;
 
     // Pin this flow to this browser. The callback compares this cookie to
     // `state.nonce`; if they don't match the user finished OAuth in a
@@ -302,11 +311,7 @@ async fn sign_in_with_google(headers: HeaderMap, cookies: CookieJar) -> Result<i
         .path("/")
         .http_only(true)
         .same_site(cookie::SameSite::Lax)
-        .secure(
-            env::var("APP_ORIGIN")
-                .unwrap_or_default()
-                .starts_with("https://"),
-        );
+        .secure(is_https());
     let cookies = cookies.add(nonce_cookie);
 
     Ok((cookies, redirect!(url.as_str(), &headers)))
@@ -319,7 +324,7 @@ async fn sign_in_with_google_callback(
     headers: HeaderMap,
     cookies: CookieJar,
 ) -> Result<impl IntoResponse> {
-    GoogleOAuth::ensure_configured()?;
+    google::ensure_configured()?;
     let oauth_state = OAuthState::verify(&params.state)
         .map_err(|_| AppError::BadRequest("Invalid or expired OAuth state.".to_string()))?;
 
@@ -357,18 +362,12 @@ async fn sign_in_with_google_callback(
         return Ok(FinishSignInTemplate {
             shared: SharedContext::new(&state)
                 .with_canonical_path("/auth/google")
-                .with_meta(
-                    PageMeta::new()
-                        .title("Finish signing in")
-                        .robots("noindex,nofollow"),
-                ),
+                .with_meta(PageMeta::private("Finish signing in")),
         }
         .into_response());
     }
 
-    let mut create_user = GoogleOAuth::default()
-        .exchange_code_for_user(&params.code)
-        .await?;
+    let mut create_user = google::exchange_code(&params.code).await?;
     create_user.last_known_ip = ip_addr;
 
     // A first-time sign-in that trips a lock signal never creates an account.
@@ -412,9 +411,16 @@ fn is_local_path(target: &str) -> bool {
     target.starts_with('/') && !target.starts_with("//") && !target.contains('\\')
 }
 
+/// Whether the site is served over HTTPS, so cookies get `Secure`. Read once.
+fn is_https() -> bool {
+    static HTTPS: LazyLock<bool> =
+        LazyLock::new(|| env::var("APP_ORIGIN").is_ok_and(|origin| origin.starts_with("https://")));
+    *HTTPS
+}
+
 /// Mint the session cookie for `user`.
 pub fn auth_cookie(user: &User) -> Result<Cookie<'static>> {
-    let token = Jwt::generate(&UserClaims::from(user.clone()))?;
+    let token = Jwt::generate(&UserClaims::from(user))?;
     // Without a Max-Age this is a session cookie, which browsers drop when
     // they close, long before the token itself expires.
     Ok(Cookie::build(("auth_token", token))
@@ -422,11 +428,7 @@ pub fn auth_cookie(user: &User) -> Result<Cookie<'static>> {
         .max_age(::cookie::time::Duration::days(SESSION_DAYS))
         .http_only(true)
         .same_site(cookie::SameSite::Lax)
-        .secure(
-            env::var("APP_ORIGIN")
-                .unwrap_or_default()
-                .starts_with("https://"),
-        )
+        .secure(is_https())
         .build())
 }
 

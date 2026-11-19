@@ -7,7 +7,7 @@
     <meta name="description" content="{{ shared.meta_description() }}" />
     <meta name="robots" content="{{ shared.meta_robots() }}" />
     <link rel="canonical" href="{{ shared.canonical_url() }}" />
-    <meta property="og:site_name" content="{{ shared.app_name }}" />
+    <meta property="og:site_name" content="{{ shared.app_name() }}" />
     <meta property="og:title" content="{{ shared.page_title() }}" />
     <meta property="og:description" content="{{ shared.meta_description() }}" />
     <meta property="og:type" content="{{ shared.page_meta.kind }}" />
@@ -22,11 +22,11 @@
       <meta name="twitter:image" content="{{ shared.image_url() }}" />
     {% endif %}
     {% if shared.has_twitter_handle() %}
-      <meta name="twitter:site" content="{{ shared.twitter_handle }}" />
+      <meta name="twitter:site" content="{{ shared.state.seo.twitter_handle }}" />
     {% endif %}
-    <meta name="theme-color" content="{{ shared.theme_color }}" />
-    <meta name="application-name" content="{{ shared.web_app_name }}" />
-    <meta name="apple-mobile-web-app-title" content="{{ shared.web_app_short_name }}" />
+    <meta name="theme-color" content="{{ shared.state.web_app.theme_color }}" />
+    <meta name="application-name" content="{{ shared.state.web_app.name }}" />
+    <meta name="apple-mobile-web-app-title" content="{{ shared.state.web_app.short_name }}" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="icon" href="{{ shared.asset("/assets/images/app-icon.svg") }}" type="image/svg+xml" />
@@ -34,7 +34,7 @@
     <script type="application/ld+json">{{ shared.structured_data_json()|safe }}</script>
     <link rel="stylesheet" href="{{ shared.asset("/assets/styles.css") }}" />
     {% include "_partials/scripts.html" %}
-    {% if shared.web_app_service_worker_enabled %}
+    {% if shared.state.web_app.service_worker_enabled %}
       <script>
         if ("serviceWorker" in navigator) {
           window.addEventListener("load", () => {

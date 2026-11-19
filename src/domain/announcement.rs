@@ -183,17 +183,6 @@ impl Validate for AnnouncementForm {
     }
 }
 
-impl From<Announcement> for AnnouncementForm {
-    fn from(announcement: Announcement) -> Self {
-        Self {
-            title: announcement.title,
-            message: announcement.message,
-            active: announcement.active.then_some("on".into()),
-            severity: announcement.severity,
-        }
-    }
-}
-
 /// Site content: anyone may read it, only admins may change it.
 impl Access<Announcement> for User {
     fn can_write(&self, _: &Announcement) -> bool {

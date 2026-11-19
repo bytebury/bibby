@@ -1,6 +1,5 @@
 use crate::SharedState;
 use crate::domain::country::Country;
-use crate::domain::value_objects::toggle::Toggle;
 use crate::infra::api::SharedContext;
 use crate::infra::api::extract::admin::Admin;
 use crate::infra::seo::PageMeta;
@@ -35,7 +34,8 @@ struct CountrySearchParams {
 #[derive(Deserialize, Default)]
 struct LockForm {
     #[serde(default)]
-    locked: Toggle,
+    /// A checkbox: browsers only send it when it is checked.
+    locked: Option<String>,
 }
 
 async fn countries(
@@ -49,11 +49,7 @@ async fn countries(
         shared: SharedContext::new(&state)
             .with_user(Some(user))
             .with_canonical_path("/countries")
-            .with_meta(
-                PageMeta::new()
-                    .title("Manage Countries")
-                    .robots("noindex,nofollow"),
-            ),
+            .with_meta(PageMeta::private("Manage Countries")),
         countries,
         search_query,
     })
@@ -67,6 +63,6 @@ async fn toggle_lock(
 ) -> Result<impl IntoResponse> {
     let country = Country::find_by_id(state.db.as_ref(), id).await?;
     admin.ensure_can_write(&country)?;
-    Country::set_locked(state.db.as_ref(), country.id, form.locked.as_bool()).await?;
+    Country::set_locked(state.db.as_ref(), country.id, form.locked.is_some()).await?;
     Ok(StatusCode::NO_CONTENT)
 }

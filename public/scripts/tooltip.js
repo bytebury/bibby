@@ -1,25 +1,23 @@
+// Delegated from `document`, so elements HTMX swaps in need no rebinding.
 let activeTooltip = null;
 
-document.addEventListener("DOMContentLoaded", function () {
-    initializeTooltips();
-});
-
-document.body.addEventListener("htmx:afterSwap", function () {
-    // Hide any active tooltips
-    hideTooltip();
-    initializeTooltips();
-});
-
-function initializeTooltips() {
-    for (const element of document.querySelectorAll("[data-tooltip]")) {
-        element.addEventListener("mouseenter", showTooltip);
-        element.addEventListener("mouseleave", hideTooltip);
+document.addEventListener("mouseover", function (event) {
+    const target = event.target.closest("[data-tooltip]");
+    if (target && target !== activeTooltip) {
+        showTooltip(target);
     }
-}
+});
 
-function showTooltip(event) {
-    const target = event.currentTarget;
+document.addEventListener("mouseout", function (event) {
+    if (activeTooltip && !activeTooltip.contains(event.relatedTarget)) {
+        hideTooltip();
+    }
+});
 
+// A swap can remove the hovered element without a mouseout.
+document.body.addEventListener("htmx:afterSwap", hideTooltip);
+
+function showTooltip(target) {
     const isMobile = window.matchMedia("(max-width: 748px)").matches;
     const suppressOnMobile = target.hasAttribute("data-tooltip-no-mobile") ||
         target.matches("details.menu > summary");
@@ -29,7 +27,7 @@ function showTooltip(event) {
     }
 
     activeTooltip = target;
-    tooltip.innerHTML = activeTooltip.dataset.tooltip;
+    tooltip.textContent = activeTooltip.dataset.tooltip;
 
     tooltip.classList.add("measure");
     const tooltipRect = tooltip.getBoundingClientRect();

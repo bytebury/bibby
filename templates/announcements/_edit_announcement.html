@@ -20,10 +20,9 @@
   <label class="block">
     <span class="label">Severity</span>
     <select name="severity" class="input mt-1">
-      <option value="info" {% if announcement.severity.to_string() == "info" %}selected{% endif %}>Info</option>
-      <option value="primary" {% if announcement.severity.to_string() == "primary" %}selected{% endif %}>Primary</option>
-      <option value="warn" {% if announcement.severity.to_string() == "warn" %}selected{% endif %}>Warn</option>
-      <option value="danger" {% if announcement.severity.to_string() == "danger" %}selected{% endif %}>Danger</option>
+      {% for level in announcement.severity.all() %}
+        <option value="{{ level }}" {% if *level == announcement.severity %}selected{% endif %}>{{ level.label() }}</option>
+      {% endfor %}
     </select>
   </label>
 

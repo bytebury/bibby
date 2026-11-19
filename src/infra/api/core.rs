@@ -1,6 +1,5 @@
 use crate::domain::blog::Blog;
-use crate::infra::api::SharedContext;
-use crate::infra::api::extract::maybe_current_user::MaybeCurrentUser;
+use crate::infra::markdown::escape_html;
 use crate::infra::seo::PageMeta;
 use crate::prelude::*;
 use axum::Router;
@@ -20,61 +19,25 @@ pub fn routes() -> Router<SharedState> {
         .route("/service-worker.js", get(service_worker_js))
 }
 
-#[derive(Template, WebTemplate)]
-#[template(path = "homepage.html")]
-struct HomepageTemplate {
-    shared: SharedContext,
-}
-
-#[derive(Template, WebTemplate)]
-#[template(path = "privacy.html")]
-struct PrivacyTemplate {
-    shared: SharedContext,
-}
-
-#[derive(Template, WebTemplate)]
-#[template(path = "terms.html")]
-struct TermsTemplate {
-    shared: SharedContext,
-}
-
-async fn homepage(
-    MaybeCurrentUser(user): MaybeCurrentUser,
-    State(state): State<SharedState>,
-) -> HomepageTemplate {
-    HomepageTemplate {
-        shared: SharedContext::new(&state)
-            .with_user(user)
-            .with_canonical_path("/")
-            .with_meta(PageMeta::new().description(
-                "A full-stack web application with sign-in, billing, blogs, and more.",
-            )),
-    }
-}
-
-async fn privacy(
-    MaybeCurrentUser(user): MaybeCurrentUser,
-    State(state): State<SharedState>,
-) -> PrivacyTemplate {
-    PrivacyTemplate {
-        shared: SharedContext::new(&state)
-            .with_user(user)
-            .with_canonical_path("/privacy")
-            .with_meta(PageMeta::new().title("Privacy Policy")),
-    }
-}
-
-async fn terms(
-    MaybeCurrentUser(user): MaybeCurrentUser,
-    State(state): State<SharedState>,
-) -> TermsTemplate {
-    TermsTemplate {
-        shared: SharedContext::new(&state)
-            .with_user(user)
-            .with_canonical_path("/terms")
-            .with_meta(PageMeta::new().title("Terms of Service")),
-    }
-}
+static_page!(
+    homepage,
+    "homepage.html",
+    "/",
+    PageMeta::new()
+        .description("A full-stack web application with sign-in, billing, blogs, and more.")
+);
+static_page!(
+    privacy,
+    "privacy.html",
+    "/privacy",
+    PageMeta::new().title("Privacy Policy")
+);
+static_page!(
+    terms,
+    "terms.html",
+    "/terms",
+    PageMeta::new().title("Terms of Service")
+);
 
 async fn robots_txt(State(state): State<SharedState>) -> impl IntoResponse {
     let body = format!(
@@ -150,17 +113,8 @@ fn sitemap_url(site_url: &str, path: &str, updated_at: Option<DateTime<Utc>>) ->
         .unwrap_or_default();
     format!(
         "  <url>\n    <loc>{}{}</loc>\n{}</url>\n",
-        xml_escape(site_url),
-        xml_escape(path),
+        escape_html(site_url),
+        escape_html(path),
         lastmod
     )
-}
-
-fn xml_escape(value: &str) -> String {
-    value
-        .replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-        .replace('\'', "&apos;")
 }

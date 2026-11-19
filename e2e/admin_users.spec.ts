@@ -1,5 +1,5 @@
-import { test, expect, signInAs } from "./fixtures";
-import type { Page } from "@playwright/test";
+import { test, expect, signInAs, testEmail } from "./fixtures";
+import type { Page, TestInfo } from "@playwright/test";
 
 // Admin user management: the Manage Users list, the per-user admin page
 // (notes, flags, sign-ins, same-IP accounts, edit/delete), and Site Analytics.
@@ -10,22 +10,17 @@ import type { Page } from "@playwright/test";
 // locks an account that shares 127.0.0.1, or later sign-ups from that IP
 // would be locked automatically.
 
-const RUN = Date.now().toString(36);
-
-function emails(testId: string) {
-  // The run timestamp keeps a retry (or a rerun against the same database)
-  // from inheriting the previous attempt's flags, notes, and links.
-  const tag = `${testId}-${RUN}`.toLowerCase();
+function emails(testInfo: TestInfo) {
   return {
-    admin: `playwright+admin+${tag}@example.com`,
-    user: `playwright+user+${tag}@example.com`,
-    other: `playwright+other+${tag}@example.com`,
+    admin: testEmail(testInfo, "admin"),
+    user: testEmail(testInfo, "user"),
+    other: testEmail(testInfo, "other"),
   };
 }
 
 /** A per-test private IP, so same-IP matches only see this test's accounts. */
-function ipFor(testId: string) {
-  const n = [...`${testId}-${RUN}`].reduce(
+function ipFor(testInfo: TestInfo) {
+  const n = [...testEmail(testInfo, "ip")].reduce(
     (h, c) => (h * 31 + c.charCodeAt(0)) >>> 0,
     7,
   );
@@ -45,7 +40,7 @@ test("admin pages are off limits to everyone else", async ({
   page,
   request,
 }, testInfo) => {
-  const { user } = emails(testInfo.testId);
+  const { user } = emails(testInfo);
   await signInAs(request, page.context(), user, "free");
 
   for (const path of ["/users", "/admin/analytics"]) {
@@ -58,7 +53,7 @@ test("admins filter the user list by plan and flag", async ({
   page,
   request,
 }, testInfo) => {
-  const { admin, user } = emails(testInfo.testId);
+  const { admin, user } = emails(testInfo);
   await signInAs(request, null, user, "professional");
   await signInAs(request, page.context(), admin, "admin");
 
@@ -77,8 +72,8 @@ test("admins leave notes and flag accounts", async ({
   page,
   request,
 }, testInfo) => {
-  const { admin, user, other } = emails(testInfo.testId);
-  const sharedIp = ipFor(testInfo.testId);
+  const { admin, user, other } = emails(testInfo);
+  const sharedIp = ipFor(testInfo);
   await signInAs(request, null, user, "free", { ip: sharedIp });
   await signInAs(request, null, other, "free", { ip: sharedIp });
   await signInAs(request, page.context(), admin, "admin");
@@ -111,8 +106,8 @@ test("admins edit a plan with an end date and delete accounts", async ({
   page,
   request,
 }, testInfo) => {
-  const { admin, user } = emails(testInfo.testId);
-  await signInAs(request, null, user, "free", { ip: ipFor(testInfo.testId) });
+  const { admin, user } = emails(testInfo);
+  await signInAs(request, null, user, "free", { ip: ipFor(testInfo) });
   await signInAs(request, page.context(), admin, "admin");
 
   await openUserPage(page, user);
@@ -149,7 +144,7 @@ test("site analytics summarises the user base", async ({
   page,
   request,
 }, testInfo) => {
-  const { admin } = emails(testInfo.testId);
+  const { admin } = emails(testInfo);
   await signInAs(request, page.context(), admin, "admin");
 
   await page.goto("/admin/analytics");
@@ -169,7 +164,7 @@ test("admin pages never scroll sideways on a phone", async ({
   page,
   request,
 }, testInfo) => {
-  const { admin, user } = emails(testInfo.testId);
+  const { admin, user } = emails(testInfo);
   const long = `${"a".repeat(60)}@${"b".repeat(60)}.example.com`;
   await signInAs(request, null, long, "free", { fullName: "W".repeat(80) });
   await signInAs(request, null, user, "free");

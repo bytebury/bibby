@@ -4,8 +4,10 @@
 use crate::domain::one_time_passcode;
 use crate::domain::value_objects::email::Email;
 use crate::domain::value_objects::one_time_code::OneTimeCode;
+use crate::infra::markdown::escape_html;
 use crate::prelude::*;
 use chrono::NaiveDate;
+use std::sync::LazyLock;
 use std::time::Duration;
 
 /// Emails a sign-in code. The caller needs to know whether this landed: an
@@ -179,30 +181,29 @@ fn app_origin() -> String {
         .to_string()
 }
 
-async fn send(request: &mailman::SendEmailRequest) -> Result<()> {
-    let url = env::var("MAILMAN_URL")
-        .map_err(|_| AppError::Internal("MAILMAN_URL must be set".to_string()))?;
-    let token = env::var("MAILMAN_API_TOKEN").unwrap_or_default();
-    let http = reqwest::Client::builder()
-        .timeout(Duration::from_secs(15))
-        .build()?;
-    let client = mailman::Client::with_http(http, url, token)
-        .map_err(|error| AppError::Internal(error.to_string()))?;
+/// The mailman client, built once, or why it can't be (e.g. `MAILMAN_URL` is
+/// unset, as it usually is locally).
+fn client() -> Result<&'static mailman::Client> {
+    static CLIENT: LazyLock<std::result::Result<mailman::Client, String>> = LazyLock::new(|| {
+        let url = env::var("MAILMAN_URL").map_err(|_| "MAILMAN_URL must be set".to_string())?;
+        let token = env::var("MAILMAN_API_TOKEN").unwrap_or_default();
+        let http = reqwest::Client::builder()
+            .timeout(Duration::from_secs(15))
+            .build()
+            .map_err(|error| error.to_string())?;
+        mailman::Client::with_http(http, url, token).map_err(|error| error.to_string())
+    });
+    CLIENT
+        .as_ref()
+        .map_err(|error| AppError::Internal(error.clone()))
+}
 
-    client
+async fn send(request: &mailman::SendEmailRequest) -> Result<()> {
+    client()?
         .send(request)
         .await
         .map(|_| ())
         .map_err(|error| AppError::Internal(format!("Mailman delivery failed: {error}")))
-}
-
-fn escape_html(value: &str) -> String {
-    value
-        .replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-        .replace('\'', "&#39;")
 }
 
 #[cfg(test)]

@@ -5,7 +5,6 @@
 //! Counts live in memory, so each server keeps its own and they start over
 //! on restart, the same trade-off as `monitoring`.
 
-use crate::infra::api::auth_test;
 use crate::infra::api::extract::real_ip::RealIp;
 use crate::prelude::*;
 use axum::extract::{FromRequestParts, Request};
@@ -56,15 +55,10 @@ impl RateLimiter {
     }
 }
 
-/// Middleware for the sign-up and sign-in routes. It is off while the
-/// test-auth shim is enabled, because the Playwright suite sends every
-/// request from one IP.
+/// Middleware for the sign-up and sign-in routes.
 pub async fn limit_auth(request: Request, next: Next) -> Response {
-    if auth_test::is_enabled() {
-        return next.run(request).await;
-    }
     let (mut parts, body) = request.into_parts();
-    let ip = match RealIp::from_request_parts(&mut parts, &std::sync::Arc::new(())).await {
+    let ip = match RealIp::from_request_parts(&mut parts, &()).await {
         Ok(RealIp(ip)) => ip,
         Err(error) => return error.into_response(),
     };

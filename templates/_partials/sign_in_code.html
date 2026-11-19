@@ -15,7 +15,7 @@
 <div class="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900" id="otp_delivery_help">
   <strong>Don't see it?</strong> Check your spam or junk folder. Some organizations
   filter out email from outside senders, so if it never arrives, ask your IT team
-  to allow email from {{ shared.app_name }}, or continue with Google instead.
+  to allow email from {{ shared.app_name() }}, or continue with Google instead.
 </div>
 <form hx-post="/sign-in/code/verify" hx-target="#sign_in_form" hx-select="#sign_in_form" hx-swap="outerHTML" class="space-y-4">
   <input type="hidden" name="email" value="{{ email }}" />

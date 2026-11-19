@@ -83,7 +83,6 @@ parent struct (e.g. `UserUseCases { register, search }`) so they can be wired th
 Use the newtype pattern for any primitive that carries domain meaning. Live examples in `src/domain/value_objects/`:
 
 - `Severity` — enum stored as lowercase TEXT, with `sqlx::Type`, serde, and `Display`.
-- `Toggle` — wraps `Option<String>` so handlers can treat a missing HTML checkbox as `false` instead of a parse error.
 - `Markdown` — wraps a markdown string with a sanitization/render boundary.
 
 When introducing a new value object:
@@ -236,8 +235,8 @@ For the common case, prefer the `spinner_button` macro:
 
 ### Tooltips
 
-`data-tooltip="..."` on any element. Opt out on mobile with `data-tooltip-no-mobile`. Re-initialized after every
-`htmx:afterSwap`.
+`data-tooltip="..."` on any element. Opt out on mobile with `data-tooltip-no-mobile`. Delegated from `document`,
+so swapped-in content works without rebinding.
 
 ### Modals
 
@@ -251,23 +250,25 @@ come from `<details>`.
 
 ## Pagination
 
-Implement the `Paginate` trait on a model and use the macros:
+Implement the `Paginate` trait on a model and call its methods:
 
 ```rust
 impl Paginate for User {
     fn table_name() -> &'static str { "user_details" } // a view is fine
 }
 
-paginate!(User, &db, &paging);
-paginate_with!(User, &db, "WHERE role = $1 ORDER BY last_seen_at DESC", vec!["admin"], &paging);
+User::paginate(&db, &paging).await?; // newest first
+User::paginate_where(&db, "WHERE role = $1 ORDER BY last_seen_at DESC", vec!["admin"], &paging).await?;
 ```
+
+Render the links with `{% call pagination::pager(self.items, "/items?") %}{% endcall %}`.
 
 ## OAuth
 
-Google is wired by default. `OAuthProvider` (`src/infra/auth/mod.rs`) is a **trait** (`get_auth_url`,
-`exchange_code_for_user`) implemented by `GoogleOAuth` (`src/infra/auth/google.rs`). Nothing is generated per provider:
-`/auth/google` and `/auth/google/callback` are hard-coded routes in `src/infra/api/auth.rs`. To add a provider, implement
-the trait in `src/infra/auth/<provider>.rs`, then write its start and callback handlers and routes by hand, mirroring the
+Google is wired by default: `src/infra/auth/google.rs` is three functions (`is_configured`, `auth_url`,
+`exchange_code`), and `/auth/google` and `/auth/google/callback` are hard-coded routes in `src/infra/api/auth.rs`. To add
+a provider, write the same three functions in `src/infra/auth/<provider>.rs`, then its start and callback handlers and
+routes by hand, mirroring the
 Google ones (`oauth_nonce` cookie + signed `OAuthState`). If accounts should record the provider, add an `AuthProvider`
 variant and widen the `users.auth_provider` check constraint in a migration.
 
@@ -280,7 +281,7 @@ with a 6-digit code emailed through `mailman` (`MAILMAN_URL`, `MAILMAN_API_TOKEN
 - Codes live in `one_time_passcodes`, stored only as an HMAC keyed with `JWT_SECRET` and bound to the address. They
   expire after 10 minutes, allow 5 attempts, and sends are throttled per address (see `domain/one_time_passcode.rs`).
 - Email sign-ups start `verified = false`; entering the first code verifies them. **Unverified (or locked) users never
-  get a session** — `BaseUser` treats them as signed out. A verified Google sign-in converts an email account to
+  get a session** — `session_user` treats them as signed out. A verified Google sign-in converts an email account to
   `'google'`, taking Google's name and photo.
 - The send and sign-up steps answer identically whether or not an address has an account. Keep it that way.
 - e2e specs can't read the inbox: the test-auth shim (`infra/api/auth_test.rs`, mounted only when

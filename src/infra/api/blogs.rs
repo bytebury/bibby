@@ -63,9 +63,9 @@ async fn blogs(
                     .title("Blog")
                     .description("News, notes, and writing from the team."),
             ),
-        blogs: Blog::paginate_filter(
+        blogs: Blog::paginate_where(
             &state.db,
-            Some("ORDER BY created_at DESC, id DESC"),
+            "ORDER BY created_at DESC, id DESC",
             vec![],
             &params,
         )
@@ -147,8 +147,7 @@ async fn edit_blog(
 ) -> Result<impl IntoResponse> {
     let blog = Blog::find_by_id(state.db.as_ref(), id).await?;
     user.ensure_can_write(&blog)?;
-    Blog::update(state.db.as_ref(), blog.id, user.id, &form).await?;
-    let blog = Blog::find_by_id(state.db.as_ref(), id).await?;
+    let blog = Blog::update(state.db.as_ref(), blog.id, user.id, &form).await?;
     Ok(crate::redirect!(
         format!("/blogs/{}/{}", blog.id, blog.slug()).as_str(),
         &headers

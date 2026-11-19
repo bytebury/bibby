@@ -1,7 +1,7 @@
 use crate::domain::user::User;
 use crate::infra::db::SharedDatabase;
-use crate::infra::pagination::{Paginated, PagingInfo};
-use crate::paginate_with;
+use crate::infra::pagination::{Paginate, Paginated, PagingInfo};
+
 use crate::prelude::*;
 
 /// Plan filter on the admin Manage Users list.
@@ -94,13 +94,13 @@ impl SearchUseCase {
              ORDER BY last_seen_at DESC",
             role.sql()
         );
-        paginate_with!(
-            User,
+        User::paginate_where(
             &self.db,
             &where_clause,
             vec![filter, filter, filter],
-            paging_info
+            paging_info,
         )
+        .await
     }
 }
 

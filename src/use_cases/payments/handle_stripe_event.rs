@@ -33,65 +33,47 @@ impl HandleStripeEventUseCase {
     /// doesn't know (e.g. one deleted along with its user) are acknowledged
     /// so Stripe stops retrying them.
     pub async fn execute(&self, headers: &HeaderMap, body: &str) -> Result<()> {
-        let result = match self.stripe.listener.process(headers, body)? {
-            // Delayed payment methods complete the session unpaid and settle later
-            // via `async_payment_succeeded`, so only grant access once fulfilled.
+        let (customer, role) = match self.stripe.listener.process(headers, body)? {
+            // Delayed payment methods complete the session unpaid and settle
+            // later via `async_payment_succeeded`, so only grant access once
+            // fulfilled.
             ShimaEvent::CheckoutSessionCompleted(session)
             | ShimaEvent::CheckoutSessionAsyncPaymentSucceeded(session)
                 if session.is_fulfilled() =>
             {
-                self.on_checkout_fulfilled(&session).await
+                fulfilled_plan(&session)?
             }
             ShimaEvent::CustomerSubscriptionUpdated(subscription) => {
                 match plan_change(subscription.status) {
-                    PlanChange::Grant => self.grant_paid_plan(&subscription.customer).await,
-                    PlanChange::Revoke => self.downgrade_to_free(&subscription.customer).await,
-                    PlanChange::Keep => Ok(()),
+                    // A subscription that recovered (e.g. the card was fixed
+                    // after a failed payment) gets its plan back.
+                    PlanChange::Grant => (subscription.customer, Role::Professional),
+                    PlanChange::Revoke => (subscription.customer, Role::Free),
+                    PlanChange::Keep => return Ok(()),
                 }
             }
             ShimaEvent::CustomerSubscriptionDeleted(subscription) => {
-                self.downgrade_to_free(&subscription.customer).await
+                (subscription.customer, Role::Free)
             }
-            _ => Ok(()),
+            _ => return Ok(()),
         };
 
-        match result {
+        let user = match User::find_by_stripe_customer_id(self.db.as_ref(), &customer).await {
+            Ok(user) => user,
             Err(AppError::NotFound(_)) => {
                 warn!("ignoring a Stripe event for a customer with no account");
-                Ok(())
+                return Ok(());
             }
-            other => other,
-        }
-    }
-
-    async fn on_checkout_fulfilled(&self, session: &CheckoutSession) -> Result<()> {
-        let customer = session.customer.as_ref().ok_or_else(|| {
-            AppError::BadRequest("checkout.session.completed missing customer".into())
-        })?;
-        let plan_str = session.client_reference_id.as_deref().ok_or_else(|| {
-            AppError::BadRequest("checkout.session.completed missing client_reference_id".into())
-        })?;
-        let plan = Plan::from_str(plan_str)?;
-        self.set_paid_role(customer, &plan.role()).await
-    }
-
-    /// A subscription that recovered (e.g. the card was fixed after a failed
-    /// payment) gets its plan back.
-    async fn grant_paid_plan(&self, customer: &CustomerId) -> Result<()> {
-        let user = User::find_by_stripe_customer_id(self.db.as_ref(), customer).await?;
-        if user.is_free() {
-            self.set_paid_role(customer, &Role::Professional).await?;
-        }
-        Ok(())
-    }
-
-    async fn set_paid_role(&self, customer: &CustomerId, role: &Role) -> Result<()> {
-        let user = User::find_by_stripe_customer_id(self.db.as_ref(), customer).await?;
-        if user.is_admin() {
+            Err(error) => return Err(error),
+        };
+        // Admins keep their role whatever Stripe says. An account already on
+        // `role` with no admin-granted end date has nothing to change.
+        if user.is_admin() || (user.role == role && user.plan_expiry_date.is_none()) {
             return Ok(());
         }
+
         let mut tx = self.db.begin().await?;
-        User::set_role(&mut *tx, user.id, role).await?;
+        User::set_role(&mut *tx, user.id, &role).await?;
         // Stripe now owns this plan's lifecycle, so any admin-granted expiry
         // date must go — otherwise the scheduler would downgrade a paying
         // customer on the old deadline.
@@ -99,18 +81,17 @@ impl HandleStripeEventUseCase {
         tx.commit().await?;
         Ok(())
     }
+}
 
-    async fn downgrade_to_free(&self, customer: &CustomerId) -> Result<()> {
-        let user = User::find_by_stripe_customer_id(self.db.as_ref(), customer).await?;
-        if user.is_admin() {
-            return Ok(());
-        }
-        let mut tx = self.db.begin().await?;
-        User::set_role(&mut *tx, user.id, &Role::Free).await?;
-        User::clear_plan_expiry(&mut *tx, user.id).await?;
-        tx.commit().await?;
-        Ok(())
-    }
+/// The customer and plan a fulfilled checkout grants.
+fn fulfilled_plan(session: &CheckoutSession) -> Result<(CustomerId, Role)> {
+    let customer = session.customer.clone().ok_or_else(|| {
+        AppError::BadRequest("checkout.session.completed missing customer".into())
+    })?;
+    let plan = session.client_reference_id.as_deref().ok_or_else(|| {
+        AppError::BadRequest("checkout.session.completed missing client_reference_id".into())
+    })?;
+    Ok((customer, Plan::from_str(plan)?.role()))
 }
 
 #[derive(Debug, PartialEq, Eq)]

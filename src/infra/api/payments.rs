@@ -45,7 +45,7 @@ async fn upgrade_page(
     let shared = SharedContext::new(&state)
         .with_user(Some(user))
         .with_canonical_path("/upgrade")
-        .with_meta(PageMeta::new().title("Upgrade").robots("noindex,nofollow"));
+        .with_meta(PageMeta::private("Upgrade"));
     Ok(UpgradeTemplate { shared }.into_response())
 }
 
@@ -96,7 +96,7 @@ async fn checkout_success(
     let shared = SharedContext::new(&state)
         .with_user(Some(user))
         .with_canonical_path("/checkout/success")
-        .with_meta(PageMeta::new().title("Welcome").robots("noindex,nofollow"));
+        .with_meta(PageMeta::private("Welcome"));
     Ok(SubscriptionSuccessTemplate { shared, features }.into_response())
 }
 

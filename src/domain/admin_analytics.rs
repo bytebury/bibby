@@ -150,8 +150,7 @@ impl AdminAnalytics {
     where
         E: Executor<'e, Database = sqlx::Postgres> + Copy,
     {
-        let mut analytics = Self::default();
-
+        // The four queries are independent, so they run at once.
         let users = sqlx::query!(
             r#"
             SELECT
@@ -174,9 +173,56 @@ impl AdminAnalytics {
             FROM users
             "#,
         )
-        .fetch_one(exec)
-        .await;
+        .fetch_one(exec);
 
+        let active = sqlx::query!(
+            r#"
+            SELECT
+                COUNT(DISTINCT user_id) FILTER (WHERE day > (NOW() AT TIME ZONE 'UTC')::DATE - 30)                                                  AS "last_30d!",
+                COUNT(DISTINCT user_id) FILTER (WHERE day <= (NOW() AT TIME ZONE 'UTC')::DATE - 30 AND day > (NOW() AT TIME ZONE 'UTC')::DATE - 60) AS "prev_30d!"
+            FROM user_daily_activity
+            "#,
+        )
+        .fetch_one(exec);
+
+        // Active users per day, sourced from `user_daily_activity` — a row is
+        // written there at most once per (user, day) by the per-request
+        // audit, so each row maps 1:1 to a user who was signed in that day.
+        // Spans the last 60 days so it splits into current vs previous 30-day
+        // windows.
+        let activity = sqlx::query!(
+            r#"
+            SELECT day                AS "day!",
+                   COUNT(*)::BIGINT   AS "active_count!"
+            FROM user_daily_activity
+            WHERE day >= (NOW() AT TIME ZONE 'UTC')::DATE - INTERVAL '60 days'
+            GROUP BY day
+            ORDER BY day
+            "#,
+        )
+        .fetch_all(exec);
+
+        let countries = sqlx::query!(
+            r#"
+            SELECT
+                COALESCE(c.name, 'Unknown') AS "name!",
+                COALESCE(c.code, 'unknown') AS "code!",
+                COUNT(u.id)                 AS "user_count!"
+            FROM users u
+            LEFT JOIN countries c ON c.id = u.country_id
+            -- Users with no country and those in the auto-created "unknown"
+            -- country are the same thing to an admin, so group on the
+            -- displayed values.
+            GROUP BY 1, 2
+            ORDER BY COUNT(u.id) DESC
+            LIMIT 5
+            "#,
+        )
+        .fetch_all(exec);
+
+        let (users, active, activity, countries) = tokio::join!(users, active, activity, countries);
+
+        let mut analytics = Self::default();
         match users {
             Ok(r) => {
                 analytics.total_users = r.total;
@@ -199,16 +245,6 @@ impl AdminAnalytics {
             Err(error) => warn!(%error, "could not load user analytics"),
         }
 
-        let active = sqlx::query!(
-            r#"
-            SELECT
-                COUNT(DISTINCT user_id) FILTER (WHERE day > (NOW() AT TIME ZONE 'UTC')::DATE - 30)                                                  AS "last_30d!",
-                COUNT(DISTINCT user_id) FILTER (WHERE day <= (NOW() AT TIME ZONE 'UTC')::DATE - 30 AND day > (NOW() AT TIME ZONE 'UTC')::DATE - 60) AS "prev_30d!"
-            FROM user_daily_activity
-            "#,
-        )
-        .fetch_one(exec)
-        .await;
         match active {
             Ok(r) => {
                 analytics.active_users_last_30d = r.last_30d;
@@ -217,26 +253,8 @@ impl AdminAnalytics {
             Err(error) => warn!(%error, "could not load active-user analytics"),
         }
 
-        // Active users per day, sourced from `user_daily_activity` — a row is
-        // written there at most once per (user, day) by the per-request
-        // audit, so each row maps 1:1 to a user who was signed in that day.
-        // Spans the last 60 days so it splits into current vs previous 30-day
-        // windows.
-        let activity = sqlx::query!(
-            r#"
-            SELECT day                AS "day!",
-                   COUNT(*)::BIGINT   AS "active_count!"
-            FROM user_daily_activity
-            WHERE day >= (NOW() AT TIME ZONE 'UTC')::DATE - INTERVAL '60 days'
-            GROUP BY day
-            ORDER BY day
-            "#,
-        )
-        .fetch_all(exec)
-        .await
-        .unwrap_or_default();
-
         let mut buckets: HashMap<NaiveDate, i64> = activity
+            .unwrap_or_default()
             .into_iter()
             .map(|r| (r.day, r.active_count))
             .collect();
@@ -266,33 +284,15 @@ impl AdminAnalytics {
             .map(|s| s.active_users)
             .sum();
 
-        analytics.top_countries = sqlx::query!(
-            r#"
-            SELECT
-                COALESCE(c.name, 'Unknown') AS "name!",
-                COALESCE(c.code, 'unknown') AS "code!",
-                COUNT(u.id)                 AS "user_count!"
-            FROM users u
-            LEFT JOIN countries c ON c.id = u.country_id
-            -- Users with no country and those in the auto-created "unknown"
-            -- country are the same thing to an admin, so group on the
-            -- displayed values.
-            GROUP BY 1, 2
-            ORDER BY COUNT(u.id) DESC
-            LIMIT 5
-            "#,
-        )
-        .fetch_all(exec)
-        .await
-        .unwrap_or_default()
-        .into_iter()
-        .map(|r| CountrySlice {
-            name: r.name,
-            code: r.code,
-            user_count: r.user_count,
-        })
-        .collect();
-
+        analytics.top_countries = countries
+            .unwrap_or_default()
+            .into_iter()
+            .map(|r| CountrySlice {
+                name: r.name,
+                code: r.code,
+                user_count: r.user_count,
+            })
+            .collect();
         analytics
     }
 }

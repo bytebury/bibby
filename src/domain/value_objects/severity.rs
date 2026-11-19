@@ -14,6 +14,37 @@ pub enum Severity {
     Danger,
 }
 
+impl Severity {
+    /// Every level, in the order the edit form lists them.
+    pub fn all(&self) -> &'static [Severity] {
+        &[
+            Severity::Info,
+            Severity::Primary,
+            Severity::Warn,
+            Severity::Danger,
+        ]
+    }
+
+    pub fn label(&self) -> &'static str {
+        match self {
+            Severity::Primary => "Primary",
+            Severity::Info => "Info",
+            Severity::Warn => "Warn",
+            Severity::Danger => "Danger",
+        }
+    }
+
+    /// The badge class for this level (see `public/styles/tailwind.css`).
+    pub fn badge_class(&self) -> &'static str {
+        match self {
+            Severity::Primary => "badge-success",
+            Severity::Info => "badge-neutral",
+            Severity::Warn => "badge-warning",
+            Severity::Danger => "badge-danger",
+        }
+    }
+}
+
 impl Display for Severity {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {

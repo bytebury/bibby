@@ -33,3 +33,13 @@ pub fn to_plain_text(source: &str) -> String {
     }
     out.split_whitespace().collect::<Vec<_>>().join(" ")
 }
+
+/// Escapes text for HTML or XML: email bodies and the sitemap.
+pub fn escape_html(value: &str) -> String {
+    value
+        .replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&#39;")
+}

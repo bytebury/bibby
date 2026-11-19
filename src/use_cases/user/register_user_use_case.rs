@@ -25,11 +25,22 @@ impl RegisterUserUseCase {
     /// page. The automatic lock signals (see `resolve_location`) propagate as
     /// a sign-in block.
     pub async fn execute(&self, request: &mut CreateUser) -> Result<User> {
+        let existing = match User::find_by_email(self.db.as_ref(), &request.email).await {
+            Ok(user) => Some(user),
+            Err(AppError::NotFound(_)) => None,
+            Err(error) => return Err(error),
+        };
+        self.sign_in(existing, request).await
+    }
+
+    /// `execute` for a caller that has already loaded the account (`None`
+    /// creates it), saving the lookup.
+    pub async fn sign_in(&self, existing: Option<User>, request: &mut CreateUser) -> Result<User> {
         self.resolve_location(request).await?;
 
-        let user = match User::find_by_email(self.db.as_ref(), &request.email).await {
-            Ok(user) => self.update_audit_fields(user, request).await,
-            Err(_) => User::create(self.db.as_ref(), request).await,
+        let user = match existing {
+            Some(user) => self.update_audit_fields(user, request).await,
+            None => User::create(self.db.as_ref(), request).await,
         }?;
         // A verified Google sign-in proves the address. A code sign-in
         // reaches here only after `VerifySignInCodeUseCase` granted it.

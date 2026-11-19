@@ -96,15 +96,6 @@ pub struct CountryForm {
     pub code: String,
 }
 
-impl From<Country> for CountryForm {
-    fn from(country: Country) -> Self {
-        Self {
-            name: country.name,
-            code: country.code,
-        }
-    }
-}
-
 impl From<CountryDetails> for CountryForm {
     fn from(details: CountryDetails) -> Self {
         Self {

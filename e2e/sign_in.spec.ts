@@ -59,18 +59,12 @@ test("signing up with email verifies the address, then signs in with a code", as
   expect(days).toBeGreaterThan(364);
   expect(days).toBeLessThanOrEqual(365);
 
-  // A used code can't be replayed.
+  // Signed out, the now-verified account signs back in from /sign-in.
+  // (Replay and attempt limits are tested against the database in Rust.)
   await page.context().clearCookies();
   await page.goto("/sign-in");
   await page.getByLabel("Email").fill(email);
   await page.getByRole("button", { name: "Email Me a Sign-in Code" }).click();
-  await page.getByLabel("Sign-in code").fill(code);
-  await page.getByRole("button", { name: "Sign In" }).click();
-  await expect(page.locator("#sign_in_form [role=alert]")).toContainText(
-    "expired",
-  );
-
-  // A fresh code signs the now-verified account back in.
   await page
     .getByLabel("Sign-in code")
     .fill(await issueSignInCode(request, email));

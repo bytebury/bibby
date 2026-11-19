@@ -158,6 +158,7 @@ src/
   main.rs                 # entry: dotenv, tracing, DB init, router assembly, static files
   lib.rs                  # AppState — SharedDatabase + use-case bundles, exported as SharedState
   prelude.rs              # common imports (Template, WebTemplate, serde, sqlx prelude, Result, AppError, PrimaryKey, Utc, tracing…)
+  test_support.rs         # helpers for the #[sqlx::test] database tests (insert_user)
   error.rs                # AppError enum, From impls, IntoResponse mapping, Result alias
   domain/                 # entities; persistence lives on the entity
     mod.rs                # Access<T> and Validate traits
@@ -491,6 +492,25 @@ stack: a flow across pages, routes being wired to the right guard, real
 browser behaviour (keyboard focus, layout, JavaScript), and the axe scan.
 Don't add an e2e test for something a unit test can pin down.
 
+### Database tests
+Logic that needs Postgres (queries, use-cases, the scheduler lease) is tested
+in Rust with `#[sqlx::test]`, in a `db_tests` module next to the code. Each
+test gets its own new database with every migration applied, so tests run in
+parallel and never see each other's rows. `cargo test` needs `DATABASE_URL`
+pointing at a Postgres it can create databases on (the generated `.env`
+does; CI's test job has a Postgres service). Create rows with the helpers in
+`src/test_support.rs`, such as `insert_user`, and pass the `PgPool` the test
+receives anywhere an executor goes (wrap it in `Arc` for a use-case).
+
+```rust
+#[sqlx::test]
+async fn signing_out_everywhere_retires_every_token(db: PgPool) {
+    let user = insert_user(&db, "a@example.com", Role::Free, "10.0.0.1").await;
+    User::end_all_sessions(&db, user.id).await.unwrap();
+    // …
+}
+```
+
 ### The test-auth shim
 `src/infra/api/auth_test.rs` is mounted only when `ENABLE_TEST_AUTH=true`, and
 every route requires `X-Test-Auth-Token` to match `TEST_AUTH_TOKEN`:
@@ -504,9 +524,9 @@ every route requires `X-Test-Auth-Token` to match `TEST_AUTH_TOKEN`:
   plaintext. Wrapped by `issueSignInCode`.
 
 ### Writing tests
-- `e2e.sh` and the workflow list `playwright+listed-admin@example.com` in
-  `ADMIN_EMAILS`, set dummy Google values so the Google button renders, and
-  leave Stripe unset so the suite also covers running without billing.
+- `e2e.sh` and the workflow set `ADMIN_EMAILS` (required to boot), dummy
+  Google values so the Google button renders, and leave Stripe unset so the
+  suite also covers running without billing.
 - The database is shared across the suite and never reset. Make every
   address with `testEmail(testInfo, "who")` from `e2e/fixtures.ts`: it adds the
   test id and a per-run suffix, so retries start clean.

@@ -322,4 +322,8 @@ stripe listen --forward-to localhost:8080/stripe
 ```
 
 # Tests
-We strongly encourage you to test mission-critical features through end-to-end (e2e) tests. Bibby uses Playwright for this, which can be run using `./e2e.sh`. We also bootstrap GitHub Actions, which will automatically execute tests and e2e tests on every Pull Request as the default functionality.
+- **Unit tests** (`cargo test`) cover the rules, parsing and validation, next to the code.
+- **Database tests** (`#[sqlx::test]`, also run by `cargo test`) cover queries and use-cases against a real Postgres. Each test gets its own fresh database, so they run in parallel. They need `DATABASE_URL`, which `./dev.sh` writes to `.env`.
+- **End-to-end tests** (Playwright, `./e2e.sh`) cover what needs a browser: flows across pages, routes, keyboard behaviour, layout, and an accessibility scan.
+
+Prefer the first two; they run in seconds. GitHub Actions runs all three on every pull request.

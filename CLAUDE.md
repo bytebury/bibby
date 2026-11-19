@@ -111,6 +111,41 @@ database too: leftover rows from earlier runs can hide a regression.
   (`feat: …`, `fix: …`, `refactor: …`, `perf: …`, `test: …`, `docs: …`,
   `chore: …`).
 
+## Lessons learned
+
+Habits from past mistakes; each one cost a failed CI run, a bug or a wasted
+round trip.
+
+- **Reproduce before fixing, measure before optimising.** Show the bug in a
+  test or a browser first (the modal Escape bug; the navigation flicker,
+  measured as layout shifts), then show the same check passing.
+- **Run the tests once.** A failure, flaky or not, is a bug to explain: find
+  its cause. Don't rerun, add retries, or run a suite twice to look for
+  flakes.
+- **Simple and correct beats clever.** Read from the database instead of
+  adding a cache, timer or background refresh. Cache only for a measured
+  need, and then invalidate on change, never on a schedule.
+- **Don't optimise away a write something else reads.** Skipping the daily
+  activity insert to save a write lost users who signed in and left within
+  a minute.
+- **Test against an empty database.** CI's starts empty; leftover local rows
+  hid that bug. Build with `SQLX_OFFLINE=true` when `DATABASE_URL` points at
+  a fresh database, or the query macros fail to compile.
+- **Optional services never block startup.** Only `DATABASE_URL`,
+  `JWT_SECRET` and `ADMIN_EMAILS` are required; without Stripe, Google,
+  mailman or geodude their feature is hidden, not a panic.
+- **Validate or escape anything rendered inside `<script>`** (`script_json`,
+  strict tag IDs). Askama escapes HTML, not JavaScript.
+- **A green deploy isn't a running app.** Railway reported a preview that
+  crashed on boot as a success; check that it responds.
+- **Delete what nothing calls**: unused impls, macros that only forward,
+  traits with one implementation. The compiler and the tests prove it safe.
+- **Docs change with the code.** CLAUDE.md, README.md and AGENTS.md describe
+  the code as it is now, in the same commit.
+- **Never discard commits you haven't checked.** Before resetting or
+  recreating a branch, make sure it doesn't hold unmerged work, such as an
+  open PR's commits.
+
 ## Branching workflow
 
 - Always branch off `main` and open a PR back into `main`. Never commit to

@@ -213,7 +213,7 @@ For the common HTMX button case, prefer the `spinner_button` macro in `templates
 ```
 
 ### Tooltips
-Add `data-tooltip="..."` to any element and `public/scripts/tooltip.js` will position a tooltip below it on hover. Listeners are delegated from `document`, so it works on swapped-in content too. Keyboard focus shows it as well, Escape hides it, and screen readers read it as the element's description.
+Add `data-tooltip="..."` to any element and `public/scripts/tooltip.js` will position a tooltip below it on hover. For a word or name that explains itself in a tooltip, add `class="tooltip-term" tabindex="0"`: it gets a dotted underline and can be reached by keyboard. Listeners are delegated from `document`, so it works on swapped-in content too. Keyboard focus shows it as well, Escape hides it, and screen readers read it as the element's description.
 
 The base layout already renders the required `<div id="tooltip" class="tooltip"></div>` element — don't remove it. On mobile (`max-width: 748px`) you can opt-out with `data-tooltip-no-mobile`, which is useful for tap targets where a hover tooltip just gets in the way.
 

@@ -52,8 +52,8 @@ Bibby's name appears in a handful of places. After creating your repository, rep
 - [ ] `Cargo.toml` — the package (and therefore binary) name `bibby`. `Cargo.lock` follows on the next build, and `src/main.rs` imports the crate as `bibby::…`.
 - [ ] `dev.sh` — `cargo watch -x 'run --bin bibby'`, plus the `APP_NAME`, `SEO_DEFAULT_TITLE`, `SEO_DEFAULT_DESCRIPTION`, `WEB_APP_NAME`, and `WEB_APP_SHORT_NAME` defaults it writes to `.env`.
 - [ ] `e2e.sh` — `cargo build --bin bibby`, `./target/debug/bibby`, the `bibby-e2e-` log file name, and `APP_NAME="Bibby"`.
-- [ ] `.github/workflows/playwright.yml` — `--bin bibby`, `./target/debug/bibby`, `APP_NAME: Bibby`, and the cache `shared-key: bibby-debug`.
-- [ ] `.github/workflows/rust.yml` — the cache `shared-key: bibby-debug` (twice).
+- [ ] `.github/workflows/playwright.yml` — `--bin bibby`, `./target/debug/bibby`, `APP_NAME: Bibby`, and the cache `shared-key: bibby-e2e`.
+- [ ] `.github/workflows/rust.yml` — the cache keys `bibby-check` and `bibby-sqlx`.
 - [ ] `Dockerfile` — the binary path `target/x86_64-unknown-linux-musl/release/bibby`.
 - [ ] `package.json` — `name` (`bibby-frontend`) and `description`. Run `npm install` afterwards so `package-lock.json` matches, or `npm ci` in the Docker build fails.
 - [ ] `src/lib.rs` and `src/infra/email.rs` — the `"Bibby"` fallback used when `APP_NAME` is unset. (The tests in `src/infra/email.rs` use `"Bibby"` only as sample data.)
@@ -152,11 +152,22 @@ impl Paginate for User {
 
 **Sample Usage**
 ```rs
-paginate!(User, &db, &paging);
-paginate_with!(User, &db, "WHERE role = $1 ORDER BY last_seen_at DESC", vec!["admin"], &paging);
+User::paginate(&db, &paging).await?; // newest first
+User::paginate_where(&db, "WHERE role = $1 ORDER BY last_seen_at DESC", vec!["admin"], &paging).await?;
 ```
 
-Bindings are positional and passed as `&str`. Only put fixed SQL fragments in the clause, never request data. Leave off `&paging` to get the first page at the default page size.
+Bindings are positional and passed as `&str`. Only put fixed SQL fragments in the clause, never request data. `page` and `page_size` come from the query string and are clamped (at most 100 rows).
+
+In the template, `{% call pagination::pager(self.users, "/users?") %}{% endcall %}` (from `templates/_macros/pagination.html`) renders the Previous / Next links. Pass a third argument, the element to swap, to page over HTMX instead.
+
+### Macros
+
+Bibby keeps repetition down with a few small macros:
+
+- `redirect!(url, &headers)` and `refresh!(&headers)`: redirect or reload correctly for both plain and HTMX requests (below).
+- `static_page!(about, "about.html", "/about", PageMeta::new().title("About"))`: the whole handler for a page that only needs the layout. Route it with `.route("/about", get(about))`.
+- `select_user!("WHERE id = $1", id)`: a compile-time-checked `User` query; the column list lives once in `src/domain/user.rs`.
+- Template macros: `ui::spinner_button` (`templates/_macros/buttons.html`) and `pagination::pager` (`templates/_macros/pagination.html`).
 
 ### Redirects
 
@@ -202,7 +213,7 @@ For the common HTMX button case, prefer the `spinner_button` macro in `templates
 ```
 
 ### Tooltips
-Add `data-tooltip="..."` to any element and `public/scripts/tooltip.js` will position a tooltip below it on hover. The tooltip is re-initialized after every `htmx:afterSwap`, so it works on swapped-in content too.
+Add `data-tooltip="..."` to any element and `public/scripts/tooltip.js` will position a tooltip below it on hover. Listeners are delegated from `document`, so it works on swapped-in content too.
 
 The base layout already renders the required `<div id="tooltip" class="tooltip"></div>` element — don't remove it. On mobile (`max-width: 748px`) you can opt-out with `data-tooltip-no-mobile`, which is useful for tap targets where a hover tooltip just gets in the way.
 
@@ -283,11 +294,11 @@ Popover menus use the native `<details>` element with the `menu` class — no ex
 Note: the tooltip script automatically suppresses hover tooltips on `details.menu > summary` so a tooltip doesn't pop while the menu is opening.
 
 ## OAuth Providers
-Google OAuth is supported out of the box, alongside email sign-up and sign-in with emailed one-time codes. `OAuthProvider` (in `src/infra/auth/mod.rs`) is a trait with two methods, `get_auth_url` and `exchange_code_for_user`, and `GoogleOAuth` in `src/infra/auth/google.rs` implements it. The routes are written out in `src/infra/api/auth.rs`: `/auth/google` starts the flow and `/auth/google/callback` finishes it. Nothing is generated per provider.
+Google OAuth is supported out of the box, alongside email sign-up and sign-in with emailed one-time codes. `src/infra/auth/google.rs` is three functions: `is_configured`, `auth_url` and `exchange_code`. The routes are written out in `src/infra/api/auth.rs`: `/auth/google` starts the flow and `/auth/google/callback` finishes it.
 
 To add another provider:
 
-1. Add a struct that implements `OAuthProvider` in `src/infra/auth/<provider>.rs`, reading its client id, secret, and callback URL from the environment.
+1. Add `src/infra/auth/<provider>.rs` with the same three functions, reading its client id, secret, and callback URL from the environment.
 2. Add a start route and a callback route for it in `src/infra/api/auth.rs`, following the Google handlers (they set and check the `oauth_nonce` cookie and the signed `OAuthState`).
 3. If accounts should record which provider created them, add a variant to `AuthProvider` in `src/domain/user.rs` and widen the `users.auth_provider` check constraint in a new migration.
 4. Add a button for it next to `templates/_partials/google_button.html`.

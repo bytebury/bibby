@@ -45,7 +45,7 @@ JS framework.
     `domain/value_objects/admin_emails.rs`). A listed address becomes an
     admin once it proves ownership (verified Google sign-in or an emailed
     code). Leaving the list doesn't demote anyone.
-  - **Unverified or locked users never get a session:** `BaseUser` treats them
+  - **Unverified or locked users never get a session:** `session_user` treats them
     as signed out. So does a token whose `uid` or `ver` no longer matches the
     account: `User::end_all_sessions` bumps `users.session_version`, which
     happens on a lock, an admin email change, and "Sign out everywhere" in
@@ -59,7 +59,7 @@ JS framework.
   routes answer 404 (`state.payments()?`), and `shared.payments_enabled`
   hides the links. The webhook follows subscription status (see
   `handle_stripe_event.rs`) and never changes an admin's role.
-- Google sign-in is optional the same way (`GoogleOAuth::is_configured`,
+- Google sign-in is optional the same way (`google::is_configured`,
   `shared.google_enabled`).
 - Email: the `mailman` microservice (`infra/email.rs`)
 - Geolocation: the `geodude` microservice resolves IPs to country / region /
@@ -126,12 +126,12 @@ src/
     user.rs, country.rs, region.rs, city.rs, announcement.rs, blog.rs,
     one_time_passcode.rs, sign_in.rs, user_note.rs, user_flag.rs,
     user_activity.rs, admin_analytics.rs, avatar.rs, system_status.rs
-    value_objects/        # Email, AdminEmails, OneTimeCode, Markdown, Severity, Toggle
+    value_objects/        # Email, AdminEmails, OneTimeCode, Markdown, Severity
   use_cases/              # application logic, grouped by aggregate
     user/, payments/      # each exposes a `<Name>UseCases` bundle mounted on AppState
   infra/
     db.rs                 # PgPool init; exports DbPool, SharedDatabase, PrimaryKey (= i32)
-    pagination.rs         # Paginate trait, Paginated<T>, paginate!/paginate_with!
+    pagination.rs         # Paginate trait (paginate / paginate_where), Paginated<T>
     geolocation.rs        # geodude lookup
     email.rs              # mailman: sign-in codes, plan-expiry emails
     payments.rs           # Stripe client wrapper (optional)
@@ -313,6 +313,20 @@ fragment and an inline message instead — see `infra/api/auth.rs`.
   if a template links a `.js` or `.css` file without the helper. Dynamic
   images such as flags may stay bare — they just get the short cache.
 
+### Macros
+
+Reach for a macro when it removes real repetition; keep each one small and
+documented here and in the README.
+
+| Macro | Where | What it does |
+|---|---|---|
+| `redirect!(url, &headers)` | `infra/api/mod.rs` | 303, or `HX-Redirect` for HTMX. Use for every redirect. |
+| `refresh!(&headers)` | `infra/api/mod.rs` | Reloads the page (`HX-Refresh` for HTMX). |
+| `static_page!(handler, "x.html", "/x", meta)` | `infra/api/mod.rs` | Handler for a page that needs only `SharedContext` (homepage, privacy, terms). |
+| `select_user!("WHERE …", args…)` | `domain/user.rs` | `query_as!` for one `User` from `user_details`; the column list lives there once. |
+| `ui::spinner_button(…)` | `templates/_macros/buttons.html` | HTMX button with the standard attributes. |
+| `pagination::pager(page, base, target)` | `templates/_macros/pagination.html` | Previous / Next links for a `Paginated<T>`; `target` swaps over HTMX. |
+
 ### Request extractors (`src/infra/api/extract/`)
 | Extractor | Meaning |
 |---|---|
@@ -322,21 +336,25 @@ fragment and an inline message instead — see `infra/api/auth.rs`.
 | `RealIp(String)` | Client IP: the `X-Forwarded-For` entry `TRUSTED_PROXY_HOPS` (default 1) from the right, else the socket. |
 | `ValidatedForm<T>` | Form body that has passed `T::validate`. |
 
-`BaseUser` is the root of the user extractors. It verifies the JWT and runs
+`extract::session_user` is the root of the user extractors. It verifies the JWT and runs
 `User::audit_and_find_by_email` on every signed-in request, which updates
 `last_seen_at` / `last_known_ip` and records the day in
 `user_daily_activity` (the analytics DAU chart).
 
 ### Pagination
-Implement `Paginate` with a `table_name()` (a view is fine — `User` uses
-`user_details`), then:
+Implement `Paginate` with a `table_name()`, then call its two methods:
 
 ```rust
-paginate!(User, &db, &paging);
-paginate_with!(User, &db, "WHERE role = $1 ORDER BY last_seen_at DESC", vec!["admin"], &paging);
+impl Paginate for User {
+    fn table_name() -> &'static str { "user_details" } // a view is fine
+}
+
+User::paginate(&db, &paging).await?; // newest first
+User::paginate_where(&db, "WHERE role = $1 ORDER BY last_seen_at DESC", vec!["admin"], &paging).await?;
 ```
 
 Bindings are positional and passed as `&str`; put `ORDER BY` inside the clause.
+Render the Previous / Next links with the `pagination::pager` template macro.
 `page` / `page_size` from the request are clamped (`PagingInfo::clamped`, at
 most `MAX_PAGE_SIZE` rows).
 Only interpolate fixed SQL fragments into the clause, never request data (see
@@ -421,9 +439,9 @@ every route requires `X-Test-Auth-Token` to match `TEST_AUTH_TOKEN`:
 - `e2e.sh` and the workflow list `playwright+listed-admin@example.com` in
   `ADMIN_EMAILS`, set dummy Google values so the Google button renders, and
   leave Stripe unset so the suite also covers running without billing.
-- The database is shared across the suite and never reset. Derive emails from
-  `testInfo.testId` plus a per-run suffix so retries start clean (see
-  `e2e/admin_users.spec.ts`).
+- The database is shared across the suite and never reset. Make every
+  address with `testEmail(testInfo, "who")` from `e2e/fixtures.ts`: it adds the
+  test id and a per-run suffix, so retries start clean.
 - Tests run in parallel, in no fixed order, against that one database. A test
   must only rely on rows it created: never assert on global counts or on a
   list being empty unless the query is narrowed to the test's own accounts.

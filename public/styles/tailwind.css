@@ -9,9 +9,34 @@
     body {
         overflow-wrap: anywhere;
     }
+
+    /* Every focusable element shows where keyboard focus is. Mouse clicks
+       don't trigger :focus-visible, so pointer users never see the ring. */
+    :where(a, button, summary, select, [tabindex]):focus-visible {
+        outline: 2px solid var(--color-blue-500);
+        outline-offset: 2px;
+    }
+
+    /* Honour the OS "reduce motion" setting everywhere (modals, toasts,
+       spinners). modal.js doesn't wait on an animation that never runs. */
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        ::before,
+        ::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
 }
 
 @layer components {
+    /* First thing Tab reaches: jumps past the navbar to the page content.
+       Hidden until focused. */
+    .skip-link {
+        @apply sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-gray-900 focus:shadow-lg;
+    }
+
     /* Layout container shared by all pages. */
     .container-page {
         @apply mx-auto w-full min-w-0 max-w-5xl px-6;

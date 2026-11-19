@@ -16,6 +16,8 @@ const CLOSE_ICON =
     '<path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22z" />' +
     "</svg>";
 
+// The base layout always renders it; the script is deferred, so it's parsed.
+const toast = document.getElementById("toast");
 let toastTimer = null;
 
 document.body.addEventListener("htmx:responseError", function (event) {
@@ -26,17 +28,6 @@ document.body.addEventListener("htmx:responseError", function (event) {
 });
 
 function showToast(message) {
-    let toast = document.getElementById("toast");
-    if (!toast) {
-        toast = document.createElement("div");
-        toast.id = "toast";
-        toast.className = "toast";
-        document.body.appendChild(toast);
-    }
-
-    toast.setAttribute("role", "alert");
-    toast.setAttribute("aria-live", "assertive");
-
     const icon = document.createElement("div");
     icon.className = "toast-icon";
     icon.innerHTML = TOAST_ICON;
@@ -73,9 +64,6 @@ function showToast(message) {
 }
 
 function hideToast() {
-    const toast = document.getElementById("toast");
-    if (toast) {
-        toast.classList.remove("show");
-    }
+    toast.classList.remove("show");
     clearTimeout(toastTimer);
 }

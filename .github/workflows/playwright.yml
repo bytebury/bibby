@@ -43,11 +43,17 @@ jobs:
       APP_NAME: Bibby
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
       SQLX_OFFLINE: "true"
-      # Startup-time .expect()s in AppState::new — dummy values keep the
-      # binary alive long enough for wait-on to see the port.
-      STRIPE_SECRET_KEY: sk_test_dummy
-      # Signs session cookies and keys the HMAC on emailed sign-in codes.
-      JWT_SECRET: e2e-jwt-secret
+      # Signs session cookies and keys the HMAC on emailed sign-in codes. The
+      # app refuses anything shorter than 32 characters.
+      JWT_SECRET: e2e-jwt-secret-at-least-32-characters
+      # The address e2e/sign_in.spec.ts expects to become an admin.
+      ADMIN_EMAILS: playwright+listed-admin@example.com
+      # Stripe is left unset on purpose: the suite also proves the app runs
+      # without billing. Dummy Google values show the Google button; nothing
+      # in the suite completes a Google sign-in.
+      GOOGLE_CLIENT_ID: e2e-client-id
+      GOOGLE_CLIENT_SECRET: e2e-client-secret
+      GOOGLE_CALLBACK_URL: http://127.0.0.1:8080/auth/google/callback
       # Mounts the test-auth shim so specs can read emailed codes back.
       ENABLE_TEST_AUTH: "true"
       TEST_AUTH_TOKEN: ci-e2e-token
@@ -66,8 +72,11 @@ jobs:
           shared-key: bibby-debug
           cache-targets: "true"
 
+      # GIT_HASH is baked in at compile time and shown on /admin/monitoring.
       - name: Build app (debug)
         run: cargo build --bin bibby --locked
+        env:
+          GIT_HASH: ${{ github.sha }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -99,7 +108,6 @@ jobs:
       # The app applies its embedded migrations on startup.
       - name: Start app
         run: |
-          export GIT_HASH=${GITHUB_SHA}
           ./target/debug/bibby > app.log 2>&1 &
           echo $! > app.pid
 

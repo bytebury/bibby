@@ -9,8 +9,12 @@ const isCI = !!process.env.CI;
 // `./e2e.sh` to manage the lifecycle.
 export default defineConfig({
   testDir: "./e2e",
-  fullyParallel: false,
-  workers: 1,
+  // Every test makes its own accounts (emails derived from the test id), so
+  // tests can share the server and database while running side by side.
+  fullyParallel: true,
+  // Tests mostly wait on the server, so CI can use every core; locally
+  // Playwright's default of half leaves room for the editor and dev server.
+  workers: isCI ? "100%" : undefined,
   retries: isCI ? 1 : 0,
   reporter: isCI ? [["github"], ["html", { open: "never" }]] : "list",
   timeout: 30_000,
@@ -19,7 +23,7 @@ export default defineConfig({
     baseURL: BASE_URL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
-    video: "retain-on-failure",
+    video: "on-first-retry",
   },
   projects: [
     {

@@ -367,6 +367,9 @@ every route requires `X-Test-Auth-Token` to match `TEST_AUTH_TOKEN`:
 - The database is shared across the suite and never reset. Derive emails from
   `testInfo.testId` plus a per-run suffix so retries start clean (see
   `e2e/admin_users.spec.ts`).
+- Tests run in parallel, in no fixed order, against that one database. A test
+  must only rely on rows it created: never assert on global counts or on a
+  list being empty unless the query is narrowed to the test's own accounts.
 - Don't lock an account whose `last_known_ip` is `127.0.0.1` — every later
   sign-up from the test runner would be locked by the shared-IP rule. Give
   such accounts their own IP via `signInAs(…, { ip })`.

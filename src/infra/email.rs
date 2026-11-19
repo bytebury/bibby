@@ -1,5 +1,5 @@
-//! Outbound email through the `mailman` microservice (`MAILMAN_URL`,
-//! `MAILMAN_API_TOKEN`).
+//! Outbound email through the `mailman` microservice (`MAILMAN_URL`, plus
+//! `MAILMAN_API_TOKEN` if that service requires one).
 
 use crate::domain::one_time_passcode;
 use crate::domain::value_objects::email::Email;

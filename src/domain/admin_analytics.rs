@@ -12,23 +12,11 @@ pub struct AdminAnalytics {
     pub total_users: i64,
     pub free_users: i64,
     pub pro_users: i64,
-    pub admin_users: i64,
-    pub locked_users: i64,
-    pub unverified_users: i64,
-    pub email_users: i64,
-    pub flagged_users: i64,
     pub new_users_last_30d: i64,
     pub new_users_prev_30d: i64,
     /// Distinct users with at least one authenticated request in the window.
     pub active_users_last_30d: i64,
     pub active_users_prev_30d: i64,
-
-    new_pro_users_last_30d: i64,
-    new_pro_users_prev_30d: i64,
-    new_free_users_last_30d: i64,
-    new_free_users_prev_30d: i64,
-    new_email_users_last_30d: i64,
-    new_email_users_prev_30d: i64,
 
     /// 30 entries, oldest first. `current_window[29]` is today.
     pub current_window: Vec<DailyActiveSlice>,
@@ -130,15 +118,6 @@ impl AdminAnalytics {
     pub fn users_delta(&self) -> Delta {
         Delta::new(self.new_users_last_30d, self.new_users_prev_30d)
     }
-    pub fn pro_users_delta(&self) -> Delta {
-        Delta::new(self.new_pro_users_last_30d, self.new_pro_users_prev_30d)
-    }
-    pub fn free_users_delta(&self) -> Delta {
-        Delta::new(self.new_free_users_last_30d, self.new_free_users_prev_30d)
-    }
-    pub fn email_users_delta(&self) -> Delta {
-        Delta::new(self.new_email_users_last_30d, self.new_email_users_prev_30d)
-    }
     pub fn active_users_delta(&self) -> Delta {
         Delta::new(self.active_users_last_30d, self.active_users_prev_30d)
     }
@@ -157,19 +136,8 @@ impl AdminAnalytics {
                 COUNT(*)                                         AS "total!",
                 COUNT(*) FILTER (WHERE role = 'free')            AS "free!",
                 COUNT(*) FILTER (WHERE role = 'professional')    AS "pro!",
-                COUNT(*) FILTER (WHERE role = 'admin')           AS "admin!",
-                COUNT(*) FILTER (WHERE locked)                   AS "locked!",
-                COUNT(*) FILTER (WHERE NOT verified)             AS "unverified!",
-                COUNT(*) FILTER (WHERE auth_provider = 'email')  AS "email!",
                 COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days')                                                AS "new_30d!",
-                COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '60 days' AND created_at < NOW() - INTERVAL '30 days')   AS "new_prev_30d!",
-                COUNT(*) FILTER (WHERE role = 'professional' AND created_at >= NOW() - INTERVAL '30 days')                      AS "new_pro_30d!",
-                COUNT(*) FILTER (WHERE role = 'professional' AND created_at >= NOW() - INTERVAL '60 days' AND created_at < NOW() - INTERVAL '30 days') AS "new_pro_prev_30d!",
-                COUNT(*) FILTER (WHERE role = 'free' AND created_at >= NOW() - INTERVAL '30 days')                              AS "new_free_30d!",
-                COUNT(*) FILTER (WHERE role = 'free' AND created_at >= NOW() - INTERVAL '60 days' AND created_at < NOW() - INTERVAL '30 days') AS "new_free_prev_30d!",
-                COUNT(*) FILTER (WHERE auth_provider = 'email' AND created_at >= NOW() - INTERVAL '30 days')                    AS "new_email_30d!",
-                COUNT(*) FILTER (WHERE auth_provider = 'email' AND created_at >= NOW() - INTERVAL '60 days' AND created_at < NOW() - INTERVAL '30 days') AS "new_email_prev_30d!",
-                (SELECT COUNT(*) FROM user_flags)                AS "flagged!"
+                COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '60 days' AND created_at < NOW() - INTERVAL '30 days')   AS "new_prev_30d!"
             FROM users
             "#,
         )
@@ -228,19 +196,8 @@ impl AdminAnalytics {
                 analytics.total_users = r.total;
                 analytics.free_users = r.free;
                 analytics.pro_users = r.pro;
-                analytics.admin_users = r.admin;
-                analytics.locked_users = r.locked;
-                analytics.unverified_users = r.unverified;
-                analytics.email_users = r.email;
-                analytics.flagged_users = r.flagged;
                 analytics.new_users_last_30d = r.new_30d;
                 analytics.new_users_prev_30d = r.new_prev_30d;
-                analytics.new_pro_users_last_30d = r.new_pro_30d;
-                analytics.new_pro_users_prev_30d = r.new_pro_prev_30d;
-                analytics.new_free_users_last_30d = r.new_free_30d;
-                analytics.new_free_users_prev_30d = r.new_free_prev_30d;
-                analytics.new_email_users_last_30d = r.new_email_30d;
-                analytics.new_email_users_prev_30d = r.new_email_prev_30d;
             }
             Err(error) => warn!(%error, "could not load user analytics"),
         }
@@ -326,5 +283,26 @@ mod tests {
     fn chart_json_cannot_close_the_script_tag() {
         let analytics = AdminAnalytics::default();
         assert!(!analytics.chart_json().contains("</"));
+    }
+}
+
+#[cfg(test)]
+mod db_tests {
+    use super::*;
+    use crate::domain::user::Role;
+    use crate::test_support::insert_user;
+    use sqlx::PgPool;
+
+    #[sqlx::test]
+    async fn total_users_splits_into_free_and_pro(db: PgPool) {
+        insert_user(&db, "free1@example.com", Role::Free, "10.0.3.1").await;
+        insert_user(&db, "free2@example.com", Role::Free, "10.0.3.1").await;
+        insert_user(&db, "pro@example.com", Role::Professional, "10.0.3.1").await;
+        insert_user(&db, "admin@example.com", Role::Admin, "10.0.3.1").await;
+
+        let analytics = AdminAnalytics::load(&db).await;
+        assert_eq!(analytics.total_users, 4);
+        assert_eq!((analytics.free_users, analytics.pro_users), (2, 1));
+        assert_eq!(analytics.new_users_last_30d, 4);
     }
 }

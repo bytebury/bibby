@@ -66,11 +66,11 @@ jobs:
 
       - name: Cache cargo build
         uses: Swatinem/rust-cache@v2
+        # Its own key, since this runs alongside the Rust workflow and builds
+        # different artifacts. Only main saves; PRs restore main's build.
         with:
-          # Share the cache with the Rust check workflow so the debug build is
-          # already warm by the time we get here.
-          shared-key: bibby-debug
-          cache-targets: "true"
+          shared-key: bibby-e2e
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       # GIT_HASH is baked in at compile time and shown on /admin/monitoring.
       - name: Build app (debug)

@@ -31,10 +31,12 @@ jobs:
 
       - name: Cache cargo build
         uses: Swatinem/rust-cache@v2
+        # One key per job: jobs build different artifacts, and with a shared
+        # key only the first to finish gets saved. Only main saves, so PRs
+        # restore main's cache instead of evicting it with their own.
         with:
-          # Shared with the playwright workflow so a warm cache covers both.
-          shared-key: bibby-debug
-          cache-targets: "true"
+          shared-key: bibby-check
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: cargo fmt
         run: cargo fmt --all -- --check
@@ -76,8 +78,8 @@ jobs:
       - name: Cache cargo build
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: bibby-debug
-          cache-targets: "true"
+          shared-key: bibby-sqlx
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install sqlx-cli
         uses: taiki-e/install-action@v2

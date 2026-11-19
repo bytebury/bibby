@@ -160,17 +160,20 @@ impl User {
     {
         let user = sqlx::query_as(
             r#"
-            WITH audited AS (
+            WITH _audited AS (
                 UPDATE users
                    SET last_known_ip = $2, last_seen_at = NOW()
                  WHERE email = $1
                    AND (last_known_ip IS DISTINCT FROM $2
                         OR last_seen_at < NOW() - INTERVAL '1 minute')
-             RETURNING id
             ),
+            -- Every request, not only when the audit writes: a sign-in sets
+            -- `last_seen_at` itself, so tying this to the audit would miss
+            -- the day for someone who signs in and leaves within a minute.
+            -- Once the day's row exists the insert is a no-op.
             _activity AS (
                 INSERT INTO user_daily_activity (user_id, day)
-                SELECT id, (NOW() AT TIME ZONE 'UTC')::DATE FROM audited
+                SELECT id, (NOW() AT TIME ZONE 'UTC')::DATE FROM users WHERE email = $1
                 ON CONFLICT DO NOTHING
             )
             SELECT * FROM user_details WHERE email = $1

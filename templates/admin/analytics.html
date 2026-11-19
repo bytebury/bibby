@@ -27,35 +27,16 @@
     <a href="/users" class="btn-secondary">Manage users</a>
   </header>
 
-  <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+  <section class="grid grid-cols-1 gap-4 sm:grid-cols-2">
     <div class="card card-body kpi">
       <div class="flex items-start justify-between"><p class="text-xs text-gray-500">Total users</p>{% call delta_badge(analytics.users_delta()) %}{% endcall %}</div>
       <p class="text-2xl font-semibold">{{ self.int(analytics.total_users) }}</p>
-      <p class="text-xs text-gray-500">+{{ self.int(analytics.new_users_last_30d) }} in last 30d (prev {{ self.int(analytics.new_users_prev_30d) }})</p>
-    </div>
-    <div class="card card-body kpi">
-      <div class="flex items-start justify-between"><p class="text-xs text-gray-500">Professional users</p>{% call delta_badge(analytics.pro_users_delta()) %}{% endcall %}</div>
-      <p class="text-2xl font-semibold">{{ self.int(analytics.pro_users) }}</p>
-      <p class="text-xs text-gray-500">Paid through Stripe or granted by an admin</p>
-    </div>
-    <div class="card card-body kpi">
-      <div class="flex items-start justify-between"><p class="text-xs text-gray-500">Free users</p>{% call delta_badge(analytics.free_users_delta()) %}{% endcall %}</div>
-      <p class="text-2xl font-semibold">{{ self.int(analytics.free_users) }}</p>
-      <p class="text-xs text-gray-500">{{ self.int(analytics.admin_users) }} admin · {{ self.int(analytics.locked_users) }} locked</p>
+      <p class="text-xs text-gray-500">{{ self.int(analytics.free_users) }} free · {{ self.int(analytics.pro_users) }} pro</p>
     </div>
     <div class="card card-body kpi">
       <div class="flex items-start justify-between"><p class="text-xs text-gray-500">Active users</p>{% call delta_badge(analytics.active_users_delta()) %}{% endcall %}</div>
       <p class="text-2xl font-semibold">{{ self.int(analytics.active_users_last_30d) }}</p>
       <p class="text-xs text-gray-500">Signed in during the last 30d (prev {{ self.int(analytics.active_users_prev_30d) }})</p>
-    </div>
-    <div class="card card-body kpi">
-      <div class="flex items-start justify-between"><p class="text-xs text-gray-500">Email sign-ups</p>{% call delta_badge(analytics.email_users_delta()) %}{% endcall %}</div>
-      <p class="text-2xl font-semibold">{{ self.int(analytics.email_users) }}</p>
-      <p class="text-xs text-gray-500">{{ self.int(analytics.unverified_users) }} still unverified</p>
-    </div>
-    <div class="card card-body kpi">
-      <div class="flex items-start justify-between"><p class="text-xs text-gray-500">Flagged users</p></div>
-      <p class="text-2xl font-semibold">{{ self.int(analytics.flagged_users) }}</p>
     </div>
   </section>
 

@@ -248,3 +248,28 @@ mod tests {
         assert_eq!(Feature::from_key("removed_feature"), None);
     }
 }
+
+#[cfg(test)]
+mod db_tests {
+    use super::*;
+    use sqlx::PgPool;
+
+    #[sqlx::test]
+    async fn google_analytics_ships_off_and_turns_on_with_its_id(db: PgPool) {
+        let toggles = FeatureToggle::all(&db).await.unwrap();
+        let ga = toggles
+            .iter()
+            .find(|t| t.feature() == Some(Feature::GoogleAnalytics))
+            .unwrap();
+        assert!(!ga.enabled && ga.value.is_none(), "off by default");
+
+        FeatureToggle::update(&db, ga.id, true, Some("G-AB12CD34EF"))
+            .await
+            .unwrap();
+        let toggles = FeatureToggles::new(FeatureToggle::all(&db).await.unwrap());
+        assert_eq!(
+            toggles.value(Feature::GoogleAnalytics),
+            Some("G-AB12CD34EF")
+        );
+    }
+}

@@ -839,3 +839,117 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+mod db_tests {
+    use super::*;
+    use crate::infra::auth::jwt::UserClaims;
+    use crate::infra::pagination::{Paginate, PagingInfo};
+    use crate::test_support::insert_user;
+    use sqlx::PgPool;
+
+    #[sqlx::test]
+    async fn every_signed_in_request_counts_the_user_as_active_today(db: PgPool) {
+        let user = insert_user(&db, "active@example.com", Role::Free, "10.0.0.1").await;
+        // A sign-in sets last_seen_at, so the audit right after it skips its
+        // write. The day must be recorded anyway.
+        User::audit_and_find_by_email(&db, &user.email, "10.0.0.1")
+            .await
+            .unwrap();
+        let days: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM user_daily_activity WHERE user_id = $1")
+                .bind(user.id)
+                .fetch_one(&db)
+                .await
+                .unwrap();
+        assert_eq!(days, 1);
+    }
+
+    #[sqlx::test]
+    async fn signing_out_everywhere_retires_every_token(db: PgPool) {
+        let user = insert_user(&db, "sessions@example.com", Role::Free, "10.0.0.2").await;
+        let claims = UserClaims::from(&user);
+        assert!(claims.is_current_for(&user));
+
+        User::end_all_sessions(&db, user.id).await.unwrap();
+        let user = User::find_by_id(&db, user.id).await.unwrap();
+        assert!(!claims.is_current_for(&user));
+        assert!(
+            UserClaims::from(&user).is_current_for(&user),
+            "a new sign-in works"
+        );
+    }
+
+    #[sqlx::test]
+    async fn an_admin_lock_or_email_change_ends_sessions_but_a_role_change_does_not(db: PgPool) {
+        let user = insert_user(&db, "edited@example.com", Role::Free, "10.0.0.3").await;
+        let edit = |email: &str, role: Role, locked: bool| UserUpdate {
+            email: Email::parse(email).unwrap(),
+            role,
+            locked,
+            plan_expiry_date: None,
+        };
+
+        let user = User::update(
+            &db,
+            user.id,
+            &edit("edited@example.com", Role::Professional, false),
+        )
+        .await
+        .unwrap();
+        assert_eq!(user.session_version, 0, "a role change keeps sessions");
+        let user = User::update(
+            &db,
+            user.id,
+            &edit("edited@example.com", Role::Professional, true),
+        )
+        .await
+        .unwrap();
+        assert_eq!(user.session_version, 1, "a lock ends them");
+        let user = User::update(
+            &db,
+            user.id,
+            &edit("moved@example.com", Role::Professional, true),
+        )
+        .await
+        .unwrap();
+        assert_eq!(user.session_version, 2, "so does a new address");
+    }
+
+    #[sqlx::test]
+    async fn paginates_with_a_filter_and_counts_every_match(db: PgPool) {
+        for n in 0..3 {
+            insert_user(
+                &db,
+                &format!("pro{n}@example.com"),
+                Role::Professional,
+                "10.0.0.4",
+            )
+            .await;
+        }
+        insert_user(&db, "free@example.com", Role::Free, "10.0.0.4").await;
+        let db = std::sync::Arc::new(db);
+        let paging = PagingInfo {
+            page: Some(1),
+            page_size: Some(2),
+        };
+
+        let page = User::paginate_where(
+            &db,
+            "WHERE role = $1 ORDER BY email",
+            vec!["professional"],
+            &paging,
+        )
+        .await
+        .unwrap();
+        assert_eq!(page.total, 3);
+        assert_eq!(
+            page.data
+                .iter()
+                .map(|u| u.email.as_str())
+                .collect::<Vec<_>>(),
+            ["pro0@example.com", "pro1@example.com"]
+        );
+        assert!(page.has_next_page);
+    }
+}

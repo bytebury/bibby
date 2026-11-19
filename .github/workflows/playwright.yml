@@ -46,7 +46,7 @@ jobs:
       # Signs session cookies and keys the HMAC on emailed sign-in codes. The
       # app refuses anything shorter than 32 characters.
       JWT_SECRET: e2e-jwt-secret-at-least-32-characters
-      # The address e2e/sign_in.spec.ts expects to become an admin.
+      # Required to boot; no test signs in as it.
       ADMIN_EMAILS: playwright+listed-admin@example.com
       # Stripe is left unset on purpose: the suite also proves the app runs
       # without billing. Dummy Google values show the Google button; nothing

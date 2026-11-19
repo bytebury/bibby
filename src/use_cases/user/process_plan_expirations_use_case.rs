@@ -205,3 +205,38 @@ mod tests {
         assert_eq!(due_threshold(1, Some(7)), Some(1));
     }
 }
+
+#[cfg(test)]
+mod db_tests {
+    use super::*;
+    use crate::domain::user::{Role, User};
+    use crate::test_support::insert_user;
+    use sqlx::PgPool;
+
+    async fn pro_until(db: &PgPool, email: &str, days_from_today: i64) -> PrimaryKey {
+        let user = insert_user(db, email, Role::Professional, "10.0.2.1").await;
+        let date = Utc::now().date_naive() + chrono::Duration::days(days_from_today);
+        sqlx::query("UPDATE users SET plan_expiry_date = $1 WHERE id = $2")
+            .bind(date)
+            .bind(user.id)
+            .execute(db)
+            .await
+            .unwrap();
+        user.id
+    }
+
+    #[sqlx::test]
+    async fn downgrades_lapsed_plans_and_keeps_the_rest(db: PgPool) {
+        let lapsed = pro_until(&db, "lapsed@example.com", -1).await;
+        let last_day = pro_until(&db, "today@example.com", 0).await;
+        ProcessPlanExpirationsUseCase::new(std::sync::Arc::new(db.clone()))
+            .execute()
+            .await
+            .unwrap();
+
+        let lapsed = User::find_by_id(&db, lapsed).await.unwrap();
+        assert!(lapsed.is_free() && lapsed.plan_expiry_date.is_none());
+        let last_day = User::find_by_id(&db, last_day).await.unwrap();
+        assert!(last_day.is_pro(), "the end date is the last day of access");
+    }
+}

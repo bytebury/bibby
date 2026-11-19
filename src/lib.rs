@@ -13,6 +13,8 @@ mod domain;
 mod error;
 pub mod infra;
 mod prelude;
+#[cfg(test)]
+mod test_support;
 mod use_cases;
 
 pub use error::AppError;

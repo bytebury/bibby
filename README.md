@@ -213,7 +213,7 @@ For the common HTMX button case, prefer the `spinner_button` macro in `templates
 ```
 
 ### Tooltips
-Add `data-tooltip="..."` to any element and `public/scripts/tooltip.js` will position a tooltip below it on hover. Listeners are delegated from `document`, so it works on swapped-in content too.
+Add `data-tooltip="..."` to any element and `public/scripts/tooltip.js` will position a tooltip below it on hover. Listeners are delegated from `document`, so it works on swapped-in content too. Keyboard focus shows it as well, Escape hides it, and screen readers read it as the element's description.
 
 The base layout already renders the required `<div id="tooltip" class="tooltip"></div>` element — don't remove it. On mobile (`max-width: 748px`) you can opt-out with `data-tooltip-no-mobile`, which is useful for tap targets where a hover tooltip just gets in the way.
 
@@ -235,18 +235,18 @@ The base layout already renders the required `<div id="tooltip" class="tooltip">
 Templates already do this for the flag overlay on user avatars (see `templates/users/users.html` and `templates/users/user.html`).
 
 ### Modals
-Modals are HTMX-driven: any button that targets `#modal` loads a partial into the modal slot, and `public/scripts/modal.js` flips the wrapper to `display: flex` on `htmx:afterSwap`. Closing is handled by `closeModal()` (the underlay click, an `&times;` button, the `Escape` key, or a server-emitted `closeModal` event all work).
+Modals are HTMX-driven: any button that targets `#modal` loads a partial into the modal slot, and `public/scripts/modal.js` opens it as an accessible dialog: it is named after the partial's first heading, focus moves to its first field, Tab stays inside it while the page behind is `inert`, and focus returns to the button that opened it. Closing is handled by `closeModal()` (the underlay click, an `&times;` button, the `Escape` key, or a server-emitted `closeModal` event all work).
 
 The base layout already renders the required wrapper:
 
 ```html
 <div id="modal_wrapper" class="modal wrapper" style="display: none">
   <div class="underlay" onclick="closeModal()"></div>
-  <div id="modal" class="content"></div>
+  <div id="modal" class="content" role="dialog" aria-modal="true" tabindex="-1"></div>
 </div>
 ```
 
-Modal partials should be **content-only** — just the inner card markup, no wrapper. Use `onclick="closeModal()"` for the close button.
+Modal partials should be **content-only** — just the inner card markup, no wrapper. Start with an `<h2>` (it names the dialog) and give the close button `aria-label="Close"`.
 
 **Sample Usage**
 ```html
@@ -258,7 +258,7 @@ Modal partials should be **content-only** — just the inner card markup, no wra
 <!-- Partial returned by /users/123/edit (content-only) -->
 <div class="card-header">
   <h2 class="card-title">Edit user</h2>
-  <button type="button" class="btn-ghost" onclick="closeModal()">&times;</button>
+  <button type="button" class="btn-ghost" onclick="closeModal()" aria-label="Close">&times;</button>
 </div>
 <form hx-patch="/users/123" hx-swap="none" class="card-body">
   <!-- ...fields... -->

@@ -454,6 +454,23 @@ every route requires `X-Test-Auth-Token` to match `TEST_AUTH_TOKEN`:
 - Drive setup through the UI when realistic; use the shim when click-throughs
   would be slow or impossible (OAuth, email).
 
+## Accessibility
+
+Target WCAG 2.1 AA. `e2e/accessibility.spec.ts` scans the main pages with
+axe and tests keyboard behaviour; add a page to its scan when you add one.
+
+- Every control has a name: visible text, a `<label>`, or `aria-label` for
+  icon-only buttons (`&times;` is `aria-label="Close"`).
+- Text meets 4.5:1 contrast: `text-gray-500` is the lightest gray for text
+  on white; `text-gray-400` fails.
+- One `<h1>` per page and no skipped heading levels. Modal partials start
+  with an `<h2>`, which names the dialog.
+- Decorative images get `alt=""` (a flag next to its country name).
+- Anything shown on hover (tooltips, menus) works from the keyboard too, and
+  Escape dismisses it.
+- Landmarks are labelled when there's more than one of a kind
+  (`<nav aria-label="Main">`).
+
 ## Conventions for contributions
 
 - New entity → `domain/<name>.rs`; new use-case →

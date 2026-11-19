@@ -79,6 +79,7 @@ GEODUDE_URL=
 
 # \`mailman\` microservice that sends email (sign-in and verification codes).
 # Leave MAILMAN_URL empty locally and codes fail to send (the error is logged).
+# MAILMAN_API_TOKEN is optional: set it only if your mailman requires one.
 MAILMAN_URL=
 MAILMAN_API_TOKEN=
 

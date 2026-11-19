@@ -177,7 +177,7 @@ const CONFIG: &[(&str, &str, bool)] = &[
     ("GOOGLE_CLIENT_SECRET", "Google sign-in (optional)", false),
     ("GOOGLE_CALLBACK_URL", "Google sign-in (optional)", false),
     ("MAILMAN_URL", "Sign-in codes and emails", true),
-    ("MAILMAN_API_TOKEN", "Sign-in codes and emails", true),
+    ("MAILMAN_API_TOKEN", "Mailman auth (optional)", false),
     ("STRIPE_SECRET_KEY", "Billing (optional)", false),
     ("STRIPE_WEBHOOK_SECRET", "Stripe webhooks", false),
     ("STRIPE_MONTHLY_PRO", "Monthly plan price", false),
@@ -571,6 +571,26 @@ pub fn format_bytes(bytes: i64) -> String {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn optional_services_are_not_required_settings() {
+        let required: Vec<&str> = CONFIG
+            .iter()
+            .filter(|(_, _, required)| *required)
+            .map(|(name, _, _)| *name)
+            .collect();
+        assert_eq!(
+            required,
+            [
+                "DATABASE_URL",
+                "JWT_SECRET",
+                "ADMIN_EMAILS",
+                "APP_ORIGIN",
+                "MAILMAN_URL",
+                "CRON_SECRET"
+            ]
+        );
+    }
     use super::*;
 
     #[test]

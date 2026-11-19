@@ -241,12 +241,14 @@ so swapped-in content works without rebinding.
 ### Modals
 
 HTMX-driven. Trigger: `hx-get="..." hx-target="#modal"`. Close: `closeModal()` from a button, underlay click, `Escape`,
-or server-emitted `HX-Trigger: closeModal`.
+or server-emitted `HX-Trigger: closeModal`. `modal.js` makes it a dialog: named by the partial's first heading, focus on
+its first field, Tab wrapped inside, page behind `inert`, focus back to the opener on close. Partials start with an `<h2>`
+and the `&times;` button carries `aria-label="Close"`.
 
 ### Popover menus
 
-Use native `<details class="menu">`. `menu.js` handles outside-click, item-click-closes, and `Escape`. Keyboard + a11y
-come from `<details>`.
+Use native `<details class="menu">`. `menu.js` handles outside-click, item-click-closes, and `Escape` (which returns focus
+to the `<summary>`). Keyboard + a11y come from `<details>`; give an icon-only `<summary>` an `aria-label`.
 
 ## Pagination
 

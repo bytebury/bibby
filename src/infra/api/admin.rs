@@ -37,6 +37,7 @@ async fn analytics(
     let analytics = AdminAnalytics::load(state.db.as_ref()).await;
     Ok(AnalyticsTemplate {
         shared: SharedContext::new(&state)
+            .await
             .with_user(Some(user))
             .with_canonical_path("/admin/analytics")
             .with_meta(PageMeta::private("Site Analytics")),
@@ -110,6 +111,7 @@ async fn monitoring_page(
         level: query.level,
         q: query.q,
         shared: SharedContext::new(&state)
+            .await
             .with_user(Some(user))
             .with_canonical_path("/admin/monitoring")
             .with_meta(PageMeta::private("Monitoring")),

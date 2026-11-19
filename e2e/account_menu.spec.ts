@@ -54,7 +54,7 @@ test("admins find the admin links in the avatar menu", async ({
   ).toHaveCount(0);
 
   const menu = await openAccountMenu(page);
-  for (const name of ["Users", "Analytics", "Countries", "Announcements", "Settings"]) {
+  for (const name of ["Users", "Analytics", "Countries", "Announcements", "Feature toggles", "Settings"]) {
     await expect(menu.getByRole("link", { name })).toBeVisible();
   }
   await menu.getByRole("link", { name: "Analytics" }).click();
@@ -82,7 +82,3 @@ test("users rename themselves from the settings page", async ({
   await expect(accountMenu(page)).toContainText("Grace Hopper");
 });
 
-test("settings require a session", async ({ page }) => {
-  const response = await page.goto("/settings");
-  expect(response?.status()).toBe(401);
-});

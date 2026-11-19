@@ -56,6 +56,7 @@ async fn blogs(
 ) -> Result<BlogsTemplate> {
     Ok(BlogsTemplate {
         shared: SharedContext::new(&state)
+            .await
             .with_user(user)
             .with_canonical_path("/blogs")
             .with_meta(
@@ -103,6 +104,7 @@ async fn view_blog(
     let is_admin = user.as_ref().map(|u| u.is_admin()).unwrap_or(false);
     Ok(BlogTemplate {
         shared: SharedContext::new(&state)
+            .await
             .with_user(user)
             .with_canonical_path(canonical_path)
             .with_meta(PageMeta::article(&blog)),

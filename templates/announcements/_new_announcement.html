@@ -3,7 +3,7 @@
     <h2 class="card-title">New announcement</h2>
     <p class="card-subtitle">The most recent active announcement is shown sitewide.</p>
   </div>
-  <button type="button" class="btn-ghost" onclick="closeModal()">&times;</button>
+  <button type="button" class="btn-ghost" onclick="closeModal()" aria-label="Close">&times;</button>
 </div>
 
 <form hx-put="/announcements" hx-swap="none" class="card-body space-y-4">

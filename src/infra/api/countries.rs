@@ -47,6 +47,7 @@ async fn countries(
     let countries = Country::search(state.db.as_ref(), &search_query).await?;
     Ok(CountriesTemplate {
         shared: SharedContext::new(&state)
+            .await
             .with_user(Some(user))
             .with_canonical_path("/countries")
             .with_meta(PageMeta::private("Manage Countries")),

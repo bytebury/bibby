@@ -43,6 +43,7 @@ async fn upgrade_page(
         return Ok(redirect!("/", &headers).into_response());
     }
     let shared = SharedContext::new(&state)
+        .await
         .with_user(Some(user))
         .with_canonical_path("/upgrade")
         .with_meta(PageMeta::private("Upgrade"));
@@ -94,6 +95,7 @@ async fn checkout_success(
         ("Early access", "Try new features before everyone else."),
     ];
     let shared = SharedContext::new(&state)
+        .await
         .with_user(Some(user))
         .with_canonical_path("/checkout/success")
         .with_meta(PageMeta::private("Welcome"));

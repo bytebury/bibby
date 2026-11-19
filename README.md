@@ -213,7 +213,7 @@ For the common HTMX button case, prefer the `spinner_button` macro in `templates
 ```
 
 ### Tooltips
-Add `data-tooltip="..."` to any element and `public/scripts/tooltip.js` will position a tooltip below it on hover. Listeners are delegated from `document`, so it works on swapped-in content too.
+Add `data-tooltip="..."` to any element and `public/scripts/tooltip.js` will position a tooltip below it on hover. Listeners are delegated from `document`, so it works on swapped-in content too. Keyboard focus shows it as well, Escape hides it, and screen readers read it as the element's description.
 
 The base layout already renders the required `<div id="tooltip" class="tooltip"></div>` element — don't remove it. On mobile (`max-width: 748px`) you can opt-out with `data-tooltip-no-mobile`, which is useful for tap targets where a hover tooltip just gets in the way.
 
@@ -235,18 +235,18 @@ The base layout already renders the required `<div id="tooltip" class="tooltip">
 Templates already do this for the flag overlay on user avatars (see `templates/users/users.html` and `templates/users/user.html`).
 
 ### Modals
-Modals are HTMX-driven: any button that targets `#modal` loads a partial into the modal slot, and `public/scripts/modal.js` flips the wrapper to `display: flex` on `htmx:afterSwap`. Closing is handled by `closeModal()` (the underlay click, an `&times;` button, the `Escape` key, or a server-emitted `closeModal` event all work).
+Modals are HTMX-driven: any button that targets `#modal` loads a partial into the modal slot, and `public/scripts/modal.js` opens it as an accessible dialog: it is named after the partial's first heading, focus moves to its first field, Tab stays inside it while the page behind is `inert`, and focus returns to the button that opened it. Closing is handled by `closeModal()` (the underlay click, an `&times;` button, the `Escape` key, or a server-emitted `closeModal` event all work).
 
 The base layout already renders the required wrapper:
 
 ```html
 <div id="modal_wrapper" class="modal wrapper" style="display: none">
   <div class="underlay" onclick="closeModal()"></div>
-  <div id="modal" class="content"></div>
+  <div id="modal" class="content" role="dialog" aria-modal="true" tabindex="-1"></div>
 </div>
 ```
 
-Modal partials should be **content-only** — just the inner card markup, no wrapper. Use `onclick="closeModal()"` for the close button.
+Modal partials should be **content-only** — just the inner card markup, no wrapper. Start with an `<h2>` (it names the dialog) and give the close button `aria-label="Close"`.
 
 **Sample Usage**
 ```html
@@ -258,7 +258,7 @@ Modal partials should be **content-only** — just the inner card markup, no wra
 <!-- Partial returned by /users/123/edit (content-only) -->
 <div class="card-header">
   <h2 class="card-title">Edit user</h2>
-  <button type="button" class="btn-ghost" onclick="closeModal()">&times;</button>
+  <button type="button" class="btn-ghost" onclick="closeModal()" aria-label="Close">&times;</button>
 </div>
 <form hx-patch="/users/123" hx-swap="none" class="card-body">
   <!-- ...fields... -->
@@ -292,6 +292,11 @@ Popover menus use the native `<details>` element with the `menu` class — no ex
 ```
 
 Note: the tooltip script automatically suppresses hover tooltips on `details.menu > summary` so a tooltip doesn't pop while the menu is opening.
+
+## Feature Toggles
+Admins switch features on for everyone at `/admin/feature-toggles`. A toggle is on or off and can carry a value. The first one is **Google Analytics**, off by default: turn it on with your Google tag ID (`G-XXXXXXXXXX`) and gtag loads on every page, and the privacy policy mentions its cookies.
+
+Features are declared in code (`Feature` in `src/domain/feature_toggle.rs`) and stored in the `feature_toggles` table. Each page reads them with the announcement banner (`shared.site.toggles`), so a change shows everywhere as soon as it is saved.
 
 ## OAuth Providers
 Google OAuth is supported out of the box, alongside email sign-up and sign-in with emailed one-time codes. `src/infra/auth/google.rs` is three functions: `is_configured`, `auth_url` and `exchange_code`. The routes are written out in `src/infra/api/auth.rs`: `/auth/google` starts the flow and `/auth/google/callback` finishes it.

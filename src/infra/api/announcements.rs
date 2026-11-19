@@ -17,7 +17,6 @@ pub fn routes() -> Router<SharedState> {
     Router::new()
         .route("/announcements", get(announcements))
         .route("/announcements", put(create_announcement))
-        .route("/announcements/banner", get(banner))
         .route("/announcements/new", get(new_announcement_modal))
         .route("/announcements/{id}", delete(destroy_announcement))
         .route("/announcements/{id}", patch(edit_announcement))
@@ -52,12 +51,6 @@ struct EditAnnouncementModal {
     announcement: Announcement,
 }
 
-#[derive(Template, WebTemplate)]
-#[template(path = "_partials/announcement_banner.html")]
-struct BannerTemplate {
-    announcement: Option<Announcement>,
-}
-
 async fn announcements(
     State(state): State<SharedState>,
     Admin(user): Admin,
@@ -65,6 +58,7 @@ async fn announcements(
 ) -> Result<AnnouncementsTemplate> {
     Ok(AnnouncementsTemplate {
         shared: SharedContext::new(&state)
+            .await
             .with_user(Some(user))
             .with_canonical_path("/announcements")
             .with_meta(PageMeta::private("Announcements")),
@@ -132,15 +126,4 @@ async fn toggle_active(
     admin.ensure_can_write(&announcement)?;
     Announcement::set_active(state.db.as_ref(), announcement.id, form.active.is_some()).await?;
     Ok(StatusCode::NO_CONTENT)
-}
-
-/// Public endpoint — every page fetches this on load via HTMX so the latest
-/// active announcement renders sitewide. Returns an empty `<div>` when there
-/// is no active announcement so the placeholder cleanly swaps itself out.
-async fn banner(State(state): State<SharedState>) -> Result<BannerTemplate> {
-    Ok(BannerTemplate {
-        announcement: Announcement::find_latest_active(state.db.as_ref())
-            .await
-            .unwrap_or(None),
-    })
 }

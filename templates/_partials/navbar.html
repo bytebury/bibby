@@ -1,5 +1,5 @@
 {% import "_macros/buttons.html" as ui %}
-<nav class="navbar">
+<nav class="navbar" aria-label="Main">
   <div class="navbar-inner">
     <a href="/" class="navbar-brand">{{ shared.app_name() }}</a>
 
@@ -34,10 +34,11 @@
               </div>
 
               {% if user.is_admin() %}
-                <div class="px-3 pt-1 text-xs font-medium uppercase tracking-wide text-gray-400">Admin</div>
+                <div class="px-3 pt-1 text-xs font-medium uppercase tracking-wide text-gray-500">Admin</div>
                 <a href="/users" class="navbar-link">Users</a>
                 <a href="/admin/analytics" class="navbar-link">Analytics</a>
                 <a href="/admin/monitoring" class="navbar-link">Monitoring</a>
+                <a href="/admin/feature-toggles" class="navbar-link">Feature toggles</a>
                 <a href="/countries" class="navbar-link">Countries</a>
                 <a href="/announcements" class="navbar-link">Announcements</a>
                 <div class="border-t border-gray-100"></div>

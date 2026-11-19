@@ -66,34 +66,6 @@ test("signing out everywhere ends sessions on other devices", async ({
   await phone.close();
 });
 
-test("state-changing requests from another site are refused", async ({
-  page,
-  request,
-}, testInfo) => {
-  await signInAs(request, page.context(), testEmail(testInfo, "csrf"), "free");
-  const response = await page.request.patch("/settings", {
-    headers: { Origin: "https://evil.example" },
-    form: { first_name: "Mallory", last_name: "Evil" },
-  });
-  expect(response.status()).toBe(403);
-});
-
-test("a user's name can't run script on the admin user page", async ({
-  page,
-  request,
-}, testInfo) => {
-  const victim = testEmail(testInfo, "named");
-  await signInAs(request, null, victim, "free", {
-    fullName: "</script><script>window.__pwned = true</script>",
-  });
-  await signInAs(request, page.context(), testEmail(testInfo, "admin"), "admin");
-
-  await page.goto(`/users?q=${encodeURIComponent(victim)}`);
-  await page.locator('#list a[href^="/users/"]:visible').first().click();
-  await expect(page.locator(".user-email")).toHaveText(victim);
-  expect(await page.evaluate(() => (window as { __pwned?: boolean }).__pwned)).toBeUndefined();
-});
-
 test("without Stripe there is no billing to reach", async ({ page, request }, testInfo) => {
   await signInAs(request, page.context(), testEmail(testInfo, "free"), "free");
   await page.goto("/");

@@ -4,6 +4,7 @@ pub mod avatar;
 pub mod blog;
 pub mod city;
 pub mod country;
+pub mod feature_toggle;
 pub mod one_time_passcode;
 pub mod region;
 pub mod sign_in;

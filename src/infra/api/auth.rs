@@ -44,9 +44,10 @@ struct SignInTemplate {
 }
 
 impl SignInTemplate {
-    fn new(state: &SharedState) -> Self {
+    async fn new(state: &SharedState) -> Self {
         Self {
             shared: SharedContext::new(state)
+                .await
                 .with_canonical_path("/sign-in")
                 .with_meta(PageMeta::new().title("Sign in")),
             code_sent: false,
@@ -73,9 +74,10 @@ struct SignUpTemplate {
 }
 
 impl SignUpTemplate {
-    fn new(state: &SharedState) -> Self {
+    async fn new(state: &SharedState) -> Self {
         Self {
             shared: SharedContext::new(state)
+                .await
                 .with_canonical_path("/sign-up")
                 .with_meta(PageMeta::new().title("Sign up")),
             code_sent: false,
@@ -142,7 +144,7 @@ async fn sign_in_page(
     if user.is_some() {
         return redirect!("/", &headers);
     }
-    SignInTemplate::new(&state).into_response()
+    SignInTemplate::new(&state).await.into_response()
 }
 
 async fn sign_up_page(
@@ -153,7 +155,7 @@ async fn sign_up_page(
     if user.is_some() {
         return redirect!("/", &headers);
     }
-    SignUpTemplate::new(&state).into_response()
+    SignUpTemplate::new(&state).await.into_response()
 }
 
 /// Creates an unverified account and emails it a code. Entering the code on
@@ -183,7 +185,7 @@ async fn sign_up_with_email(
         first_name: form.first_name.clone(),
         last_name: form.last_name.clone(),
         email: form.email.clone(),
-        ..SignUpTemplate::new(&state)
+        ..SignUpTemplate::new(&state).await
     };
 
     let sign_up = match SignUp::try_from(form) {
@@ -221,7 +223,7 @@ async fn send_sign_in_code(
     let page = SignInTemplate {
         email: form.email.trim().to_string(),
         sign_up: form.sign_up,
-        ..SignInTemplate::new(&state)
+        ..SignInTemplate::new(&state).await
     };
 
     let email = match Email::parse(&form.email) {
@@ -273,7 +275,7 @@ async fn verify_sign_in_code(
                 sign_up: form.sign_up,
                 email: form.email.trim().to_string(),
                 error_message: Some(message),
-                ..SignInTemplate::new(&state)
+                ..SignInTemplate::new(&state).await
             }
             .into_response());
         }
@@ -361,6 +363,7 @@ async fn sign_in_with_google_callback(
     if !nonce_matches {
         return Ok(FinishSignInTemplate {
             shared: SharedContext::new(&state)
+                .await
                 .with_canonical_path("/auth/google")
                 .with_meta(PageMeta::private("Finish signing in")),
         }

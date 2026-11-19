@@ -1,6 +1,8 @@
 use crate::SharedState;
+use crate::domain::feature_toggle::Feature;
 use crate::domain::user::User;
 use crate::infra::seo::PageMeta;
+use crate::infra::site::SiteSnapshot;
 use axum::Router;
 use chrono::Datelike;
 
@@ -55,7 +57,7 @@ macro_rules! static_page {
                 shared: $crate::infra::api::SharedContext,
             }
             Page {
-                shared: $crate::infra::api::SharedContext::new(&state)
+                shared: $crate::infra::api::SharedContext::new(&state).await
                     .with_user(user)
                     .with_canonical_path($path)
                     .with_meta($meta),
@@ -73,6 +75,7 @@ pub mod core;
 pub mod countries;
 pub mod cron;
 pub mod extract;
+pub mod feature_toggles;
 pub mod payments;
 pub mod settings;
 pub mod users;
@@ -81,6 +84,7 @@ pub fn routes() -> Router<SharedState> {
     let router = Router::new()
         .merge(core::routes())
         .merge(admin::routes())
+        .merge(feature_toggles::routes())
         .merge(cron::routes())
         .merge(auth::routes())
         .merge(users::routes())
@@ -104,18 +108,21 @@ pub struct SharedContext {
     pub user: Option<User>,
     pub canonical_path: Option<String>,
     pub page_meta: PageMeta,
+    /// The banner and feature toggles, read for this page.
+    pub site: SiteSnapshot,
     /// Current UTC year — stamped on each request and used by the footer
     /// copyright line so it rolls over without a code change.
     pub current_year: i32,
 }
 
 impl SharedContext {
-    pub fn new(state: &SharedState) -> Self {
+    pub async fn new(state: &SharedState) -> Self {
         Self {
             state: state.clone(),
             user: None,
             canonical_path: None,
             page_meta: PageMeta::new(),
+            site: SiteSnapshot::load(state.db.as_ref()).await,
             current_year: chrono::Utc::now().year(),
         }
     }
@@ -127,6 +134,11 @@ impl SharedContext {
     /// Whether Stripe is configured, so billing links can be hidden.
     pub fn payments_enabled(&self) -> bool {
         self.state.payments_use_cases.is_some()
+    }
+
+    /// The Google tag to load on every page, when that toggle is on.
+    pub fn google_analytics_tag(&self) -> Option<&str> {
+        self.site.toggles.value(Feature::GoogleAnalytics)
     }
 
     /// Whether Google sign-in is configured.
@@ -258,5 +270,20 @@ fn absolute_url(site_url: &str, value: &str) -> String {
         format!("{}{}", site_url, value)
     } else {
         format!("{}/{}", site_url, value)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::script_json;
+
+    #[test]
+    fn json_in_a_script_tag_cannot_close_it() {
+        let name = "</script><script>alert(1)</script> & <!--";
+        let json = script_json(&serde_json::json!({ "name": name }));
+        assert!(!json.contains('<') && !json.contains('>') && !json.contains('&'));
+        // The escapes are JSON, so the value reads back unchanged.
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed["name"], name);
     }
 }

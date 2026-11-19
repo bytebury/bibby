@@ -34,6 +34,7 @@
     <script type="application/ld+json">{{ shared.structured_data_json()|safe }}</script>
     <link rel="stylesheet" href="{{ shared.asset("/assets/styles.css") }}" />
     {% include "_partials/scripts.html" %}
+    {% include "_partials/google_analytics.html" %}
     {% if shared.state.web_app.service_worker_enabled %}
       <script>
         if ("serviceWorker" in navigator) {
@@ -45,15 +46,17 @@
     {% endif %}
   </head>
   <body class="flex min-h-screen flex-col bg-gray-50 text-gray-900 antialiased">
-    <div hx-get="/announcements/banner" hx-trigger="load" hx-swap="outerHTML"></div>
+    <a href="#main" class="skip-link">Skip to content</a>
+    {#- Rendered with the page, so it doesn't push the content down after it paints. -#}
+    {% include "_partials/announcement_banner.html" %}
     {% include "_partials/navbar.html" %}
-    <main class="container-page flex-1 py-8">
+    <main id="main" tabindex="-1" class="container-page flex-1 py-8 focus:outline-none">
       {% block content %}{% endblock %}
     </main>
     {% include "_partials/footer.html" %}
     <div id="modal_wrapper" class="modal wrapper" style="display: none">
       <div class="underlay" onclick="closeModal()"></div>
-      <div id="modal" class="content"></div>
+      <div id="modal" class="content" role="dialog" aria-modal="true" tabindex="-1"></div>
     </div>
     <div id="tooltip" class="tooltip"></div>
     <div id="toast" class="toast" role="alert" aria-live="assertive"></div>

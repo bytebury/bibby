@@ -67,7 +67,7 @@
     <div class="card card-body">
       <p class="text-xs text-gray-500">Days active</p>
       <p class="text-2xl font-semibold">{{ self.active_day_count() }} <span class="text-sm font-normal text-gray-500">of {{ activity_window_days }}</span></p>
-      <div class="activity-strip" aria-label="Signed-in days over the last {{ activity_window_days }} days">
+      <div class="activity-strip" role="img" aria-label="Signed-in days over the last {{ activity_window_days }} days">
         {% for day in activity %}
           <span class="{% if day.active %}active{% endif %}" data-tooltip="{{ day.day.format("%B %-d, %Y") }}{% if day.active %} · active{% endif %}"></span>
         {% endfor %}

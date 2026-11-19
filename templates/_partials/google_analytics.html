@@ -1,0 +1,14 @@
+{#-
+  Google Analytics, when an admin has turned it on at /admin/feature-toggles.
+  The tag is validated as `G-`/`GT-`/`AW-`/`DC-` plus letters and digits
+  (`Feature::parse_value`), so it is safe inside the script.
+-#}
+{% if let Some(tag) = shared.google_analytics_tag() %}
+  <script async src="https://www.googletagmanager.com/gtag/js?id={{ tag }}"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag("js", new Date());
+    gtag("config", "{{ tag }}");
+  </script>
+{% endif %}

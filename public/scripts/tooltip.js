@@ -14,6 +14,26 @@ document.addEventListener("mouseout", function (event) {
     }
 });
 
+// Keyboard focus shows the same tooltip as hovering, and Escape dismisses it.
+document.addEventListener("focusin", function (event) {
+    const target = event.target.closest("[data-tooltip]");
+    if (target) {
+        showTooltip(target);
+    }
+});
+
+document.addEventListener("focusout", function (event) {
+    if (event.target === activeTooltip) {
+        hideTooltip();
+    }
+});
+
+document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") {
+        hideTooltip();
+    }
+});
+
 // A swap can remove the hovered element without a mouseout.
 document.body.addEventListener("htmx:afterSwap", hideTooltip);
 
@@ -26,7 +46,12 @@ function showTooltip(target) {
         return;
     }
 
+    if (activeTooltip && activeTooltip !== target) {
+        activeTooltip.removeAttribute("aria-describedby");
+    }
     activeTooltip = target;
+    // Screen readers read the tooltip as the element's description.
+    activeTooltip.setAttribute("aria-describedby", "tooltip");
     tooltip.textContent = activeTooltip.dataset.tooltip;
 
     tooltip.classList.add("measure");
@@ -54,10 +79,13 @@ function showTooltip(target) {
     tooltip.style.top = `${finalTop}px`;
     tooltip.style.left = `${finalLeft}px`;
 
+    tooltip.setAttribute("role", "tooltip");
     tooltip.classList.add("show");
 }
 
 function hideTooltip() {
     tooltip.classList.remove("show");
+    tooltip.removeAttribute("role");
+    activeTooltip?.removeAttribute("aria-describedby");
     activeTooltip = null;
 }

@@ -7,7 +7,7 @@
       <p class="card-subtitle truncate">{{ user.email }}</p>
     </div>
   </div>
-  <button type="button" class="btn-ghost shrink-0" onclick="closeModal()">&times;</button>
+  <button type="button" class="btn-ghost shrink-0" onclick="closeModal()" aria-label="Close">&times;</button>
 </div>
 
 <form hx-patch="/users/{{ user.id }}" hx-swap="none" class="card-body space-y-4">
@@ -27,7 +27,7 @@
   </label>
 
   <label class="block">
-    <span class="label">Plan end date <span class="font-normal text-gray-400">(optional)</span></span>
+    <span class="label">Plan end date <span class="font-normal text-gray-500">(optional)</span></span>
     <input type="date" name="plan_expiry_date" class="input mt-1"
            value="{% if let Some(plan_expiry_date) = user.plan_expiry_date %}{{ plan_expiry_date }}{% endif %}" />
     <span class="mt-1 block text-xs text-gray-500">Last day of a Professional plan granted by hand. They're emailed a month, a week, and a day before, then moved to Free. Ignored for Free and Admin, and cleared if the plan moves to Stripe.</span>

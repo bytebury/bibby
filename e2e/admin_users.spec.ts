@@ -36,17 +36,33 @@ async function openUserPage(page: Page, email: string) {
   await expect(page.locator(".user-email")).toHaveText(email);
 }
 
-test("admin pages are off limits to everyone else", async ({
+test("admin pages refuse everyone else, and settings need a session", async ({
   page,
   request,
+  browser,
 }, testInfo) => {
-  const { user } = emails(testInfo);
-  await signInAs(request, page.context(), user, "free");
+  const visitor = await browser.newPage();
+  expect((await visitor.goto("/settings"))?.status()).toBe(401);
+  await visitor.close();
 
-  for (const path of ["/users", "/admin/analytics"]) {
-    const response = await page.goto(path);
-    expect(response?.status(), path).toBe(403);
+  await signInAs(request, page.context(), emails(testInfo).user, "free");
+  for (const path of [
+    "/users",
+    "/countries",
+    "/announcements",
+    "/admin/analytics",
+    "/admin/monitoring",
+    "/admin/monitoring/status",
+    "/admin/monitoring/logs",
+    "/admin/feature-toggles",
+  ]) {
+    expect((await page.goto(path))?.status(), path).toBe(403);
   }
+  // Writes are refused too, not just the pages.
+  const write = await page.request.patch("/admin/feature-toggles/1", {
+    form: { enabled: "on", value: "G-ABCDEF12" },
+  });
+  expect(write.status()).toBe(403);
 });
 
 test("admins filter the user list by plan and flag", async ({

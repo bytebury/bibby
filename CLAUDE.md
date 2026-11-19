@@ -111,6 +111,41 @@ database too: leftover rows from earlier runs can hide a regression.
   (`feat: …`, `fix: …`, `refactor: …`, `perf: …`, `test: …`, `docs: …`,
   `chore: …`).
 
+## Lessons learned
+
+Habits from past mistakes; each one cost a failed CI run, a bug or a wasted
+round trip.
+
+- **Reproduce before fixing, measure before optimising.** Show the bug in a
+  test or a browser first (the modal Escape bug; the navigation flicker,
+  measured as layout shifts), then show the same check passing.
+- **Run the tests once.** A failure, flaky or not, is a bug to explain: find
+  its cause. Don't rerun, add retries, or run a suite twice to look for
+  flakes.
+- **Simple and correct beats clever.** Read from the database instead of
+  adding a cache, timer or background refresh. Cache only for a measured
+  need, and then invalidate on change, never on a schedule.
+- **Don't optimise away a write something else reads.** Skipping the daily
+  activity insert to save a write lost users who signed in and left within
+  a minute.
+- **Test against an empty database.** CI's starts empty; leftover local rows
+  hid that bug. Build with `SQLX_OFFLINE=true` when `DATABASE_URL` points at
+  a fresh database, or the query macros fail to compile.
+- **Optional services never block startup.** Only `DATABASE_URL`,
+  `JWT_SECRET` and `ADMIN_EMAILS` are required; without Stripe, Google,
+  mailman or geodude their feature is hidden, not a panic.
+- **Validate or escape anything rendered inside `<script>`** (`script_json`,
+  strict tag IDs). Askama escapes HTML, not JavaScript.
+- **A green deploy isn't a running app.** Railway reported a preview that
+  crashed on boot as a success; check that it responds.
+- **Delete what nothing calls**: unused impls, macros that only forward,
+  traits with one implementation. The compiler and the tests prove it safe.
+- **Docs change with the code.** CLAUDE.md, README.md and AGENTS.md describe
+  the code as it is now, in the same commit.
+- **Never discard commits you haven't checked.** Before resetting or
+  recreating a branch, make sure it doesn't hold unmerged work, such as an
+  open PR's commits.
+
 ## Branching workflow
 
 - Always branch off `main` and open a PR back into `main`. Never commit to
@@ -128,7 +163,8 @@ src/
     mod.rs                # Access<T> and Validate traits
     user.rs, country.rs, region.rs, city.rs, announcement.rs, blog.rs,
     one_time_passcode.rs, sign_in.rs, user_note.rs, user_flag.rs,
-    user_activity.rs, admin_analytics.rs, avatar.rs, system_status.rs
+    user_activity.rs, admin_analytics.rs, avatar.rs, system_status.rs,
+    feature_toggle.rs
     value_objects/        # Email, AdminEmails, OneTimeCode, Markdown, Severity
   use_cases/              # application logic, grouped by aggregate
     user/, payments/      # each exposes a `<Name>UseCases` bundle mounted on AppState
@@ -141,6 +177,7 @@ src/
     markdown.rs           # Markdown → sanitized HTML (pulldown-cmark + ammonia)
     monitoring.rs         # in-memory logs and request stats for /admin/monitoring
     rate_limit.rs         # per-IP limit on the sign-up / sign-in POSTs
+    site.rs               # the banner + feature toggles every page reads
     csrf.rs               # refuses cross-site state-changing requests
     scheduler.rs          # the daily tick (plan expirations, sign-in pruning)
     seo.rs                # SeoConfig / WebAppConfig / PageMeta
@@ -379,6 +416,27 @@ shima 0.8 implements sqlx 0.9's traits, so shima ids can be columns directly
 (`User::stripe_customer_id: Option<CustomerId>`, selected as
 `stripe_customer_id as "stripe_customer_id: CustomerId"`).
 
+## Feature toggles
+
+`/admin/feature-toggles` (admin only, in the account menu) switches features
+on for everyone. A toggle is on or off and may carry a value.
+
+- Features are defined in code (`Feature` in `domain/feature_toggle.rs`: key,
+  name, description, value label, `parse_value` validation) and each has a
+  `feature_toggles` row, added by a migration, holding `enabled` / `value`.
+- Pages read them through `shared.site.toggles` (e.g.
+  `shared.google_analytics_tag()`). `SharedContext::new` loads them and the
+  active announcement banner with each page (`infra/site.rs`, two small
+  queries run together), so a change shows everywhere as soon as it is saved.
+- **Google Analytics** (off by default): turning it on requires a Google tag
+  ID (`G-…`, `GT-…`, `AW-…`, `DC-…`). When on, `_partials/google_analytics.html`
+  loads gtag on every page and the privacy policy mentions its cookies.
+  The ID is validated strictly because it is rendered inside a `<script>`.
+
+To add a toggle: a `Feature` variant (and its arms), a migration inserting
+its row, and the code that reads `shared.site.toggles.value(Feature::X)` or
+checks it is on.
+
 ## Admin monitoring
 
 `/admin/monitoring` (admin only, linked from the account menu) shows an
@@ -426,6 +484,13 @@ at it. New daily jobs go in `run_tick`.
 Specs live in `e2e/` and run on every PR (`.github/workflows/playwright.yml`)
 against a debug build and a fresh Postgres.
 
+**Prefer unit tests.** They run in milliseconds; each Playwright test costs a
+browser and a server round trip. Put rules, parsing, validation and policy
+in unit tests next to the code. Keep Playwright for what needs the whole
+stack: a flow across pages, routes being wired to the right guard, real
+browser behaviour (keyboard focus, layout, JavaScript), and the axe scan.
+Don't add an e2e test for something a unit test can pin down.
+
 ### The test-auth shim
 `src/infra/api/auth_test.rs` is mounted only when `ENABLE_TEST_AUTH=true`, and
 every route requires `X-Test-Auth-Token` to match `TEST_AUTH_TOKEN`:
@@ -453,6 +518,23 @@ every route requires `X-Test-Auth-Token` to match `TEST_AUTH_TOKEN`:
   such accounts their own IP via `signInAs(…, { ip })`.
 - Drive setup through the UI when realistic; use the shim when click-throughs
   would be slow or impossible (OAuth, email).
+
+## Accessibility
+
+Target WCAG 2.1 AA. `e2e/accessibility.spec.ts` scans the main pages with
+axe and tests keyboard behaviour; add a page to its scan when you add one.
+
+- Every control has a name: visible text, a `<label>`, or `aria-label` for
+  icon-only buttons (`&times;` is `aria-label="Close"`).
+- Text meets 4.5:1 contrast: `text-gray-500` is the lightest gray for text
+  on white; `text-gray-400` fails.
+- One `<h1>` per page and no skipped heading levels. Modal partials start
+  with an `<h2>`, which names the dialog.
+- Decorative images get `alt=""` (a flag next to its country name).
+- Anything shown on hover (tooltips, menus) works from the keyboard too, and
+  Escape dismisses it.
+- Landmarks are labelled when there's more than one of a kind
+  (`<nav aria-label="Main">`).
 
 ## Conventions for contributions
 

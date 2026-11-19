@@ -6,6 +6,44 @@ use crate::prelude::*;
 use chrono::NaiveDate;
 use shima::CustomerId;
 
+/// `query_as!` for one `User` from `user_details`, given the `WHERE` clause and
+/// its arguments. The column list lives here once; sqlx joins the literals
+/// with `+` and still checks the query at compile time.
+macro_rules! select_user {
+    ($where:literal $(, $arg:expr)* $(,)?) => {
+        sqlx::query_as!(
+            User,
+            r#"SELECT
+                id as "id!",
+                country_id,
+                region_id,
+                city_id,
+                full_name as "full_name!",
+                first_name as "first_name!",
+                last_name,
+                email as "email!",
+                image_url as "image_url!",
+                role as "role!: Role",
+                verified as "verified!",
+                auth_provider as "auth_provider!: AuthProvider",
+                locked as "locked!",
+                plan_expiry_date,
+                last_known_ip as "last_known_ip!",
+                stripe_customer_id as "stripe_customer_id: CustomerId",
+                country_code as "country_code!",
+                country_name as "country_name!",
+                region_name,
+                city_name,
+                last_seen_at as "last_seen_at!",
+                created_at as "created_at!",
+                updated_at as "updated_at!",
+                session_version as "session_version!"
+            FROM user_details "# + $where
+            $(, $arg)*
+        )
+    };
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone, FromRow)]
 pub struct User {
     pub id: PrimaryKey,
@@ -90,82 +128,16 @@ impl User {
     where
         E: Executor<'e, Database = sqlx::Postgres>,
     {
-        let user = sqlx::query_as!(
-            User,
-            r#"
-            SELECT
-                id as "id!",
-                country_id,
-                region_id,
-                city_id,
-                full_name as "full_name!",
-                first_name as "first_name!",
-                last_name,
-                email as "email!",
-                image_url as "image_url!",
-                role as "role!: Role",
-                verified as "verified!",
-                auth_provider as "auth_provider!: AuthProvider",
-                locked as "locked!",
-                plan_expiry_date,
-                last_known_ip as "last_known_ip!",
-                stripe_customer_id as "stripe_customer_id: CustomerId",
-                country_code as "country_code!",
-                country_name as "country_name!",
-                region_name,
-                city_name,
-                last_seen_at as "last_seen_at!",
-                created_at as "created_at!",
-                updated_at as "updated_at!",
-                session_version as "session_version!"
-            FROM user_details WHERE email = $1
-            "#,
-            email,
-        )
-        .fetch_one(exec)
-        .await?;
-        Ok(user)
+        Ok(select_user!("WHERE email = $1", email)
+            .fetch_one(exec)
+            .await?)
     }
 
     pub async fn find_by_id<'e, E>(exec: E, id: PrimaryKey) -> Result<User>
     where
         E: Executor<'e, Database = sqlx::Postgres>,
     {
-        let user = sqlx::query_as!(
-            User,
-            r#"
-            SELECT
-                id as "id!",
-                country_id,
-                region_id,
-                city_id,
-                full_name as "full_name!",
-                first_name as "first_name!",
-                last_name,
-                email as "email!",
-                image_url as "image_url!",
-                role as "role!: Role",
-                verified as "verified!",
-                auth_provider as "auth_provider!: AuthProvider",
-                locked as "locked!",
-                plan_expiry_date,
-                last_known_ip as "last_known_ip!",
-                stripe_customer_id as "stripe_customer_id: CustomerId",
-                country_code as "country_code!",
-                country_name as "country_name!",
-                region_name,
-                city_name,
-                last_seen_at as "last_seen_at!",
-                created_at as "created_at!",
-                updated_at as "updated_at!",
-                session_version as "session_version!"
-            FROM user_details WHERE id = $1
-            "#,
-            id,
-        )
-        .fetch_one(exec)
-        .await?;
-        Ok(user)
+        Ok(select_user!("WHERE id = $1", id).fetch_one(exec).await?)
     }
 
     /// Per-request audit + lookup in a single statement. This runs on every
@@ -364,41 +336,11 @@ impl User {
     where
         E: Executor<'e, Database = sqlx::Postgres>,
     {
-        let user = sqlx::query_as!(
-            User,
-            r#"
-            SELECT
-                id as "id!",
-                country_id,
-                region_id,
-                city_id,
-                full_name as "full_name!",
-                first_name as "first_name!",
-                last_name,
-                email as "email!",
-                image_url as "image_url!",
-                role as "role!: Role",
-                verified as "verified!",
-                auth_provider as "auth_provider!: AuthProvider",
-                locked as "locked!",
-                plan_expiry_date,
-                last_known_ip as "last_known_ip!",
-                stripe_customer_id as "stripe_customer_id: CustomerId",
-                country_code as "country_code!",
-                country_name as "country_name!",
-                region_name,
-                city_name,
-                last_seen_at as "last_seen_at!",
-                created_at as "created_at!",
-                updated_at as "updated_at!",
-                session_version as "session_version!"
-            FROM user_details WHERE stripe_customer_id = $1
-            "#,
-            customer_id.as_str(),
+        Ok(
+            select_user!("WHERE stripe_customer_id = $1", customer_id.as_str())
+                .fetch_one(exec)
+                .await?,
         )
-        .fetch_one(exec)
-        .await?;
-        Ok(user)
     }
 
     pub async fn set_role<'e, E>(exec: E, id: PrimaryKey, role: &Role) -> Result<()>

@@ -4,6 +4,18 @@ Guidance for AI assistants working in this repository. `AGENTS.md` covers the
 template-level gotchas (askama macro quirks, modals, tooltips, spinners, the
 tailwind watcher) — read both before making changes.
 
+## Core values
+
+Every change is judged on these, in this order:
+
+1. **Simplicity.** Code a person or an AI can read once and understand. Remove
+   duplication with a helper or a small macro (see [Macros](#macros)), not a
+   framework. No speculative abstractions.
+2. **Correctness.** Sound logic, unit tests for the rules, e2e tests for the
+   flows, and both suites green before anything is pushed.
+3. **Performance.** As fast as reasonably possible: the app (no needless
+   queries or per-request work), the tests, and CI.
+
 ## Project
 
 **Bibby** — Bytebury's full-stack Rust template. Server-rendered with HTMX; no
@@ -82,14 +94,19 @@ it as a build arg) and Railway's `RAILWAY_GIT_COMMIT_SHA` (its fallback).
 `cargo fmt --all` and `cargo sqlx prepare`, and stops the commit if either
 changed files. CI (`.github/workflows/rust.yml`) runs `cargo fmt --check`,
 `cargo clippy --all-targets --locked -- -D warnings`, `cargo test`, and checks
-that `.sqlx/` is current. Run all of those yourself before pushing.
+that `.sqlx/` is current.
+
+**Before every push, run all of it yourself, including both test suites:**
+`cargo fmt --check`, `cargo clippy --all-targets --locked -- -D warnings`,
+`cargo test`, `cargo sqlx prepare --check`, and `./e2e.sh`. Never push red.
 
 - Do not hand-edit `.sqlx/`. Run `cargo sqlx prepare` after changing any
   `query!` / `query_as!` / `query_scalar!` and commit the churn with the code.
   CI and the Docker build compile with `SQLX_OFFLINE=true`.
 - Run new migrations (`sqlx migrate run`) before `cargo sqlx prepare`.
-- Commit messages and PR titles use conventional-commit format
-  (`feat: …`, `fix: …`, `chore: …`).
+- **Always** use conventional commits for commit messages and PR titles
+  (`feat: …`, `fix: …`, `refactor: …`, `perf: …`, `test: …`, `docs: …`,
+  `chore: …`).
 
 ## Branching workflow
 

@@ -18,6 +18,7 @@ use axum::response::IntoResponse;
 use axum::routing::{delete, get, post};
 use axum_extra::extract::cookie::{self, Cookie};
 use axum_extra::extract::{CookieJar, Form};
+use std::sync::LazyLock;
 
 const OAUTH_NONCE_COOKIE: &str = "oauth_nonce";
 
@@ -302,11 +303,7 @@ async fn sign_in_with_google(headers: HeaderMap, cookies: CookieJar) -> Result<i
         .path("/")
         .http_only(true)
         .same_site(cookie::SameSite::Lax)
-        .secure(
-            env::var("APP_ORIGIN")
-                .unwrap_or_default()
-                .starts_with("https://"),
-        );
+        .secure(is_https());
     let cookies = cookies.add(nonce_cookie);
 
     Ok((cookies, redirect!(url.as_str(), &headers)))
@@ -412,6 +409,13 @@ fn is_local_path(target: &str) -> bool {
     target.starts_with('/') && !target.starts_with("//") && !target.contains('\\')
 }
 
+/// Whether the site is served over HTTPS, so cookies get `Secure`. Read once.
+fn is_https() -> bool {
+    static HTTPS: LazyLock<bool> =
+        LazyLock::new(|| env::var("APP_ORIGIN").is_ok_and(|origin| origin.starts_with("https://")));
+    *HTTPS
+}
+
 /// Mint the session cookie for `user`.
 pub fn auth_cookie(user: &User) -> Result<Cookie<'static>> {
     let token = Jwt::generate(&UserClaims::from(user.clone()))?;
@@ -422,11 +426,7 @@ pub fn auth_cookie(user: &User) -> Result<Cookie<'static>> {
         .max_age(::cookie::time::Duration::days(SESSION_DAYS))
         .http_only(true)
         .same_site(cookie::SameSite::Lax)
-        .secure(
-            env::var("APP_ORIGIN")
-                .unwrap_or_default()
-                .starts_with("https://"),
-        )
+        .secure(is_https())
         .build())
 }
 

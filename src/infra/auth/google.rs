@@ -4,6 +4,7 @@ use crate::infra::auth::oauth_state::OAuthState;
 use crate::prelude::*;
 use oauth2::basic::BasicClient;
 use oauth2::*;
+use std::sync::LazyLock;
 
 #[derive(Deserialize)]
 pub struct GoogleUser {
@@ -28,10 +29,14 @@ impl GoogleOAuth {
     /// Whether Google sign-in is set up. Without it the template still runs
     /// on emailed codes alone, and the "Continue with Google" button is hidden.
     pub fn is_configured() -> bool {
-        let set = |name: &str| env::var(name).is_ok_and(|v| !v.trim().is_empty());
-        set("GOOGLE_CLIENT_ID")
-            && set("GOOGLE_CLIENT_SECRET")
-            && env::var("GOOGLE_CALLBACK_URL").is_ok_and(|url| RedirectUrl::new(url).is_ok())
+        // Every page asks (for the button), so the environment is read once.
+        static CONFIGURED: LazyLock<bool> = LazyLock::new(|| {
+            let set = |name: &str| env::var(name).is_ok_and(|v| !v.trim().is_empty());
+            set("GOOGLE_CLIENT_ID")
+                && set("GOOGLE_CLIENT_SECRET")
+                && env::var("GOOGLE_CALLBACK_URL").is_ok_and(|url| RedirectUrl::new(url).is_ok())
+        });
+        *CONFIGURED
     }
 
     pub fn ensure_configured() -> Result<()> {

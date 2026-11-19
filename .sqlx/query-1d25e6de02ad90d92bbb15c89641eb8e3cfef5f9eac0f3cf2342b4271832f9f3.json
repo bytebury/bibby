@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT\n                id as \"id!\",\n                country_id,\n                region_id,\n                city_id,\n                full_name as \"full_name!\",\n                first_name as \"first_name!\",\n                last_name,\n                email as \"email!\",\n                image_url as \"image_url!\",\n                role as \"role!: Role\",\n                verified as \"verified!\",\n                auth_provider as \"auth_provider!: AuthProvider\",\n                locked as \"locked!\",\n                plan_expiry_date,\n                last_known_ip as \"last_known_ip!\",\n                stripe_customer_id as \"stripe_customer_id: CustomerId\",\n                country_code as \"country_code!\",\n                country_name as \"country_name!\",\n                region_name,\n                city_name,\n                last_seen_at as \"last_seen_at!\",\n                created_at as \"created_at!\",\n                updated_at as \"updated_at!\",\n                session_version as \"session_version!\"\n            FROM user_details WHERE email = $1\n            ",
+  "query": "SELECT\n                id as \"id!\",\n                country_id,\n                region_id,\n                city_id,\n                full_name as \"full_name!\",\n                first_name as \"first_name!\",\n                last_name,\n                email as \"email!\",\n                image_url as \"image_url!\",\n                role as \"role!: Role\",\n                verified as \"verified!\",\n                auth_provider as \"auth_provider!: AuthProvider\",\n                locked as \"locked!\",\n                plan_expiry_date,\n                last_known_ip as \"last_known_ip!\",\n                stripe_customer_id as \"stripe_customer_id: CustomerId\",\n                country_code as \"country_code!\",\n                country_name as \"country_name!\",\n                region_name,\n                city_name,\n                last_seen_at as \"last_seen_at!\",\n                created_at as \"created_at!\",\n                updated_at as \"updated_at!\",\n                session_version as \"session_version!\"\n            FROM user_details WHERE stripe_customer_id = $1",
   "describe": {
     "columns": [
       {
@@ -300,5 +300,5 @@
       true
     ]
   },
-  "hash": "b4679223eb0dc262e2be5698617bddfb9675add83c1cc57a90184927395050bd"
+  "hash": "1d25e6de02ad90d92bbb15c89641eb8e3cfef5f9eac0f3cf2342b4271832f9f3"
 }

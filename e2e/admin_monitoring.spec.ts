@@ -1,7 +1,7 @@
-import { test, expect, signInAs } from "./fixtures";
+import { test, expect, signInAs, testEmail } from "./fixtures";
 
 test("admins see the app's health, traffic and recent logs", async ({ page, request, context }, testInfo) => {
-  await signInAs(request, context, `playwright+monitoring-admin+${testInfo.testId}@example.com`, "admin");
+  await signInAs(request, context, testEmail(testInfo, "monitoring-admin"), "admin");
 
   await page.goto("/admin/monitoring");
   await expect(page.getByRole("heading", { name: "Monitoring", level: 1 })).toBeVisible();
@@ -29,7 +29,7 @@ test("admins see the app's health, traffic and recent logs", async ({ page, requ
 });
 
 test("non-admins can't open the monitoring page", async ({ page, request, context }, testInfo) => {
-  await signInAs(request, context, `playwright+monitoring-user+${testInfo.testId}@example.com`, "professional");
+  await signInAs(request, context, testEmail(testInfo, "monitoring-user"), "professional");
   for (const path of ["/admin/monitoring", "/admin/monitoring/status", "/admin/monitoring/logs"]) {
     expect((await page.goto(path))?.status()).toBe(403);
   }

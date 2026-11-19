@@ -1,13 +1,7 @@
-import { test, expect, signInAs } from "./fixtures";
+import { test, expect, signInAs, testEmail } from "./fixtures";
 import type { Page } from "@playwright/test";
 
 // The avatar menu in the navbar and the settings page it links to.
-
-const RUN = Date.now().toString(36);
-
-function emailFor(testId: string, who: string) {
-  return `playwright+${who}+${testId}-${RUN}@example.com`.toLowerCase();
-}
 
 function accountMenu(page: Page) {
   return page.locator("details.account-menu");
@@ -32,7 +26,7 @@ test("the avatar menu offers settings and sign out, but no admin links", async (
   page,
   request,
 }, testInfo) => {
-  const email = emailFor(testInfo.testId, "free");
+  const email = testEmail(testInfo, "free");
   await signInAs(request, page.context(), email, "free");
   await page.goto("/");
 
@@ -51,7 +45,7 @@ test("admins find the admin links in the avatar menu", async ({
   page,
   request,
 }, testInfo) => {
-  await signInAs(request, page.context(), emailFor(testInfo.testId, "admin"), "admin");
+  await signInAs(request, page.context(), testEmail(testInfo, "admin"), "admin");
   await page.goto("/");
 
   // Admin links live only in the menu, not the navbar.
@@ -71,7 +65,7 @@ test("users rename themselves from the settings page", async ({
   page,
   request,
 }, testInfo) => {
-  await signInAs(request, page.context(), emailFor(testInfo.testId, "free"), "free");
+  await signInAs(request, page.context(), testEmail(testInfo, "free"), "free");
   await page.goto("/");
 
   const menu = await openAccountMenu(page);

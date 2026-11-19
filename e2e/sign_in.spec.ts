@@ -1,4 +1,4 @@
-import { test, expect, issueSignInCode } from "./fixtures";
+import { test, expect, issueSignInCode, testEmail } from "./fixtures";
 import type { Page } from "@playwright/test";
 
 // Accounts can be created at `/sign-up` with any email address. They start
@@ -42,8 +42,7 @@ test("signing up with email verifies the address, then signs in with a code", as
   page,
   request,
 }, testInfo) => {
-  const email =
-    `playwright+signup+${testInfo.testId}@example.com`.toLowerCase();
+  const email = testEmail(testInfo, "signup");
 
   // Hand-typed addresses are folded to lowercase.
   await signUp(page, "Ada", "Lovelace", email.toUpperCase());
@@ -102,8 +101,7 @@ test("signing up with email verifies the address, then signs in with a code", as
 test("signing in doesn't reveal whether an address has an account", async ({
   page,
 }, testInfo) => {
-  const email =
-    `playwright+nobody+${testInfo.testId}@example.com`.toLowerCase();
+  const email = testEmail(testInfo, "nobody");
 
   await page.goto("/sign-in");
   await page.getByLabel("Email").fill(email);

@@ -47,7 +47,7 @@ async fn homepage(
             .with_user(user)
             .with_canonical_path("/")
             .with_meta(PageMeta::new().description(
-                "A full-stack Rust template at the heart of every Bytebury application.",
+                "A full-stack web application with sign-in, billing, blogs, and more.",
             )),
     }
 }

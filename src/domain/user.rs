@@ -170,10 +170,13 @@ impl User {
 
     /// Per-request audit + lookup in a single statement. This runs on every
     /// authenticated request (see `BaseUser::from_request_parts`), so the CTE
-    /// folds the lookup, the audit UPDATE, and the re-read into one round
-    /// trip. Only the columns the audit actually changes (`last_known_ip`,
+    /// folds the lookup, the audit UPDATE, and the read into one round trip.
+    /// Only the columns the audit actually changes (`last_known_ip`,
     /// `last_seen_at`) are written, which avoids racily writing back stale
-    /// copies of `role`/`locked`/etc.
+    /// copies of `role`/`locked`/etc. The row is only rewritten when the IP
+    /// changed or a minute has passed, so polling pages don't rewrite it (and
+    /// bump `updated_at`) on every request. Like any data-modifying CTE, the
+    /// read sees the row as it was before this statement's update.
     ///
     /// The same CTE also records a (user_id, UTC day) row in
     /// `user_daily_activity` — at most one per user per day, thanks to the
@@ -185,18 +188,19 @@ impl User {
     {
         let user = sqlx::query_as(
             r#"
-            WITH audited AS (
+            WITH _audited AS (
                 UPDATE users
                    SET last_known_ip = $2, last_seen_at = NOW()
                  WHERE email = $1
-             RETURNING id
+                   AND (last_known_ip IS DISTINCT FROM $2
+                        OR last_seen_at < NOW() - INTERVAL '1 minute')
             ),
             _activity AS (
                 INSERT INTO user_daily_activity (user_id, day)
-                SELECT id, (NOW() AT TIME ZONE 'UTC')::DATE FROM audited
+                SELECT id, (NOW() AT TIME ZONE 'UTC')::DATE FROM users WHERE email = $1
                 ON CONFLICT DO NOTHING
             )
-            SELECT ud.* FROM user_details ud JOIN audited ON audited.id = ud.id
+            SELECT * FROM user_details WHERE email = $1
             "#,
         )
         .bind(email)

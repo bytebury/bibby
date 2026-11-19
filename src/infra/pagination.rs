@@ -9,6 +9,29 @@ pub struct PagingInfo {
     pub page_size: Option<i64>,
 }
 
+/// The largest page a request may ask for.
+pub const MAX_PAGE_SIZE: i64 = 100;
+
+impl PagingInfo {
+    /// `page` and `page_size` come straight from the query string, so they are
+    /// pulled into range: page 1 or later, 1 to `MAX_PAGE_SIZE` rows, and no
+    /// page so far out that the offset overflows.
+    pub fn clamped(&self) -> (i64, i64) {
+        let page_size = self.page_size.unwrap_or(15).clamp(1, MAX_PAGE_SIZE);
+        let page = self.page.unwrap_or(1).clamp(1, i64::MAX / MAX_PAGE_SIZE);
+        (page, page_size)
+    }
+}
+
+/// The filter part of a clause, for the COUNT query, whatever case its
+/// `ORDER BY` is written in.
+fn without_order_by(clause: &str) -> &str {
+    match clause.to_ascii_uppercase().find("ORDER BY") {
+        Some(at) => &clause[..at],
+        None => clause,
+    }
+}
+
 impl Default for PagingInfo {
     fn default() -> Self {
         Self {
@@ -114,17 +137,11 @@ pub trait Paginate:
         args: Vec<&str>,
         pagination: &PagingInfo,
     ) -> Result<Paginated<Self>> {
-        let page = pagination.page.unwrap_or(1);
-        let page_size = pagination.page_size.unwrap_or(15);
+        let (page, page_size) = pagination.clamped();
         let offset = (page - 1) * page_size;
 
         let count_sql = if let Some(wc) = where_clause {
-            let filter_only = wc
-                .split_inclusive("ORDER BY")
-                .next()
-                .and_then(|s| s.strip_suffix("ORDER BY"))
-                .unwrap_or(wc);
-            format!("{} {}", Self::count_query(), filter_only)
+            format!("{} {}", Self::count_query(), without_order_by(wc))
         } else {
             Self::count_query().to_string()
         };
@@ -212,4 +229,35 @@ macro_rules! paginate_with {
         )
         .await
     };
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn paging(page: i64, page_size: i64) -> PagingInfo {
+        PagingInfo {
+            page: Some(page),
+            page_size: Some(page_size),
+        }
+    }
+
+    #[test]
+    fn out_of_range_paging_is_pulled_back_into_range() {
+        assert_eq!(paging(0, 15).clamped(), (1, 15));
+        assert_eq!(paging(-3, -5).clamped(), (1, 1));
+        assert_eq!(paging(2, 1_000_000).clamped(), (2, MAX_PAGE_SIZE));
+        let (page, size) = paging(i64::MAX, MAX_PAGE_SIZE).clamped();
+        assert!(
+            page.checked_mul(size).is_some(),
+            "the offset can't overflow"
+        );
+    }
+
+    #[test]
+    fn the_count_query_drops_order_by_in_any_case() {
+        assert_eq!(without_order_by("WHERE a = $1 ORDER BY b"), "WHERE a = $1 ");
+        assert_eq!(without_order_by("where a = $1 order by b"), "where a = $1 ");
+        assert_eq!(without_order_by("WHERE a = $1"), "WHERE a = $1");
+    }
 }

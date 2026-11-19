@@ -149,6 +149,7 @@ async fn users(
     let flagged = UserFlag::flagged_among(state.db.as_ref(), &ids).await;
     Ok(ManageUsersTemplate {
         shared: SharedContext::new(&state)
+            .await
             .with_user(Some(user))
             .with_canonical_path("/users")
             .with_meta(PageMeta::private("Manage Users")),
@@ -199,6 +200,7 @@ async fn user_page(
     let page_title = user.full_name.clone();
     Ok(UserPageTemplate {
         shared: SharedContext::new(&state)
+            .await
             .with_user(Some(admin))
             .with_canonical_path(format!("/users/{}", user.id))
             .with_meta(PageMeta::private(page_title)),

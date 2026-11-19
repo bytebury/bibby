@@ -20,7 +20,7 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind(&address).await.unwrap();
 
     let db = Arc::new(Database::init().await);
-    let state = Arc::new(AppState::new(db).await);
+    let state = Arc::new(AppState::new(db));
 
     let serve_static = Router::new()
         .nest_service("/assets", ServeDir::new("public"))

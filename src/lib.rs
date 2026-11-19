@@ -4,7 +4,6 @@ use crate::infra::auth::jwt::Jwt;
 use crate::infra::db::SharedDatabase;
 use crate::infra::payments::Stripe;
 use crate::infra::seo::{SeoConfig, WebAppConfig};
-use crate::infra::site::SiteCache;
 use crate::prelude::*;
 use crate::use_cases::payments::PaymentsUseCases;
 use crate::use_cases::user::UserUseCases;
@@ -28,12 +27,10 @@ pub struct AppState {
     /// `None` when `STRIPE_SECRET_KEY` isn't set: billing is then switched off
     /// and its routes answer 404.
     pub payments_use_cases: Option<PaymentsUseCases>,
-    /// The banner and feature toggles, kept in memory (see `infra::site`).
-    pub site: Arc<SiteCache>,
 }
 
 impl AppState {
-    pub async fn new(db: SharedDatabase) -> Self {
+    pub fn new(db: SharedDatabase) -> Self {
         Jwt::ensure_configured();
         let app_name = env::var("APP_NAME").unwrap_or_else(|_| "Bibby".to_string());
         Self {
@@ -44,7 +41,6 @@ impl AppState {
             web_app: WebAppConfig::from_env(&app_name),
             app_name,
             assets: AssetManifest::load("public"),
-            site: SiteCache::start(db.clone()).await,
             db,
         }
     }

@@ -161,7 +161,7 @@ impl Access<FeatureToggle> for User {
     }
 }
 
-/// The toggles as the pages see them. Kept in memory (see `infra::site`).
+/// The toggles as a page sees them (loaded by `infra::site`).
 #[derive(Debug, Clone, Default)]
 pub struct FeatureToggles(Vec<FeatureToggle>);
 

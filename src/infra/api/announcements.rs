@@ -58,6 +58,7 @@ async fn announcements(
 ) -> Result<AnnouncementsTemplate> {
     Ok(AnnouncementsTemplate {
         shared: SharedContext::new(&state)
+            .await
             .with_user(Some(user))
             .with_canonical_path("/announcements")
             .with_meta(PageMeta::private("Announcements")),
@@ -78,7 +79,6 @@ async fn create_announcement(
     ValidatedForm(form): ValidatedForm<AnnouncementForm>,
 ) -> Result<impl IntoResponse> {
     Announcement::create(state.db.as_ref(), user.id, &form).await?;
-    state.site.reload().await;
     Ok(redirect!("/announcements", &headers))
 }
 
@@ -101,7 +101,6 @@ async fn edit_announcement(
     let announcement = Announcement::find_by_id(state.db.as_ref(), id).await?;
     user.ensure_can_write(&announcement)?;
     Announcement::update(state.db.as_ref(), announcement.id, user.id, &form).await?;
-    state.site.reload().await;
     Ok(redirect!("/announcements", &headers))
 }
 
@@ -114,7 +113,6 @@ async fn destroy_announcement(
     let announcement = Announcement::find_by_id(state.db.as_ref(), id).await?;
     admin.ensure_can_write(&announcement)?;
     Announcement::destroy(state.db.as_ref(), announcement.id).await?;
-    state.site.reload().await;
     Ok(redirect!("/announcements", &headers))
 }
 
@@ -127,6 +125,5 @@ async fn toggle_active(
     let announcement = Announcement::find_by_id(state.db.as_ref(), id).await?;
     admin.ensure_can_write(&announcement)?;
     Announcement::set_active(state.db.as_ref(), announcement.id, form.active.is_some()).await?;
-    state.site.reload().await;
     Ok(StatusCode::NO_CONTENT)
 }

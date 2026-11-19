@@ -34,6 +34,7 @@ async fn feature_toggles(
         .collect();
     Ok(FeatureTogglesTemplate {
         shared: SharedContext::new(&state)
+            .await
             .with_user(Some(admin))
             .with_canonical_path("/admin/feature-toggles")
             .with_meta(PageMeta::private("Feature Toggles")),
@@ -64,7 +65,6 @@ async fn update_toggle(
     let enabled = form.enabled.is_some();
     let value = feature.parse_value(enabled, &form.value)?;
     FeatureToggle::update(state.db.as_ref(), toggle.id, enabled, value.as_deref()).await?;
-    state.site.reload().await;
     info!(feature = feature.key(), enabled, "feature toggle changed");
     Ok(refresh!(&headers))
 }

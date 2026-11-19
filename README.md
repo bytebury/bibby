@@ -296,7 +296,7 @@ Note: the tooltip script automatically suppresses hover tooltips on `details.men
 ## Feature Toggles
 Admins switch features on for everyone at `/admin/feature-toggles`. A toggle is on or off and can carry a value. The first one is **Google Analytics**, off by default: turn it on with your Google tag ID (`G-XXXXXXXXXX`) and gtag loads on every page, and the privacy policy mentions its cookies.
 
-Features are declared in code (`Feature` in `src/domain/feature_toggle.rs`) and stored in the `feature_toggles` table. Pages read them from memory (`shared.site.toggles`), so they cost nothing per request; changes apply at once on the server that made them and within 30 seconds elsewhere.
+Features are declared in code (`Feature` in `src/domain/feature_toggle.rs`) and stored in the `feature_toggles` table. Each page reads them with the announcement banner (`shared.site.toggles`), so a change shows everywhere as soon as it is saved.
 
 ## OAuth Providers
 Google OAuth is supported out of the box, alongside email sign-up and sign-in with emailed one-time codes. `src/infra/auth/google.rs` is three functions: `is_configured`, `auth_url` and `exchange_code`. The routes are written out in `src/infra/api/auth.rs`: `/auth/google` starts the flow and `/auth/google/callback` finishes it.

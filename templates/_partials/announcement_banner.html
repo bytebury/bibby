@@ -1,4 +1,4 @@
-{#- The latest active announcement, from the in-memory site snapshot. -#}
+{#- The latest active announcement, loaded with the page (`infra/site.rs`). -#}
 {% if let Some(a) = shared.site.banner %}
   <div class="banner banner-{{ a.severity }}" role="region" aria-label="Announcement">
     <div class="container-page py-2 text-sm text-center">

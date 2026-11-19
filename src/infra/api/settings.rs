@@ -33,6 +33,7 @@ async fn settings_page(
     CurrentUser(user): CurrentUser,
 ) -> Result<impl IntoResponse> {
     let shared = SharedContext::new(&state)
+        .await
         .with_user(Some(user.clone()))
         .with_canonical_path("/settings")
         .with_meta(PageMeta::private("Settings"));

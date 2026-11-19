@@ -5,7 +5,6 @@ use crate::infra::seo::PageMeta;
 use crate::infra::site::SiteSnapshot;
 use axum::Router;
 use chrono::Datelike;
-use std::sync::Arc;
 
 /// Redirects the user appropriately based on the request origin.
 ///
@@ -58,7 +57,7 @@ macro_rules! static_page {
                 shared: $crate::infra::api::SharedContext,
             }
             Page {
-                shared: $crate::infra::api::SharedContext::new(&state)
+                shared: $crate::infra::api::SharedContext::new(&state).await
                     .with_user(user)
                     .with_canonical_path($path)
                     .with_meta($meta),
@@ -109,21 +108,21 @@ pub struct SharedContext {
     pub user: Option<User>,
     pub canonical_path: Option<String>,
     pub page_meta: PageMeta,
-    /// The banner and feature toggles as of this request.
-    pub site: Arc<SiteSnapshot>,
+    /// The banner and feature toggles, read for this page.
+    pub site: SiteSnapshot,
     /// Current UTC year — stamped on each request and used by the footer
     /// copyright line so it rolls over without a code change.
     pub current_year: i32,
 }
 
 impl SharedContext {
-    pub fn new(state: &SharedState) -> Self {
+    pub async fn new(state: &SharedState) -> Self {
         Self {
             state: state.clone(),
             user: None,
             canonical_path: None,
             page_meta: PageMeta::new(),
-            site: state.site.get(),
+            site: SiteSnapshot::load(state.db.as_ref()).await,
             current_year: chrono::Utc::now().year(),
         }
     }

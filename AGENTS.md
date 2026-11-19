@@ -255,17 +255,21 @@ Implement the `Paginate` trait on a model and use the macros:
 
 ```rust
 impl Paginate for User {
-    fn table_name() -> &'static str { "users" }
+    fn table_name() -> &'static str { "user_details" } // a view is fine
 }
 
-paginate!(User, &db);
-paginate_with!(User, &db, "where role = $1", vec!["admin"]);
+paginate!(User, &db, &paging);
+paginate_with!(User, &db, "WHERE role = $1 ORDER BY last_seen_at DESC", vec!["admin"], &paging);
 ```
 
 ## OAuth
 
-Google is wired by default. To add a provider, extend the `OAuthProvider` enum and add its config — endpoints
-`/auth/{provider_code}` and `/auth/{provider_code}/callback` are generated automatically.
+Google is wired by default. `OAuthProvider` (`src/infra/auth/mod.rs`) is a **trait** (`get_auth_url`,
+`exchange_code_for_user`) implemented by `GoogleOAuth` (`src/infra/auth/google.rs`). Nothing is generated per provider:
+`/auth/google` and `/auth/google/callback` are hard-coded routes in `src/infra/api/auth.rs`. To add a provider, implement
+the trait in `src/infra/auth/<provider>.rs`, then write its start and callback handlers and routes by hand, mirroring the
+Google ones (`oauth_nonce` cookie + signed `OAuthState`). If accounts should record the provider, add an `AuthProvider`
+variant and widen the `users.auth_provider` check constraint in a migration.
 
 ## Email sign-up and sign-in (one-time codes)
 

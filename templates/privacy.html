@@ -27,33 +27,66 @@
         </p>
 
         <h2>Information we collect</h2>
-        <p>When you sign in or use the Service, we collect:</p>
+        <p>When you create an account, sign in, or use the Service, we collect:</p>
         <ul>
           <li>
-            <strong>Account information from Google</strong> — when you sign in
-            with Google OAuth, we receive your name, email address, profile
-            picture URL, and Google account identifier. We never receive your
-            Google password.
+            <strong>Account information</strong> — your first name, last name,
+            and email address. If you sign up with your email, we assign you a
+            default avatar and email you a one-time code to confirm the address
+            and to sign you in; we keep only a hashed copy of each code, and it
+            expires after 10 minutes.
           </li>
           <li>
-            <strong>Network information</strong> — your IP address, derived
-            approximate country and region, and the timestamp of your last
-            sign-in. We use this for fraud and abuse prevention, geographic
-            personalization, and audit logs.
+            <strong>Information from Google</strong> — if you sign in with
+            Google, we receive your name, email address, and profile picture
+            URL, and use them in place of what you entered. We never receive
+            your Google password.
+          </li>
+          <li>
+            <strong>Sign-in and network information</strong> — your IP address
+            each time you sign in and the last IP address you used the Service
+            from. We look up the approximate city, region, and country of the
+            IP address you sign in from using a geolocation database. Each
+            sign-in (time, IP address, and location) is kept in a sign-in
+            history for 30 days; your most recent sign-in is kept for as long
+            as your account exists.
+          </li>
+          <li>
+            <strong>Activity information</strong> — when you were last active,
+            and a record of each day on which you used the Service while signed
+            in. We use this to measure how the Service is used.
+          </li>
+          <li>
+            <strong>Billing information</strong> — if you buy a paid plan,
+            payments are processed by Stripe. We store your Stripe customer
+            identifier and your plan. Your card details are entered with and
+            held by Stripe; they never reach our servers.
           </li>
           <li>
             <strong>Content you submit</strong> — anything you post to the
-            Service, including blog content (if you're an administrator) and
-            account settings.
+            Service and your account settings.
           </li>
           <li>
             <strong>Cookies</strong> — see the cookies section below.
           </li>
         </ul>
 
+        <h2>Who can see it</h2>
+        <p>
+          Our administrators can see your account information, sign-in history,
+          locations, and activity, and can look up which accounts have signed in
+          from a given IP address. They may also keep private notes and flags on
+          an account. We use this to support you and to detect and prevent
+          fraud and abuse — for example, accounts that sign in from an IP
+          address tied to a suspended account, or from <strong>[RESTRICTED
+          COUNTRIES, if any]</strong>, may be suspended automatically.
+        </p>
+
         <h2>How we use information</h2>
         <ul>
-          <li>To create and authenticate your account.</li>
+          <li>To create and authenticate your account, including emailing you
+            sign-in codes.</li>
+          <li>To process payments and manage your plan.</li>
           <li>To operate, maintain, and improve the Service.</li>
           <li>To detect, investigate, and prevent fraud or abuse.</li>
           <li>To comply with legal obligations and enforce our terms.</li>
@@ -67,9 +100,11 @@
         </p>
         <ul>
           <li>
-            <strong>Service providers</strong> who run infrastructure on our
-            behalf (e.g. hosting, database, analytics, error reporting). They
-            are bound by contract to use the data only to provide their service.
+            <strong>Service providers</strong> who run the Service on our
+            behalf: <strong>[HOSTING PROVIDER]</strong> for hosting and our
+            database, Google for sign-in (if you choose it), Stripe for
+            payments, and <strong>[EMAIL PROVIDER]</strong> for sending email.
+            They may use the data only to provide their service to us.
           </li>
           <li>
             <strong>Legal and safety</strong> recipients when required by law,
@@ -86,12 +121,15 @@
         <p>We use a small set of strictly necessary cookies:</p>
         <ul>
           <li>
-            <code>auth_token</code> — a signed JWT that keeps you logged in.
-            HttpOnly, SameSite=Lax, secured in production.
+            <code>auth_token</code> — a signed token that keeps you signed in
+            for up to a year, or until you sign out. HttpOnly, SameSite=Lax,
+            and Secure when the Service runs over HTTPS.
           </li>
           <li>
-            <code>oauth_csrf</code> — a short-lived random nonce used during
-            sign-in to defend against cross-site request forgery.
+            <code>oauth_nonce</code> — a random value set when you start
+            signing in with Google and removed when you finish. It ties the
+            sign-in to your browser to defend against cross-site request
+            forgery.
           </li>
         </ul>
         <p>
@@ -101,6 +139,10 @@
         <h2>Data retention</h2>
         <p>
           We retain account information for as long as your account is active.
+          Sign-in history older than 30 days is deleted automatically, except
+          your most recent sign-in. Deleting your account deletes its sign-in
+          history and activity records and the customer record we created at
+          Stripe.
           You can request deletion at any time by contacting us at
           <strong>[CONTACT EMAIL]</strong>; we will delete or anonymize your
           personal data within <strong>[RETENTION WINDOW, e.g. 30 days]</strong>,

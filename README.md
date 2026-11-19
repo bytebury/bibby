@@ -8,7 +8,18 @@
 </div>
 
 # Getting Started
-You can get started by creating a repository from this template repository. This framework helps the bytebury team deliver efficiently and safely. You will need Rust and NodeJS available in your development environment to run the application.
+You can get started by creating a repository from this template repository. This framework helps the bytebury team deliver efficiently and safely.
+
+## Prerequisites
+
+- [Rust](https://rustup.rs) (the version in `Cargo.toml`'s `rust-version`, or newer)
+- [Node.js](https://nodejs.org) and npm, for Tailwind and Playwright
+- [PostgreSQL](https://www.postgresql.org), reachable at the `DATABASE_URL` in your `.env`
+- `sqlx-cli`, which `./dev.sh` uses to create and migrate the database:
+
+  ```sh
+  cargo install sqlx-cli --no-default-features --features postgres,rustls
+  ```
 
 For a quick start, you can copy the following lines into your terminal and go to `localhost:8080` to view the application running locally in watch mode.
 
@@ -27,6 +38,29 @@ git config core.hooksPath .githooks
 ```
 
 The pre-commit hook runs `cargo fmt --all` and `cargo sqlx prepare`. If either command changes files, the commit stops so you can review and stage the generated changes before committing again.
+
+## Configuration
+
+`./dev.sh` writes a commented `.env` the first time it runs, and `CLAUDE.md` lists every variable. One deserves a mention here because you can't administer the app without it:
+
+- `ADMIN_EMAILS` (required) — a comma-separated list of email addresses that become admins when they sign in, e.g. `ADMIN_EMAILS=you@example.com,cofounder@example.com`. Whitespace around each address is trimmed. Set it, including in production, before you first sign in.
+
+## Rename after cloning
+
+Bibby's name appears in a handful of places. After creating your repository, replace it in each of these (searching for `bibby`, `Bibby`, and `bytebury` finds them all):
+
+- [ ] `Cargo.toml` — the package (and therefore binary) name `bibby`. `Cargo.lock` follows on the next build, and `src/main.rs` imports the crate as `bibby::…`.
+- [ ] `dev.sh` — `cargo watch -x 'run --bin bibby'`, plus the `APP_NAME`, `SEO_DEFAULT_TITLE`, `SEO_DEFAULT_DESCRIPTION`, `WEB_APP_NAME`, and `WEB_APP_SHORT_NAME` defaults it writes to `.env`.
+- [ ] `e2e.sh` — `cargo build --bin bibby`, `./target/debug/bibby`, the `bibby-e2e-` log file name, and `APP_NAME="Bibby"`.
+- [ ] `.github/workflows/playwright.yml` — `--bin bibby`, `./target/debug/bibby`, `APP_NAME: Bibby`, and the cache `shared-key: bibby-debug`.
+- [ ] `.github/workflows/rust.yml` — the cache `shared-key: bibby-debug` (twice).
+- [ ] `Dockerfile` — the binary path `target/x86_64-unknown-linux-musl/release/bibby`.
+- [ ] `package.json` — `name` (`bibby-frontend`) and `description`. Run `npm install` afterwards so `package-lock.json` matches, or `npm ci` in the Docker build fails.
+- [ ] `src/lib.rs` and `src/infra/email.rs` — the `"Bibby"` fallback used when `APP_NAME` is unset. (The tests in `src/infra/email.rs` use `"Bibby"` only as sample data.)
+- [ ] `e2e/example.spec.ts` — the homepage title check (`/Bibby/i`).
+- [ ] `LICENSE` — the copyright holder (`bytebury`).
+- [ ] `README.md` — the Bibby mascot image and this introduction.
+- [ ] `templates/privacy.html` and `templates/terms.html` — every `[BRACKETED]` placeholder (contact email, effective date, jurisdiction, providers, and so on). Remove the "replace before launch" banner once a lawyer has reviewed them.
 
 ## Design Decisions
 This framework follows Clean Architecture relatively close. We do not use repositories, as all of our data gathering happens directly on the model itself. This allows for more ergonomic code as seen below.
@@ -106,19 +140,23 @@ Blog posts use `PageMeta::article(&blog)`, which sets article structured data, t
 ### Pagination
 You can use the Paginate trait to implement pagination on models.
 
+`table_name` can be a view: `User` paginates over `user_details`, which joins in the user's country, region, and city.
+
 ```rs
 impl Paginate for User {
     fn table_name() -> &'static str {
-        "users"
+        "user_details"
     }
 }
 ```
 
 **Sample Usage**
 ```rs
-paginate!(User, &db);
-paginate_with!(User, &db, "where role = $1", vec!["admin"]);
+paginate!(User, &db, &paging);
+paginate_with!(User, &db, "WHERE role = $1 ORDER BY last_seen_at DESC", vec!["admin"], &paging);
 ```
+
+Bindings are positional and passed as `&str`. Only put fixed SQL fragments in the clause, never request data. Leave off `&paging` to get the first page at the default page size.
 
 ### Redirects
 
@@ -183,7 +221,7 @@ The base layout already renders the required `<div id="tooltip" class="tooltip">
 </button>
 ```
 
-Templates already do this for the flag overlay on user avatars (see `templates/users/_edit_user.html`).
+Templates already do this for the flag overlay on user avatars (see `templates/users/users.html` and `templates/users/user.html`).
 
 ### Modals
 Modals are HTMX-driven: any button that targets `#modal` loads a partial into the modal slot, and `public/scripts/modal.js` flips the wrapper to `display: flex` on `htmx:afterSwap`. Closing is handled by `closeModal()` (the underlay click, an `&times;` button, the `Escape` key, or a server-emitted `closeModal` event all work).
@@ -245,7 +283,14 @@ Popover menus use the native `<details>` element with the `menu` class — no ex
 Note: the tooltip script automatically suppresses hover tooltips on `details.menu > summary` so a tooltip doesn't pop while the menu is opening.
 
 ## OAuth Providers
-By default, we support Google OAuth out of the box. If you'd like to support other OAuth clients, you will need to add your new provider into the `OAuthProvider` enum and add a configuration for it. This will automatically set up the auth endpoints `/auth/{provider_code}` and the callback `/auth/{provider_code}/callback`.
+Google OAuth is supported out of the box, alongside email sign-up and sign-in with emailed one-time codes. `OAuthProvider` (in `src/infra/auth/mod.rs`) is a trait with two methods, `get_auth_url` and `exchange_code_for_user`, and `GoogleOAuth` in `src/infra/auth/google.rs` implements it. The routes are written out in `src/infra/api/auth.rs`: `/auth/google` starts the flow and `/auth/google/callback` finishes it. Nothing is generated per provider.
+
+To add another provider:
+
+1. Add a struct that implements `OAuthProvider` in `src/infra/auth/<provider>.rs`, reading its client id, secret, and callback URL from the environment.
+2. Add a start route and a callback route for it in `src/infra/api/auth.rs`, following the Google handlers (they set and check the `oauth_nonce` cookie and the signed `OAuthState`).
+3. If accounts should record which provider created them, add a variant to `AuthProvider` in `src/domain/user.rs` and widen the `users.auth_provider` check constraint in a new migration.
+4. Add a button for it next to `templates/_partials/google_button.html`.
 
 ## Opt-out Microservices
 Bytebury provides a few libraries and microservices that bibby can incorporate into projects. By default these are all included. You can delete any you feel are not important to your needs. Bytebury uses Railway as our primary cloud host, so you may see some preference there, but all microservices are platform / cloud-provider agnostic.

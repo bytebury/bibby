@@ -33,7 +33,7 @@
                     data-tooltip="Flagged by {% if let Some(name) = flag.flagged_by_name %}{{ name }}{% else %}a former admin{% endif %} on {{ flag.created_at.format("%B %-d, %Y") }}">flagged</span>
             {% endif %}
           </div>
-          <a href="mailto:{{ user.email }}" class="btn-link user-email">{{ user.email }}</a>
+          <a href="mailto:{{ user.email }}" class="btn-link user-email whitespace-normal break-all">{{ user.email }}</a>
         </div>
       </div>
 

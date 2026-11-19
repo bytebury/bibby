@@ -128,7 +128,8 @@ src/
     mod.rs                # Access<T> and Validate traits
     user.rs, country.rs, region.rs, city.rs, announcement.rs, blog.rs,
     one_time_passcode.rs, sign_in.rs, user_note.rs, user_flag.rs,
-    user_activity.rs, admin_analytics.rs, avatar.rs, system_status.rs
+    user_activity.rs, admin_analytics.rs, avatar.rs, system_status.rs,
+    feature_toggle.rs
     value_objects/        # Email, AdminEmails, OneTimeCode, Markdown, Severity
   use_cases/              # application logic, grouped by aggregate
     user/, payments/      # each exposes a `<Name>UseCases` bundle mounted on AppState
@@ -141,6 +142,7 @@ src/
     markdown.rs           # Markdown → sanitized HTML (pulldown-cmark + ammonia)
     monitoring.rs         # in-memory logs and request stats for /admin/monitoring
     rate_limit.rs         # per-IP limit on the sign-up / sign-in POSTs
+    site.rs               # in-memory banner + feature toggles, refreshed every 30s
     csrf.rs               # refuses cross-site state-changing requests
     scheduler.rs          # the daily tick (plan expirations, sign-in pruning)
     seo.rs                # SeoConfig / WebAppConfig / PageMeta
@@ -379,6 +381,28 @@ shima 0.8 implements sqlx 0.9's traits, so shima ids can be columns directly
 (`User::stripe_customer_id: Option<CustomerId>`, selected as
 `stripe_customer_id as "stripe_customer_id: CustomerId"`).
 
+## Feature toggles
+
+`/admin/feature-toggles` (admin only, in the account menu) switches features
+on for everyone. A toggle is on or off and may carry a value.
+
+- Features are defined in code (`Feature` in `domain/feature_toggle.rs`: key,
+  name, description, value label, `parse_value` validation) and each has a
+  `feature_toggles` row, added by a migration, holding `enabled` / `value`.
+- Pages read them through `shared.site.toggles` (e.g.
+  `shared.google_analytics_tag()`), never from the database per request.
+  `infra/site.rs` keeps the toggles and the active announcement banner in
+  memory; it reloads right after an admin change on this server and every
+  30 seconds, so other replicas catch up.
+- **Google Analytics** (off by default): turning it on requires a Google tag
+  ID (`G-…`, `GT-…`, `AW-…`, `DC-…`). When on, `_partials/google_analytics.html`
+  loads gtag on every page and the privacy policy mentions its cookies.
+  The ID is validated strictly because it is rendered inside a `<script>`.
+
+To add a toggle: a `Feature` variant (and its arms), a migration inserting
+its row, and the code that reads `shared.site.toggles.value(Feature::X)` or
+checks it is on.
+
 ## Admin monitoring
 
 `/admin/monitoring` (admin only, linked from the account menu) shows an
@@ -425,6 +449,13 @@ at it. New daily jobs go in `run_tick`.
 
 Specs live in `e2e/` and run on every PR (`.github/workflows/playwright.yml`)
 against a debug build and a fresh Postgres.
+
+**Prefer unit tests.** They run in milliseconds; each Playwright test costs a
+browser and a server round trip. Put rules, parsing, validation and policy
+in unit tests next to the code. Keep Playwright for what needs the whole
+stack: a flow across pages, routes being wired to the right guard, real
+browser behaviour (keyboard focus, layout, JavaScript), and the axe scan.
+Don't add an e2e test for something a unit test can pin down.
 
 ### The test-auth shim
 `src/infra/api/auth_test.rs` is mounted only when `ENABLE_TEST_AUTH=true`, and

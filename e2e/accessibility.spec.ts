@@ -49,6 +49,7 @@ test("signed-in pages, an open menu and an open modal pass an accessibility scan
     "/countries",
     "/admin/analytics",
     "/admin/monitoring",
+    "/admin/feature-toggles",
   ]) {
     await page.goto(path);
     await expectNoViolations(page);
@@ -65,10 +66,13 @@ test("signed-in pages, an open menu and an open modal pass an accessibility scan
   await expectNoViolations(page);
 });
 
-test("modals are keyboard dialogs: focus moves in, stays in, and Escape returns it", async ({
+test("modals are keyboard dialogs: focus moves in, stays in, and returns on close", async ({
   page,
 }, testInfo) => {
   await signInAs(page.request, page.context(), testEmail(testInfo, "admin"), "admin");
+  await page.goto("/announcements");
+  // A stray Escape used to make the next modal close itself as it opened.
+  await page.keyboard.press("Escape");
   const opener = await openNewAnnouncement(page);
   const dialog = page.getByRole("dialog", { name: "New announcement" });
 
@@ -82,35 +86,21 @@ test("modals are keyboard dialogs: focus moves in, stays in, and Escape returns 
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
   await expect(opener).toBeFocused();
-});
 
-test("Escape with no modal open doesn't break the next one", async ({ page }, testInfo) => {
-  await signInAs(page.request, page.context(), testEmail(testInfo, "admin"), "admin");
-  await page.goto("/announcements");
-  await page.keyboard.press("Escape");
-  await openNewAnnouncement(page);
-  // It used to close itself right after opening.
-  await page.waitForTimeout(500);
-  await expect(page.getByRole("dialog", { name: "New announcement" })).toBeVisible();
-});
-
-test("the close button and the skip link work from the keyboard", async ({ page }, testInfo) => {
-  await signInAs(page.request, page.context(), testEmail(testInfo, "admin"), "admin");
   await openNewAnnouncement(page);
   await page.getByRole("button", { name: "Close" }).click();
-  await expect(page.getByRole("dialog")).toBeHidden();
-
-  await page.goto("/");
-  await page.keyboard.press("Tab");
-  const skip = page.getByRole("link", { name: "Skip to content" });
-  await expect(skip).toBeFocused();
-  await page.keyboard.press("Enter");
-  await expect(page.locator("main")).toBeFocused();
+  await expect(dialog).toBeHidden();
 });
 
-test("Escape closes the account menu and returns focus to it", async ({ page }, testInfo) => {
+test("the skip link and the account menu work from the keyboard", async ({ page }, testInfo) => {
   await signInAs(page.request, page.context(), testEmail(testInfo, "free"), "free");
   await page.goto("/");
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("main")).toBeFocused();
+
+  // Escape closes the menu and puts focus back on its button.
   const toggle = page.getByLabel("Account menu");
   await toggle.click();
   const settings = page.locator("details.account-menu").getByRole("link", { name: "Settings" });
@@ -119,3 +109,4 @@ test("Escape closes the account menu and returns focus to it", async ({ page }, 
   await expect(settings).toBeHidden();
   await expect(toggle).toBeFocused();
 });
+

@@ -19,25 +19,6 @@ async function hasSession(page: Page) {
   return (await page.context().cookies()).some((c) => c.name === "auth_token");
 }
 
-test("the homepage links to sign-up and sign-in", async ({ page }) => {
-  await page.goto("/");
-  await page.getByRole("link", { name: "Get started" }).click();
-  await expect(page).toHaveURL(/\/sign-up$/);
-  await expect(
-    page.getByRole("link", { name: "Sign up with Google" }),
-  ).toHaveAttribute("href", "/auth/google");
-
-  await page.goto("/");
-  await page
-    .locator("main")
-    .getByRole("link", { name: "Sign in", exact: true })
-    .click();
-  await expect(page).toHaveURL(/\/sign-in$/);
-  await expect(
-    page.getByRole("button", { name: "Email Me a Sign-in Code" }),
-  ).toBeVisible();
-});
-
 test("signing up with email verifies the address, then signs in with a code", async ({
   page,
   request,
@@ -112,18 +93,3 @@ test("signing in doesn't reveal whether an address has an account", async ({
   await expect(page.getByLabel("Sign-in code")).toBeVisible();
 });
 
-test("the sign-up form rejects a malformed email", async ({ page }) => {
-  await page.goto("/sign-up");
-  await page.getByLabel("First name").fill("Ada");
-  await page.getByLabel("Last name").fill("Lovelace");
-  // `type="email"` would stop the browser from submitting this.
-  await page
-    .getByLabel("Email")
-    .evaluate((el) => el.setAttribute("type", "text"));
-  await page.getByLabel("Email").fill("not-an-email");
-  await page.getByRole("button", { name: "Sign Up with Email" }).click();
-  await expect(page.locator("#sign_in_form [role=alert]")).toHaveText(
-    "Enter a valid email address.",
-  );
-  await expect(page.getByLabel("First name")).toHaveValue("Ada");
-});

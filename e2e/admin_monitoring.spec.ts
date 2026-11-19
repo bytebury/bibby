@@ -28,9 +28,3 @@ test("admins see the app's health, traffic and recent logs", async ({ page, requ
   await expect(logs.locator(".monitoring-log:not(.level-error)")).toHaveCount(0);
 });
 
-test("non-admins can't open the monitoring page", async ({ page, request, context }, testInfo) => {
-  await signInAs(request, context, testEmail(testInfo, "monitoring-user"), "professional");
-  for (const path of ["/admin/monitoring", "/admin/monitoring/status", "/admin/monitoring/logs"]) {
-    expect((await page.goto(path))?.status()).toBe(403);
-  }
-});

@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE users\n               SET role = $1,\n                   locked = $2,\n                   plan_expiry_date = $3,\n                   email = $4,\n                   -- A new lock or a new address ends the account's sessions.\n                   -- Like the CASE below, this reads the pre-UPDATE values.\n                   session_version = session_version + CASE\n                       WHEN ($2 AND NOT locked) OR email IS DISTINCT FROM $4 THEN 1\n                       ELSE 0\n                   END,\n                   -- Moving the deadline re-arms the reminder ladder; the\n                   -- CASE reads the pre-UPDATE value, so an unchanged date\n                   -- keeps whatever reminders have already gone out.\n                   plan_expiry_reminder_days = CASE\n                       WHEN plan_expiry_date IS DISTINCT FROM $3 THEN NULL\n                       ELSE plan_expiry_reminder_days\n                   END\n             WHERE id = $5\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Bool",
+        "Date",
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8c0933e2eb2b2736d6e38aec6fa2aa27f4818e13ec0c3109aa409b91e8121792"
+}

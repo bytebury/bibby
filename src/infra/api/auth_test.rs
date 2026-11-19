@@ -16,6 +16,7 @@ use crate::domain::sign_in::SignIn;
 use crate::domain::user::{AuthProvider, CreateUser, Role, User};
 use crate::domain::value_objects::email::Email;
 use crate::domain::value_objects::one_time_code::OneTimeCode;
+use crate::infra::api::cron::constant_time_eq;
 use crate::infra::auth::jwt::{Jwt, UserClaims};
 use crate::prelude::*;
 use axum::Router;
@@ -68,7 +69,7 @@ fn ensure_token(headers: &HeaderMap) -> Result<()> {
         .get(TOKEN_HEADER)
         .and_then(|h| h.to_str().ok())
         .unwrap_or_default();
-    if provided != expected || expected.is_empty() {
+    if expected.is_empty() || !constant_time_eq(provided.as_bytes(), expected.as_bytes()) {
         return Err(AppError::Forbidden("Invalid test auth token.".to_string()));
     }
     Ok(())

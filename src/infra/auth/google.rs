@@ -25,27 +25,37 @@ impl GoogleOAuth {
         GoogleOAuth {}
     }
 
+    /// Whether Google sign-in is set up. Without it the template still runs
+    /// on emailed codes alone, and the "Continue with Google" button is hidden.
+    pub fn is_configured() -> bool {
+        let set = |name: &str| env::var(name).is_ok_and(|v| !v.trim().is_empty());
+        set("GOOGLE_CLIENT_ID")
+            && set("GOOGLE_CLIENT_SECRET")
+            && env::var("GOOGLE_CALLBACK_URL").is_ok_and(|url| RedirectUrl::new(url).is_ok())
+    }
+
+    pub fn ensure_configured() -> Result<()> {
+        if Self::is_configured() {
+            Ok(())
+        } else {
+            Err(AppError::NotFound(
+                "Google sign-in isn't set up here.".to_string(),
+            ))
+        }
+    }
+
     fn client(
         &self,
     ) -> BasicClient<EndpointSet, EndpointNotSet, EndpointNotSet, EndpointSet, EndpointSet> {
-        let client_id = ClientId::new(
-            env::var("GOOGLE_CLIENT_ID")
-                .expect("Missing the GOOGLE_CLIENT_ID environment variable."),
-        );
-        let client_secret = ClientSecret::new(
-            env::var("GOOGLE_CLIENT_SECRET")
-                .expect("Missing the GOOGLE_CLIENT_SECRET environment variable."),
-        );
+        let client_id = ClientId::new(env::var("GOOGLE_CLIENT_ID").unwrap_or_default());
+        let client_secret = ClientSecret::new(env::var("GOOGLE_CLIENT_SECRET").unwrap_or_default());
         let auth_url = AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".to_string())
             .expect("Invalid auth endpoint URL.");
         let token_url = TokenUrl::new("https://www.googleapis.com/oauth2/v3/token".to_string())
             .expect("Invalid token endpoint URL.");
-        let redirect_url = RedirectUrl::new(
-            env::var("GOOGLE_CALLBACK_URL")
-                .expect("GOOGLE_CALLBACK_URL not provided")
-                .to_string(),
-        )
-        .expect("Invalid redirect URL");
+        // `ensure_configured` has already checked it parses.
+        let redirect_url = RedirectUrl::new(env::var("GOOGLE_CALLBACK_URL").unwrap_or_default())
+            .expect("Invalid redirect URL");
         let revocation_url = RevocationUrl::new("https://oauth2.googleapis.com/revoke".to_string())
             .expect("Invalid revocation endpoint URL");
 

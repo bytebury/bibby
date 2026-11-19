@@ -1,3 +1,5 @@
+use crate::domain::Access;
+use crate::domain::user::User;
 use crate::infra::geolocation::CountryDetails;
 use crate::prelude::*;
 
@@ -28,6 +30,16 @@ impl Country {
         )
         .fetch_one(exec)
         .await?;
+        Ok(country)
+    }
+
+    pub async fn find_by_id<'e, E>(exec: E, id: PrimaryKey) -> Result<Country>
+    where
+        E: Executor<'e, Database = sqlx::Postgres>,
+    {
+        let country = sqlx::query_as!(Country, "SELECT * FROM countries WHERE id = $1", id)
+            .fetch_one(exec)
+            .await?;
         Ok(country)
     }
 
@@ -99,5 +111,12 @@ impl From<CountryDetails> for CountryForm {
             name: details.name,
             code: details.code,
         }
+    }
+}
+
+/// Site content: anyone may read it, only admins may change it.
+impl Access<Country> for User {
+    fn can_write(&self, _: &Country) -> bool {
+        self.is_admin()
     }
 }

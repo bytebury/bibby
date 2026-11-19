@@ -102,27 +102,33 @@ async fn edit_announcement(
     headers: HeaderMap,
     ValidatedForm(form): ValidatedForm<AnnouncementForm>,
 ) -> Result<impl IntoResponse> {
-    Announcement::update(state.db.as_ref(), id, user.id, &form).await?;
+    let announcement = Announcement::find_by_id(state.db.as_ref(), id).await?;
+    user.ensure_can_write(&announcement)?;
+    Announcement::update(state.db.as_ref(), announcement.id, user.id, &form).await?;
     Ok(redirect!("/announcements", &headers))
 }
 
 async fn destroy_announcement(
     State(state): State<SharedState>,
     Path(id): Path<PrimaryKey>,
-    Admin(_): Admin,
+    Admin(admin): Admin,
     headers: HeaderMap,
 ) -> Result<impl IntoResponse> {
-    Announcement::destroy(state.db.as_ref(), id).await?;
+    let announcement = Announcement::find_by_id(state.db.as_ref(), id).await?;
+    admin.ensure_can_write(&announcement)?;
+    Announcement::destroy(state.db.as_ref(), announcement.id).await?;
     Ok(redirect!("/announcements", &headers))
 }
 
 async fn toggle_active(
     State(state): State<SharedState>,
-    Admin(_): Admin,
+    Admin(admin): Admin,
     Path(id): Path<PrimaryKey>,
     Form(form): Form<ActiveForm>,
 ) -> Result<impl IntoResponse> {
-    Announcement::set_active(state.db.as_ref(), id, form.active.as_bool()).await?;
+    let announcement = Announcement::find_by_id(state.db.as_ref(), id).await?;
+    admin.ensure_can_write(&announcement)?;
+    Announcement::set_active(state.db.as_ref(), announcement.id, form.active.as_bool()).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 

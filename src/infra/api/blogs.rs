@@ -145,7 +145,9 @@ async fn edit_blog(
     headers: HeaderMap,
     ValidatedForm(form): ValidatedForm<BlogForm>,
 ) -> Result<impl IntoResponse> {
-    Blog::update(state.db.as_ref(), id, user.id, &form).await?;
+    let blog = Blog::find_by_id(state.db.as_ref(), id).await?;
+    user.ensure_can_write(&blog)?;
+    Blog::update(state.db.as_ref(), blog.id, user.id, &form).await?;
     let blog = Blog::find_by_id(state.db.as_ref(), id).await?;
     Ok(crate::redirect!(
         format!("/blogs/{}/{}", blog.id, blog.slug()).as_str(),
@@ -156,9 +158,11 @@ async fn edit_blog(
 async fn destroy_blog(
     State(state): State<SharedState>,
     Path(id): Path<PrimaryKey>,
-    Admin(_): Admin,
+    Admin(admin): Admin,
     headers: HeaderMap,
 ) -> Result<impl IntoResponse> {
-    Blog::destroy(state.db.as_ref(), id).await?;
+    let blog = Blog::find_by_id(state.db.as_ref(), id).await?;
+    admin.ensure_can_write(&blog)?;
+    Blog::destroy(state.db.as_ref(), blog.id).await?;
     Ok(crate::redirect!("/blogs", &headers))
 }

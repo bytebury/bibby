@@ -3,18 +3,21 @@ use crate::domain::country::Country;
 use crate::domain::region::Region;
 use crate::domain::sign_in::SignIn;
 use crate::domain::user::{AuthProvider, CreateUser, User};
+use crate::domain::value_objects::admin_emails::AdminEmails;
 use crate::infra::db::SharedDatabase;
 use crate::infra::geolocation::LocationDetails;
 use crate::prelude::*;
 use std::net::IpAddr;
+use std::sync::Arc;
 
 pub struct RegisterUserUseCase {
     db: SharedDatabase,
+    admins: Arc<AdminEmails>,
 }
 
 impl RegisterUserUseCase {
-    pub fn new(db: SharedDatabase) -> Self {
-        Self { db }
+    pub fn new(db: SharedDatabase, admins: Arc<AdminEmails>) -> Self {
+        Self { db, admins }
     }
 
     /// Resolve the user's IP to a location, then either create the user or
@@ -28,6 +31,14 @@ impl RegisterUserUseCase {
             Ok(user) => self.update_audit_fields(user, request).await,
             Err(_) => User::create(self.db.as_ref(), request).await,
         }?;
+        // A verified Google sign-in proves the address. A code sign-in
+        // reaches here only after `VerifySignInCodeUseCase` granted it.
+        let user = if request.verified && request.auth_provider == AuthProvider::Google {
+            user.grant_listed_admin(self.db.as_ref(), &self.admins)
+                .await?
+        } else {
+            user
+        };
 
         // Recorded even for a locked account — those are the sign-ins an
         // admin most wants to see.
@@ -183,6 +194,7 @@ mod tests {
             last_seen_at: Utc::now(),
             created_at: Utc::now(),
             updated_at: Utc::now(),
+            session_version: 0,
         }
     }
 

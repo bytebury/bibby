@@ -38,6 +38,7 @@ async fn upgrade_page(
     CurrentUser(user): CurrentUser,
     headers: HeaderMap,
 ) -> Result<impl IntoResponse> {
+    state.payments()?;
     if !user.is_free() {
         return Ok(redirect!("/", &headers).into_response());
     }
@@ -59,14 +60,17 @@ async fn checkout(
     headers: HeaderMap,
     Form(form): Form<CheckoutForm>,
 ) -> Result<impl IntoResponse> {
-    let customer_id = state
-        .payments_use_cases
-        .create_customer
-        .execute(&user)
-        .await?;
+    // Paid and admin accounts already have their plan; a second
+    // subscription would bill them twice.
+    if !user.is_free() {
+        return Err(AppError::Conflict(
+            "You already have a paid plan.".to_string(),
+        ));
+    }
+    let payments = state.payments()?;
+    let customer_id = payments.create_customer.execute(&user).await?;
 
-    let checkout_url = state
-        .payments_use_cases
+    let checkout_url = payments
         .checkout
         .execute(customer_id, form.plan)
         .await?
@@ -101,18 +105,10 @@ async fn manage_subscriptions(
     CurrentUser(user): CurrentUser,
     headers: HeaderMap,
 ) -> Result<impl IntoResponse> {
-    let customer_id = state
-        .payments_use_cases
-        .create_customer
-        .execute(&user)
-        .await?;
+    let payments = state.payments()?;
+    let customer_id = payments.create_customer.execute(&user).await?;
 
-    let portal_url = state
-        .payments_use_cases
-        .manage_subscription
-        .execute(customer_id)
-        .await?
-        .url;
+    let portal_url = payments.manage_subscription.execute(customer_id).await?.url;
 
     Ok(redirect!(&portal_url, &headers))
 }
@@ -123,7 +119,7 @@ async fn handle_stripe_event(
     body: String,
 ) -> Result<impl IntoResponse> {
     state
-        .payments_use_cases
+        .payments()?
         .handle_stripe_event
         .execute(&headers, &body)
         .await

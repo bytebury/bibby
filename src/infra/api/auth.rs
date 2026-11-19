@@ -8,6 +8,7 @@ use crate::infra::auth::OAuthProvider;
 use crate::infra::auth::google::GoogleOAuth;
 use crate::infra::auth::jwt::{Jwt, SESSION_DAYS, UserClaims};
 use crate::infra::auth::oauth_state::{OAuthState, is_allowed_target};
+use crate::infra::rate_limit;
 use crate::infra::seo::PageMeta;
 use crate::prelude::*;
 use axum::Router;
@@ -113,11 +114,16 @@ struct SignOutQuery {
 }
 
 pub fn routes() -> Router<SharedState> {
-    Router::new()
-        .route("/sign-in", get(sign_in_page))
+    // Each of these sends an email or checks a code, so they're limited per IP.
+    let limited = Router::new()
         .route("/sign-in/code", post(send_sign_in_code))
         .route("/sign-in/code/verify", post(verify_sign_in_code))
-        .route("/sign-up", get(sign_up_page).post(sign_up_with_email))
+        .route("/sign-up", post(sign_up_with_email))
+        .route_layer(axum::middleware::from_fn(rate_limit::limit_auth));
+    Router::new()
+        .merge(limited)
+        .route("/sign-in", get(sign_in_page))
+        .route("/sign-up", get(sign_up_page))
         .route("/auth/google", get(sign_in_with_google))
         .route("/auth/google/callback", get(sign_in_with_google_callback))
         .route("/auth", delete(sign_out))
@@ -282,6 +288,7 @@ async fn verify_sign_in_code(
 }
 
 async fn sign_in_with_google(headers: HeaderMap, cookies: CookieJar) -> Result<impl IntoResponse> {
+    GoogleOAuth::ensure_configured()?;
     let origin =
         env::var("APP_ORIGIN").map_err(|_| AppError::Internal("APP_ORIGIN not set".to_string()))?;
     let nonce = OAuthState::new_nonce();
@@ -312,6 +319,7 @@ async fn sign_in_with_google_callback(
     headers: HeaderMap,
     cookies: CookieJar,
 ) -> Result<impl IntoResponse> {
+    GoogleOAuth::ensure_configured()?;
     let oauth_state = OAuthState::verify(&params.state)
         .map_err(|_| AppError::BadRequest("Invalid or expired OAuth state.".to_string()))?;
 
@@ -326,12 +334,13 @@ async fn sign_in_with_google_callback(
         if !is_allowed_target(&oauth_state.target) {
             return Err(AppError::Forbidden("OAuth target not allowed.".to_string()));
         }
-        let relay = format!(
-            "{}/auth/google/callback?code={}&state={}",
-            oauth_state.target.trim_end_matches('/'),
-            params.code,
-            params.state,
-        );
+        let mut relay = url::Url::parse(&oauth_state.target)
+            .and_then(|origin| origin.join("/auth/google/callback"))
+            .map_err(|_| AppError::Forbidden("OAuth target not allowed.".to_string()))?;
+        relay
+            .query_pairs_mut()
+            .append_pair("code", &params.code)
+            .append_pair("state", &params.state);
         return Ok(redirect!(relay.as_str(), &headers).into_response());
     }
 
@@ -382,8 +391,9 @@ async fn sign_in_with_google_callback(
 
     // Locked accounts (banned country or an admin lock) never get a session —
     // send them back to the homepage. Neither does an address Google hasn't
-    // verified; an emailed code can verify it instead.
-    if user.locked || !user.verified {
+    // verified, even when the account behind it already is: this sign-in
+    // proved nothing about the address. An emailed code can sign them in.
+    if user.locked || !user.verified || !create_user.verified {
         let cookies = cookies.remove(Cookie::build(OAUTH_NONCE_COOKIE).path("/"));
         let target = if user.locked { "/" } else { "/sign-in" };
         return Ok((cookies, redirect!(target, &headers)).into_response());
@@ -394,6 +404,12 @@ async fn sign_in_with_google_callback(
         .remove(Cookie::build(OAUTH_NONCE_COOKIE).path("/"));
 
     Ok((cookies, redirect!("/", &headers)).into_response())
+}
+
+/// Whether `target` stays on this site. Browsers read `/\\evil.com` like
+/// `//evil.com`, so a backslash anywhere disqualifies it too.
+fn is_local_path(target: &str) -> bool {
+    target.starts_with('/') && !target.starts_with("//") && !target.contains('\\')
 }
 
 /// Mint the session cookie for `user`.
@@ -422,7 +438,7 @@ async fn sign_out(
     let cookies = cookies.remove(Cookie::build("auth_token").path("/"));
     let target = params
         .redirect
-        .filter(|r| r.starts_with('/') && !r.starts_with("//"))
+        .filter(|r| is_local_path(r))
         .unwrap_or_else(|| "/".to_string());
     (cookies, redirect!(&target, &headers))
 }

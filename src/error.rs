@@ -11,6 +11,7 @@ pub enum AppError {
     Conflict(String),
     Forbidden(String),
     Unauthorized,
+    TooManyRequests(String),
     Internal(String),
 }
 
@@ -64,7 +65,10 @@ impl From<shima::Error> for AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         match &self {
-            Self::NotFound(_) | Self::Forbidden(_) | Self::Unauthorized => {
+            Self::NotFound(_)
+            | Self::Forbidden(_)
+            | Self::Unauthorized
+            | Self::TooManyRequests(_) => {
                 tracing::debug!("{:?}", self)
             }
             _ => tracing::error!("{:?}", self),
@@ -75,6 +79,7 @@ impl IntoResponse for AppError {
             Self::Unauthorized => (StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
             Self::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg).into_response(),
             Self::Conflict(msg) => (StatusCode::CONFLICT, msg).into_response(),
+            Self::TooManyRequests(msg) => (StatusCode::TOO_MANY_REQUESTS, msg).into_response(),
             Self::Internal(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "Something went wrong").into_response()
             }
@@ -89,6 +94,7 @@ impl Display for AppError {
             Self::NotFound(message) => f.write_str(message),
             Self::Conflict(message) => f.write_str(message),
             Self::Forbidden(message) => f.write_str(message),
+            Self::TooManyRequests(message) => f.write_str(message),
             Self::Internal(message) => f.write_str(message),
             Self::Unauthorized => f.write_str("Unauthorized"),
         }

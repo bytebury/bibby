@@ -39,7 +39,7 @@ macro_rules! refresh {
 pub mod admin;
 pub mod announcements;
 pub mod auth;
-mod auth_test;
+pub mod auth_test;
 pub mod blogs;
 pub mod core;
 pub mod countries;
@@ -85,6 +85,10 @@ pub struct SharedContext {
     pub web_app_short_name: String,
     pub theme_color: String,
     pub web_app_service_worker_enabled: bool,
+    /// Whether Stripe is configured, so billing links can be hidden.
+    pub payments_enabled: bool,
+    /// Whether Google sign-in is configured.
+    pub google_enabled: bool,
     /// Current UTC year — stamped on each request and used by the footer
     /// copyright line so it rolls over without a code change.
     pub current_year: i32,
@@ -95,6 +99,8 @@ impl SharedContext {
         Self {
             app_name: state.app_name.clone(),
             assets: state.assets.clone(),
+            payments_enabled: state.payments_use_cases.is_some(),
+            google_enabled: crate::infra::auth::google::GoogleOAuth::is_configured(),
             user: None,
             canonical_path: None,
             site_url: state.seo.site_url.clone(),
@@ -211,8 +217,20 @@ impl SharedContext {
             data["image"] = serde_json::json!(image_url);
         }
 
-        data.to_string()
+        script_json(&data)
     }
+}
+
+/// Serializes `value` for embedding inside a `<script>` element. A user's
+/// name in the JSON could otherwise close the element with `</script>`, so
+/// `<`, `>` and `&` are written as JSON unicode escapes, which parse to the
+/// same string.
+pub fn script_json(value: &serde_json::Value) -> String {
+    value
+        .to_string()
+        .replace('<', "\\u003c")
+        .replace('>', "\\u003e")
+        .replace('&', "\\u0026")
 }
 
 fn absolute_url(site_url: &str, value: &str) -> String {

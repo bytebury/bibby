@@ -19,7 +19,6 @@ pub struct OneTimePasscode {
     pub id: PrimaryKey,
     pub email: String,
     pub code_hash: Vec<u8>,
-    pub attempts: i32,
 }
 
 impl OneTimePasscode {
@@ -33,7 +32,7 @@ impl OneTimePasscode {
             r#"
             INSERT INTO one_time_passcodes (email, code_hash, expires_at)
             VALUES ($1, $2, $3)
-            RETURNING id, email, code_hash, attempts
+            RETURNING id, email, code_hash
             "#,
             email.as_str(),
             code.digest(email),
@@ -86,7 +85,7 @@ impl OneTimePasscode {
                           LIMIT 1)
                AND expires_at > NOW()
                AND attempts < $2
-            RETURNING id, email, code_hash, attempts
+            RETURNING id, email, code_hash
             "#,
             email.as_str(),
             MAX_ATTEMPTS,
@@ -132,9 +131,5 @@ impl OneTimePasscode {
             .execute(exec)
             .await?;
         Ok(())
-    }
-
-    pub fn attempts_remaining(&self) -> i32 {
-        (MAX_ATTEMPTS - self.attempts).max(0)
     }
 }

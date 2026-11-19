@@ -1,3 +1,5 @@
+use crate::domain::Access;
+use crate::domain::user::User;
 use crate::domain::value_objects::markdown::Markdown;
 use crate::domain::value_objects::severity::Severity;
 use crate::infra::pagination::Paginate;
@@ -189,5 +191,12 @@ impl From<Announcement> for AnnouncementForm {
             active: announcement.active.then_some("on".into()),
             severity: announcement.severity,
         }
+    }
+}
+
+/// Site content: anyone may read it, only admins may change it.
+impl Access<Announcement> for User {
+    fn can_write(&self, _: &Announcement) -> bool {
+        self.is_admin()
     }
 }

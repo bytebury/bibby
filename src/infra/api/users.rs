@@ -344,15 +344,17 @@ async fn destroy_user(
         return Err(AppError::Forbidden("Admins cannot be deleted.".into()));
     }
 
-    if let Some(customer_id) = &user.stripe_customer_id {
-        state
-            .payments_use_cases
-            .delete_customer
-            .execute(customer_id)
-            .await?;
-    }
-
+    // The account goes first. Deleting the customer then cancels its
+    // subscription, and the webhook that follows finds no account and is
+    // acknowledged. A Stripe failure leaves an orphaned customer to clean up
+    // in the dashboard rather than an account pointing at a dead one.
     User::destroy(state.db.as_ref(), user.id).await?;
+    if let (Some(customer_id), Some(payments)) =
+        (&user.stripe_customer_id, &state.payments_use_cases)
+        && let Err(error) = payments.delete_customer.execute(customer_id).await
+    {
+        error!(%error, customer = customer_id.as_str(), "could not delete a deleted user's Stripe customer");
+    }
     Ok(redirect!("/users", &headers))
 }
 

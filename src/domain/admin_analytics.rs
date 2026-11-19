@@ -117,16 +117,14 @@ impl AdminAnalytics {
     /// Pre-serialized JSON consumed by the page's Chart.js. Keeps user-supplied
     /// strings out of inline JS literals.
     pub fn chart_json(&self) -> String {
-        json!({
+        crate::infra::api::script_json(&json!({
             "dau": {
                 "labels": self.current_window.iter().map(|d| d.day.to_string()).collect::<Vec<_>>(),
                 "current": self.current_window.iter().map(|d| d.active_users).collect::<Vec<_>>(),
                 "previousLabels": self.previous_window.iter().map(|d| d.day.to_string()).collect::<Vec<_>>(),
                 "previous": self.previous_window.iter().map(|d| d.active_users).collect::<Vec<_>>(),
             },
-        })
-        .to_string()
-        .replace("</", "<\\/")
+        }))
     }
 
     pub fn users_delta(&self) -> Delta {

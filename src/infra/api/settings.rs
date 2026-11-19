@@ -8,13 +8,17 @@ use axum::Router;
 use axum::extract::State;
 use axum::http::HeaderMap;
 use axum::response::IntoResponse;
-use axum::routing::get;
+use axum::routing::{delete, get};
+use axum_extra::extract::CookieJar;
+use axum_extra::extract::cookie::Cookie;
 
 // Settings only ever touch the caller's own row: the user comes from the
 // session, never from an id in the request, so there is no entity to check
 // access against.
 pub fn routes() -> Router<SharedState> {
-    Router::new().route("/settings", get(settings_page).patch(update_name))
+    Router::new()
+        .route("/settings", get(settings_page).patch(update_name))
+        .route("/settings/sessions", delete(sign_out_everywhere))
 }
 
 #[derive(Template, WebTemplate)]
@@ -44,4 +48,17 @@ async fn update_name(
     let update = NameUpdate::try_from(form)?;
     User::update_name(state.db.as_ref(), user.id, &update).await?;
     Ok(refresh!(&headers))
+}
+
+/// Ends every session the account has, this one included, e.g. after a
+/// lost device.
+async fn sign_out_everywhere(
+    State(state): State<SharedState>,
+    CurrentUser(user): CurrentUser,
+    headers: HeaderMap,
+    cookies: CookieJar,
+) -> Result<impl IntoResponse> {
+    User::end_all_sessions(state.db.as_ref(), user.id).await?;
+    let cookies = cookies.remove(Cookie::build("auth_token").path("/"));
+    Ok((cookies, redirect!("/", &headers)))
 }

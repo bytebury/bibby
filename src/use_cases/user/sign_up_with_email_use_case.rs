@@ -1,9 +1,11 @@
 use crate::domain::avatar;
 use crate::domain::user::{AuthProvider, CreateUser, Role, SignUp, User};
+use crate::domain::value_objects::admin_emails::AdminEmails;
 use crate::infra::db::SharedDatabase;
 use crate::prelude::*;
 use crate::use_cases::user::register_user_use_case::RegisterUserUseCase;
 use crate::use_cases::user::send_sign_in_code_use_case::SendSignInCodeUseCase;
+use std::sync::Arc;
 
 /// Creates an account for someone who signs up with an email address instead
 /// of Google, then emails them a code to verify it.
@@ -20,9 +22,9 @@ pub struct SignUpWithEmailUseCase {
 }
 
 impl SignUpWithEmailUseCase {
-    pub fn new(db: SharedDatabase) -> Self {
+    pub fn new(db: SharedDatabase, admins: Arc<AdminEmails>) -> Self {
         Self {
-            register: RegisterUserUseCase::new(db.clone()),
+            register: RegisterUserUseCase::new(db.clone(), admins),
             send_code: SendSignInCodeUseCase::new(db.clone()),
             db,
         }

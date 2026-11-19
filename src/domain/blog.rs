@@ -1,3 +1,5 @@
+use crate::domain::Access;
+use crate::domain::user::User;
 use crate::domain::value_objects::markdown::Markdown;
 use crate::infra::markdown;
 use crate::infra::pagination::Paginate;
@@ -221,5 +223,12 @@ impl From<Blog> for BlogForm {
             content: blog.content,
             image_url: blog.image_url,
         }
+    }
+}
+
+/// Site content: anyone may read it, only admins may change it.
+impl Access<Blog> for User {
+    fn can_write(&self, _: &Blog) -> bool {
+        self.is_admin()
     }
 }

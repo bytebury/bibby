@@ -37,7 +37,7 @@ impl FromRequestParts<SharedState> for BaseUser {
             // one that hasn't verified its email —
             // sign-in never mints a session for those, so a cookie for one
             // shouldn't exist anyway.
-            if user.locked || !user.verified {
+            if user.locked || !user.verified || !data.claims.is_current_for(&user) {
                 return Ok(BaseUser::None);
             }
             return Ok(BaseUser::User(Box::new(user)));

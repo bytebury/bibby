@@ -61,10 +61,12 @@ async fn countries(
 
 async fn toggle_lock(
     State(state): State<SharedState>,
-    Admin(_): Admin,
+    Admin(admin): Admin,
     Path(id): Path<PrimaryKey>,
     Form(form): Form<LockForm>,
 ) -> Result<impl IntoResponse> {
-    Country::set_locked(state.db.as_ref(), id, form.locked.as_bool()).await?;
+    let country = Country::find_by_id(state.db.as_ref(), id).await?;
+    admin.ensure_can_write(&country)?;
+    Country::set_locked(state.db.as_ref(), country.id, form.locked.as_bool()).await?;
     Ok(StatusCode::NO_CONTENT)
 }

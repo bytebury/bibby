@@ -9,6 +9,21 @@ pub const SESSION_DAYS: i64 = 365;
 pub struct UserClaims {
     pub sub: String,
     pub exp: usize,
+    /// The account the token was minted for. An address can move to another
+    /// account (an admin edit), so `sub` alone could match the wrong one.
+    /// Absent from tokens minted before it existed.
+    #[serde(default)]
+    pub uid: Option<PrimaryKey>,
+    /// The account's `session_version` when the token was minted.
+    #[serde(default)]
+    pub ver: i32,
+}
+
+impl UserClaims {
+    /// Whether this token still signs in as `user`.
+    pub fn is_current_for(&self, user: &User) -> bool {
+        self.ver == user.session_version && self.uid.is_none_or(|uid| uid == user.id)
+    }
 }
 
 impl From<User> for UserClaims {
@@ -19,6 +34,8 @@ impl From<User> for UserClaims {
             .timestamp() as usize;
 
         Self {
+            uid: Some(user.id),
+            ver: user.session_version,
             sub: user.email,
             exp,
         }

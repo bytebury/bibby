@@ -326,7 +326,7 @@
     }
 
     /* A word or name that explains itself in a tooltip: a dotted underline
-       says "hover me". Give it tabindex="0" so keyboards can reach it. */
+       says "hover me". Plain text, so it isn't focusable. */
     .tooltip-term {
         @apply cursor-help underline decoration-gray-400 decoration-dotted underline-offset-4;
     }

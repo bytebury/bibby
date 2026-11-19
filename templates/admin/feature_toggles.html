@@ -16,7 +16,7 @@
       <form hx-patch="/admin/feature-toggles/{{ toggle.id }}" hx-swap="none" hx-disabled-elt="find button" class="card-body space-y-4">
         <div class="flex items-center justify-between gap-4">
           <h2 class="card-title" id="toggle_{{ toggle.id }}">
-            <span class="tooltip-term" tabindex="0" data-tooltip="{{ feature.description() }}">{{ feature.name() }}</span>
+            <span class="tooltip-term" data-tooltip="{{ feature.description() }}">{{ feature.name() }}</span>
           </h2>
           <label class="inline-flex shrink-0 items-center gap-2">
             <input type="checkbox" class="toggle" name="enabled" {% if toggle.enabled %}checked{% endif %} />

@@ -3,7 +3,7 @@
     <h2 class="card-title">Edit announcement</h2>
     <p class="card-subtitle">Created <time data-utc="{{ announcement.created_at }}"></time></p>
   </div>
-  <button type="button" class="btn-ghost" onclick="closeModal()">&times;</button>
+  <button type="button" class="btn-ghost" onclick="closeModal()" aria-label="Close">&times;</button>
 </div>
 
 <form hx-patch="/announcements/{{ announcement.id }}" hx-swap="none" class="card-body space-y-4">

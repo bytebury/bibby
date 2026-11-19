@@ -45,15 +45,16 @@
     {% endif %}
   </head>
   <body class="flex min-h-screen flex-col bg-gray-50 text-gray-900 antialiased">
+    <a href="#main" class="skip-link">Skip to content</a>
     <div hx-get="/announcements/banner" hx-trigger="load" hx-swap="outerHTML"></div>
     {% include "_partials/navbar.html" %}
-    <main class="container-page flex-1 py-8">
+    <main id="main" tabindex="-1" class="container-page flex-1 py-8 focus:outline-none">
       {% block content %}{% endblock %}
     </main>
     {% include "_partials/footer.html" %}
     <div id="modal_wrapper" class="modal wrapper" style="display: none">
       <div class="underlay" onclick="closeModal()"></div>
-      <div id="modal" class="content"></div>
+      <div id="modal" class="content" role="dialog" aria-modal="true" tabindex="-1"></div>
     </div>
     <div id="tooltip" class="tooltip"></div>
     <div id="toast" class="toast" role="alert" aria-live="assertive"></div>

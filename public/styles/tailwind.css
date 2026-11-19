@@ -10,6 +10,13 @@
         overflow-wrap: anywhere;
     }
 
+    /* Button labels stay on one line; the button grows instead. Text links
+       (`btn-link`) wrap like the text around them. */
+    :where(.btn, .btn-primary, .btn-secondary, .btn-ghost, .btn-danger) {
+        white-space: nowrap;
+        overflow-wrap: normal;
+    }
+
     /* Every focusable element shows where keyboard focus is. Mouse clicks
        don't trigger :focus-visible, so pointer users never see the ring. */
     :where(a, button, summary, select, [tabindex]):focus-visible {
@@ -318,11 +325,17 @@
         to { transform: scale(0.95); }
     }
 
+    /* A word or name that explains itself in a tooltip: a dotted underline
+       says "hover me". Plain text, so it isn't focusable. */
+    .tooltip-term {
+        @apply cursor-help underline decoration-gray-400 decoration-dotted underline-offset-4;
+    }
+
     /* Tooltip — required by public/scripts/tooltip.js, which references
        the implicit global `tooltip` (an element with id="tooltip"). The
        base layout always renders <div id="tooltip" class="tooltip"></div>. */
     .tooltip {
-        @apply pointer-events-none absolute z-50 max-w-xs rounded bg-black/85 px-2.5 py-1.5 text-center text-sm text-white opacity-0;
+        @apply pointer-events-none absolute z-50 max-w-[min(20rem,calc(100vw-1rem))] rounded bg-black/85 px-2.5 py-1.5 text-center text-sm text-white opacity-0;
     }
     .tooltip.show {
         @apply opacity-100;
@@ -413,8 +426,10 @@
     }
 
     /* Page header strip */
+    /* The actions drop below the title when they don't fit beside it,
+       rather than squeezing it. */
     .page-header {
-        @apply mb-6 flex items-end justify-between;
+        @apply mb-6 flex flex-wrap items-end justify-between gap-x-4 gap-y-3;
     }
     .page-title {
         @apply text-2xl font-semibold tracking-tight text-gray-900;

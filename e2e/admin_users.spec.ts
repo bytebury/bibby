@@ -176,7 +176,7 @@ test("site analytics summarises the user base", async ({
   ).toBeVisible();
 });
 
-test("admin pages never scroll sideways on a phone", async ({
+test("pages fit a phone: no sideways scroll, no button on two lines", async ({
   page,
   request,
 }, testInfo) => {
@@ -187,21 +187,44 @@ test("admin pages never scroll sideways on a phone", async ({
   await signInAs(request, page.context(), admin, "admin");
   await page.setViewportSize({ width: 360, height: 800 });
 
-  for (const path of ["/users", `/users?q=${encodeURIComponent(long)}`]) {
+  for (const path of [
+    "/users",
+    `/users?q=${encodeURIComponent(long)}`,
+    "/settings",
+    "/announcements",
+    "/admin/analytics",
+    "/admin/feature-toggles",
+  ]) {
     await page.goto(path);
-    await expectNoSidewaysScroll(page);
+    await expectFitsThePhone(page);
   }
   await page.goto(`/users?q=${encodeURIComponent(long)}`);
   await page.locator('#list a[href^="/users/"]:visible').first().click();
   await expect(page.locator(".user-email")).toHaveText(long);
-  await expectNoSidewaysScroll(page);
+  await expectFitsThePhone(page);
 });
 
-async function expectNoSidewaysScroll(page: Page) {
-  const overflow = await page.evaluate(
-    () =>
-      document.documentElement.scrollWidth -
-      document.documentElement.clientWidth,
-  );
-  expect(overflow).toBeLessThanOrEqual(0);
+async function expectFitsThePhone(page: Page) {
+  const { overflow, wrapped } = await page.evaluate(() => {
+    // A label on two lines has text boxes at two different heights.
+    const lines = (element: Element) => {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      const tops = [...range.getClientRects()]
+        .filter((rect) => rect.width > 0)
+        .map((rect) => Math.round(rect.top));
+      return new Set(tops).size;
+    };
+    const buttons = document.querySelectorAll(
+      ".btn, .btn-primary, .btn-secondary, .btn-ghost, .btn-danger",
+    );
+    return {
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      wrapped: [...buttons]
+        .filter((button) => (button as HTMLElement).offsetParent && lines(button) > 1)
+        .map((button) => button.textContent?.trim()),
+    };
+  });
+  expect(overflow, "sideways scroll").toBeLessThanOrEqual(0);
+  expect(wrapped, "buttons on two lines").toEqual([]);
 }

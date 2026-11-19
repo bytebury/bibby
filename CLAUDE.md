@@ -531,13 +531,21 @@ axe and tests keyboard behaviour; add a page to its scan when you add one.
 - One `<h1>` per page and no skipped heading levels. Modal partials start
   with an `<h2>`, which names the dialog.
 - Decorative images get `alt=""` (a flag next to its country name).
-- Anything shown on hover (tooltips, menus) works from the keyboard too, and
-  Escape dismisses it.
+- Menus and tooltips on controls work from the keyboard too, and Escape
+  dismisses them. A word that explains itself in a tooltip gets
+  `class="tooltip-term"` (dotted underline); it's text, so don't make it
+  focusable.
+- Button labels never wrap: a base rule in `tailwind.css` keeps `.btn`,
+  `btn-primary`, `btn-secondary`, `btn-ghost` and `btn-danger` on one line,
+  and the phone-width e2e test checks it. Text links (`btn-link`) wrap.
 - Landmarks are labelled when there's more than one of a kind
   (`<nav aria-label="Main">`).
 
 ## Conventions for contributions
 
+- **UI changes come with screenshots** of the result, at phone (360px) and
+  desktop width. Look at them yourself first (they catch what the tests
+  don't, such as a title breaking mid-word), then share them.
 - New entity → `domain/<name>.rs`; new use-case →
   `use_cases/<aggregate>/<verb>_use_case.rs`; new HTTP surface →
   `infra/api/<resource>.rs` + `templates/<resource>/`.

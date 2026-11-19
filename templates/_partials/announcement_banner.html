@@ -1,13 +1,11 @@
-{% match announcement %}
-  {% when Some with (a) %}
-    <div class="banner banner-{{ a.severity }}">
-      <div class="container-page py-2 text-sm text-center">
-        <div class="banner-body">
-          <strong class="mr-2">{{ a.title }}</strong>
-          {{ a.message|safe }}
-        </div>
+{#- The latest active announcement, from the in-memory site snapshot. -#}
+{% if let Some(a) = shared.site.banner %}
+  <div class="banner banner-{{ a.severity }}" role="region" aria-label="Announcement">
+    <div class="container-page py-2 text-sm text-center">
+      <div class="banner-body">
+        <strong class="mr-2">{{ a.title }}</strong>
+        {{ a.message|safe }}
       </div>
     </div>
-  {% when None %}
-    <div hidden></div>
-{% endmatch %}
+  </div>
+{% endif %}

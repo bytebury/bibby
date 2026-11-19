@@ -1,8 +1,11 @@
 use crate::SharedState;
+use crate::domain::feature_toggle::Feature;
 use crate::domain::user::User;
 use crate::infra::seo::PageMeta;
+use crate::infra::site::SiteSnapshot;
 use axum::Router;
 use chrono::Datelike;
+use std::sync::Arc;
 
 /// Redirects the user appropriately based on the request origin.
 ///
@@ -73,6 +76,7 @@ pub mod core;
 pub mod countries;
 pub mod cron;
 pub mod extract;
+pub mod feature_toggles;
 pub mod payments;
 pub mod settings;
 pub mod users;
@@ -81,6 +85,7 @@ pub fn routes() -> Router<SharedState> {
     let router = Router::new()
         .merge(core::routes())
         .merge(admin::routes())
+        .merge(feature_toggles::routes())
         .merge(cron::routes())
         .merge(auth::routes())
         .merge(users::routes())
@@ -104,6 +109,8 @@ pub struct SharedContext {
     pub user: Option<User>,
     pub canonical_path: Option<String>,
     pub page_meta: PageMeta,
+    /// The banner and feature toggles as of this request.
+    pub site: Arc<SiteSnapshot>,
     /// Current UTC year — stamped on each request and used by the footer
     /// copyright line so it rolls over without a code change.
     pub current_year: i32,
@@ -116,6 +123,7 @@ impl SharedContext {
             user: None,
             canonical_path: None,
             page_meta: PageMeta::new(),
+            site: state.site.get(),
             current_year: chrono::Utc::now().year(),
         }
     }
@@ -127,6 +135,11 @@ impl SharedContext {
     /// Whether Stripe is configured, so billing links can be hidden.
     pub fn payments_enabled(&self) -> bool {
         self.state.payments_use_cases.is_some()
+    }
+
+    /// The Google tag to load on every page, when that toggle is on.
+    pub fn google_analytics_tag(&self) -> Option<&str> {
+        self.site.toggles.value(Feature::GoogleAnalytics)
     }
 
     /// Whether Google sign-in is configured.
@@ -258,5 +271,20 @@ fn absolute_url(site_url: &str, value: &str) -> String {
         format!("{}{}", site_url, value)
     } else {
         format!("{}/{}", site_url, value)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::script_json;
+
+    #[test]
+    fn json_in_a_script_tag_cannot_close_it() {
+        let name = "</script><script>alert(1)</script> & <!--";
+        let json = script_json(&serde_json::json!({ "name": name }));
+        assert!(!json.contains('<') && !json.contains('>') && !json.contains('&'));
+        // The escapes are JSON, so the value reads back unchanged.
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed["name"], name);
     }
 }

@@ -12,3 +12,4 @@ pub mod payments;
 pub mod rate_limit;
 pub mod scheduler;
 pub mod seo;
+pub mod site;

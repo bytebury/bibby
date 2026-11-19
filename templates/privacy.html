@@ -132,9 +132,20 @@
             forgery.
           </li>
         </ul>
-        <p>
-          We do not use third-party advertising or cross-site tracking cookies.
-        </p>
+        {#- Follows the Google Analytics feature toggle, so the policy matches what the site loads. -#}
+        {% if shared.google_analytics_tag().is_some() %}
+          <p>
+            We also use Google Analytics to understand how the Service is used.
+            It sets its own cookies (<code>_ga</code> and <code>_ga_*</code>)
+            and sends usage data to Google, which processes it under
+            <a href="https://policies.google.com/privacy">Google's privacy policy</a>.
+          </p>
+        {% else %}
+          <p>
+            We do not use third-party analytics, advertising or cross-site
+            tracking cookies.
+          </p>
+        {% endif %}
 
         <h2>Data retention</h2>
         <p>

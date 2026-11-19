@@ -34,6 +34,7 @@
     <script type="application/ld+json">{{ shared.structured_data_json()|safe }}</script>
     <link rel="stylesheet" href="{{ shared.asset("/assets/styles.css") }}" />
     {% include "_partials/scripts.html" %}
+    {% include "_partials/google_analytics.html" %}
     {% if shared.state.web_app.service_worker_enabled %}
       <script>
         if ("serviceWorker" in navigator) {
@@ -46,7 +47,8 @@
   </head>
   <body class="flex min-h-screen flex-col bg-gray-50 text-gray-900 antialiased">
     <a href="#main" class="skip-link">Skip to content</a>
-    <div hx-get="/announcements/banner" hx-trigger="load" hx-swap="outerHTML"></div>
+    {#- Rendered with the page, so it doesn't push the content down after it paints. -#}
+    {% include "_partials/announcement_banner.html" %}
     {% include "_partials/navbar.html" %}
     <main id="main" tabindex="-1" class="container-page flex-1 py-8 focus:outline-none">
       {% block content %}{% endblock %}

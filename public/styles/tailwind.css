@@ -508,3 +508,12 @@
         }
     }
 }
+
+/* Same-site navigations fade into the next page instead of flashing white,
+   in browsers with cross-document view transitions. Skipped when the OS asks
+   for reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+    @view-transition {
+        navigation: auto;
+    }
+}

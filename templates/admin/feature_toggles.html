@@ -1,0 +1,42 @@
+{% extends "_layouts/base.html" %}
+
+{% block title %}{{ shared.title_tag() }}{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+  <header class="page-header mb-0">
+    <div>
+      <h1 class="page-title">Feature Toggles</h1>
+      <p class="page-subtitle">Switch features on for everyone. Changes apply right away here and within 30 seconds on other servers.</p>
+    </div>
+  </header>
+
+  {% for (toggle, feature) in toggles %}
+    <section class="card feature-toggle" aria-labelledby="toggle_{{ toggle.id }}">
+      <form hx-patch="/admin/feature-toggles/{{ toggle.id }}" hx-swap="none" hx-disabled-elt="find button" class="card-body space-y-4">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h2 class="card-title" id="toggle_{{ toggle.id }}">{{ feature.name() }}</h2>
+            <p class="text-sm text-gray-500">{{ feature.description() }}</p>
+          </div>
+          <label class="inline-flex shrink-0 items-center gap-2">
+            <input type="checkbox" class="toggle" name="enabled" {% if toggle.enabled %}checked{% endif %} />
+            <span class="text-sm">On</span>
+          </label>
+        </div>
+        {% if let Some(label) = feature.value_label() %}
+          <label class="block">
+            <span class="label">{{ label }}</span>
+            <input type="text" name="value" class="input mt-1" maxlength="100" autocomplete="off"
+                   value="{% if let Some(value) = toggle.value %}{{ value }}{% endif %}" />
+          </label>
+        {% endif %}
+        <div class="flex items-center justify-between gap-4">
+          <span class="text-xs text-gray-500">Updated <time data-utc="{{ toggle.updated_at }}"></time></span>
+          <button type="submit" class="btn-primary">Save</button>
+        </div>
+      </form>
+    </section>
+  {% endfor %}
+</div>
+{% endblock %}

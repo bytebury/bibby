@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE feature_toggles SET enabled = $1, value = $2 WHERE id = $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Bool",
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5f1391d095f6f6e183f7ca2d02c80bc29ecd25d72adda3b03dc8aebd46fc0580"
+}

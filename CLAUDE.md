@@ -541,6 +541,10 @@ axe and tests keyboard behaviour; add a page to its scan when you add one.
 
 ## Conventions for contributions
 
+- **UI changes come with screenshots.** Take before and after shots at phone
+  (360px) and desktop width, look at them yourself (they catch what the
+  tests don't, such as a title breaking mid-word), and share them with the
+  change.
 - New entity → `domain/<name>.rs`; new use-case →
   `use_cases/<aggregate>/<verb>_use_case.rs`; new HTTP surface →
   `infra/api/<resource>.rs` + `templates/<resource>/`.

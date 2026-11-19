@@ -14,11 +14,10 @@
   {% for (toggle, feature) in toggles %}
     <section class="card feature-toggle" aria-labelledby="toggle_{{ toggle.id }}">
       <form hx-patch="/admin/feature-toggles/{{ toggle.id }}" hx-swap="none" hx-disabled-elt="find button" class="card-body space-y-4">
-        <div class="flex items-start justify-between gap-4">
-          <div>
-            <h2 class="card-title" id="toggle_{{ toggle.id }}">{{ feature.name() }}</h2>
-            <p class="text-sm text-gray-500">{{ feature.description() }}</p>
-          </div>
+        <div class="flex items-center justify-between gap-4">
+          <h2 class="card-title" id="toggle_{{ toggle.id }}">
+            <span class="tooltip-term" tabindex="0" data-tooltip="{{ feature.description() }}">{{ feature.name() }}</span>
+          </h2>
           <label class="inline-flex shrink-0 items-center gap-2">
             <input type="checkbox" class="toggle" name="enabled" {% if toggle.enabled %}checked{% endif %} />
             <span class="text-sm">On</span>

@@ -59,22 +59,12 @@ function showTooltip(target) {
     tooltip.classList.remove("measure");
 
     const rect = activeTooltip.getBoundingClientRect();
-    const scrollX = window.scrollX;
-    const windowWidth = window.innerWidth;
-
+    const margin = 8;
     const finalTop = rect.bottom + window.scrollY + 4;
-    const preferredLeft = rect.left + scrollX + rect.width / 2 -
-        tooltipRect.width / 2;
-
-    let finalLeft;
-
-    if (preferredLeft < scrollX) {
-        finalLeft = rect.left + scrollX;
-    } else if (preferredLeft + tooltipRect.width > scrollX + windowWidth) {
-        finalLeft = rect.right + scrollX - tooltipRect.width;
-    } else {
-        finalLeft = preferredLeft;
-    }
+    // Centred under the element, but kept `margin` px inside the window.
+    const centred = rect.left + rect.width / 2 - tooltipRect.width / 2;
+    const widest = window.innerWidth - tooltipRect.width - margin;
+    const finalLeft = window.scrollX + Math.max(margin, Math.min(centred, widest));
 
     tooltip.style.top = `${finalTop}px`;
     tooltip.style.left = `${finalLeft}px`;

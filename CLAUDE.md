@@ -99,6 +99,9 @@ that `.sqlx/` is current.
 **Before every push, run all of it yourself, including both test suites:**
 `cargo fmt --check`, `cargo clippy --all-targets --locked -- -D warnings`,
 `cargo test`, `cargo sqlx prepare --check`, and `./e2e.sh`. Never push red.
+CI's database starts empty, so when a change touches what tests read back
+(activity, counts, analytics), run `./e2e.sh` against a freshly created
+database too: leftover rows from earlier runs can hide a regression.
 
 - Do not hand-edit `.sqlx/`. Run `cargo sqlx prepare` after changing any
   `query!` / `query_as!` / `query_scalar!` and commit the churn with the code.

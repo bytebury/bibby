@@ -1,3 +1,4 @@
+pub mod admin_emails;
 pub mod email;
 pub mod markdown;
 pub mod one_time_code;

@@ -12,7 +12,9 @@ use crate::prelude::*;
 ///
 /// Every outcome looks identical to the caller: unknown addresses, locked
 /// accounts, and throttled requests all return `Ok(())` without sending
-/// anything, so the form can't be used to discover who has an account.
+/// anything, so the form can't be used to discover who has an account. The
+/// email goes out in the background so a real address doesn't take longer
+/// to answer than an unknown one.
 pub struct SendSignInCodeUseCase {
     db: SharedDatabase,
 }
@@ -39,13 +41,19 @@ impl SendSignInCodeUseCase {
         let passcode = OneTimePasscode::create(&mut *tx, email, &code).await?;
         tx.commit().await?;
 
-        if let Err(error) =
-            email::send_sign_in_code(email, &user.first_name, &code, !user.verified).await
-        {
-            // They never received it, so it shouldn't hold up a retry.
-            error!(%error, email = %email, "could not send sign-in code");
-            OneTimePasscode::delete(self.db.as_ref(), passcode.id).await?;
-        }
+        let db = self.db.clone();
+        let email = email.clone();
+        tokio::spawn(async move {
+            if let Err(error) =
+                email::send_sign_in_code(&email, &user.first_name, &code, !user.verified).await
+            {
+                // They never received it, so it shouldn't hold up a retry.
+                error!(%error, email = %email, "could not send sign-in code");
+                if let Err(error) = OneTimePasscode::delete(db.as_ref(), passcode.id).await {
+                    error!(%error, "could not delete an unsent sign-in code");
+                }
+            }
+        });
 
         Ok(())
     }

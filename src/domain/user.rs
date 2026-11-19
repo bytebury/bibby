@@ -1,4 +1,5 @@
 use crate::domain::Access;
+use crate::domain::value_objects::admin_emails::AdminEmails;
 use crate::domain::value_objects::email::Email;
 use crate::infra::pagination::Paginate;
 use crate::prelude::*;
@@ -36,6 +37,9 @@ pub struct User {
     pub last_seen_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    /// Sessions minted at an older version are signed out; see
+    /// `end_all_sessions`.
+    pub session_version: i32,
 }
 
 /// The `users.email` column is `UNIQUE`, so pointing an account at an address
@@ -59,7 +63,7 @@ impl User {
         let user_id: PrimaryKey = sqlx::query_scalar(
             r#"
             INSERT INTO users (full_name, first_name, last_name, email, image_url, role, verified, locked, last_known_ip, country_id, region_id, auth_provider, city_id)
-            VALUES ($1, $2, $3, $4, $5, COALESCE((SELECT 'admin' WHERE NOT EXISTS (SELECT 1 FROM users)), $6), $7, $8, $9, $10, $11, $12, $13)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
             RETURNING id
             "#,
         )
@@ -112,7 +116,8 @@ impl User {
                 city_name,
                 last_seen_at as "last_seen_at!",
                 created_at as "created_at!",
-                updated_at as "updated_at!"
+                updated_at as "updated_at!",
+                session_version as "session_version!"
             FROM user_details WHERE email = $1
             "#,
             email,
@@ -152,7 +157,8 @@ impl User {
                 city_name,
                 last_seen_at as "last_seen_at!",
                 created_at as "created_at!",
-                updated_at as "updated_at!"
+                updated_at as "updated_at!",
+                session_version as "session_version!"
             FROM user_details WHERE id = $1
             "#,
             id,
@@ -164,10 +170,13 @@ impl User {
 
     /// Per-request audit + lookup in a single statement. This runs on every
     /// authenticated request (see `BaseUser::from_request_parts`), so the CTE
-    /// folds the lookup, the audit UPDATE, and the re-read into one round
-    /// trip. Only the columns the audit actually changes (`last_known_ip`,
+    /// folds the lookup, the audit UPDATE, and the read into one round trip.
+    /// Only the columns the audit actually changes (`last_known_ip`,
     /// `last_seen_at`) are written, which avoids racily writing back stale
-    /// copies of `role`/`locked`/etc.
+    /// copies of `role`/`locked`/etc. The row is only rewritten when the IP
+    /// changed or a minute has passed, so polling pages don't rewrite it (and
+    /// bump `updated_at`) on every request. Like any data-modifying CTE, the
+    /// read sees the row as it was before this statement's update.
     ///
     /// The same CTE also records a (user_id, UTC day) row in
     /// `user_daily_activity` — at most one per user per day, thanks to the
@@ -179,18 +188,19 @@ impl User {
     {
         let user = sqlx::query_as(
             r#"
-            WITH audited AS (
+            WITH _audited AS (
                 UPDATE users
                    SET last_known_ip = $2, last_seen_at = NOW()
                  WHERE email = $1
-             RETURNING id
+                   AND (last_known_ip IS DISTINCT FROM $2
+                        OR last_seen_at < NOW() - INTERVAL '1 minute')
             ),
             _activity AS (
                 INSERT INTO user_daily_activity (user_id, day)
-                SELECT id, (NOW() AT TIME ZONE 'UTC')::DATE FROM audited
+                SELECT id, (NOW() AT TIME ZONE 'UTC')::DATE FROM users WHERE email = $1
                 ON CONFLICT DO NOTHING
             )
-            SELECT ud.* FROM user_details ud JOIN audited ON audited.id = ud.id
+            SELECT * FROM user_details WHERE email = $1
             "#,
         )
         .bind(email)
@@ -224,6 +234,12 @@ impl User {
                    locked = $2,
                    plan_expiry_date = $3,
                    email = $4,
+                   -- A new lock or a new address ends the account's sessions.
+                   -- Like the CASE below, this reads the pre-UPDATE values.
+                   session_version = session_version + CASE
+                       WHEN ($2 AND NOT locked) OR email IS DISTINCT FROM $4 THEN 1
+                       ELSE 0
+                   END,
                    -- Moving the deadline re-arms the reminder ladder; the
                    -- CASE reads the pre-UPDATE value, so an unchanged date
                    -- keeps whatever reminders have already gone out.
@@ -265,7 +281,8 @@ impl User {
                    country_id = $2,
                    region_id = $3,
                    city_id = $4,
-                   locked = $5
+                   locked = $5,
+                   session_version = session_version + CASE WHEN $5 AND NOT locked THEN 1 ELSE 0 END
              WHERE id = $6
             "#,
             request.last_known_ip,
@@ -373,7 +390,8 @@ impl User {
                 city_name,
                 last_seen_at as "last_seen_at!",
                 created_at as "created_at!",
-                updated_at as "updated_at!"
+                updated_at as "updated_at!",
+                session_version as "session_version!"
             FROM user_details WHERE stripe_customer_id = $1
             "#,
             customer_id.as_str(),
@@ -393,6 +411,34 @@ impl User {
             .execute(exec)
             .await?;
         Ok(())
+    }
+
+    /// Signs the account out on every device by retiring the version its
+    /// session tokens carry.
+    pub async fn end_all_sessions<'e, E>(exec: E, id: PrimaryKey) -> Result<()>
+    where
+        E: Executor<'e, Database = sqlx::Postgres>,
+    {
+        sqlx::query!(
+            "UPDATE users SET session_version = session_version + 1 WHERE id = $1",
+            id
+        )
+        .execute(exec)
+        .await?;
+        Ok(())
+    }
+
+    /// Makes the account an admin when its address is in `ADMIN_EMAILS`. Only
+    /// call it once the caller has proven they own the address.
+    pub async fn grant_listed_admin<'e, E>(mut self, exec: E, admins: &AdminEmails) -> Result<Self>
+    where
+        E: Executor<'e, Database = sqlx::Postgres>,
+    {
+        if !self.is_admin() && admins.contains(&self.email) {
+            Self::set_role(exec, self.id, &Role::Admin).await?;
+            self.role = Role::Admin;
+        }
+        Ok(self)
     }
 
     /// Marks the account as owning its address — called once someone has

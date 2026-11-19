@@ -53,13 +53,14 @@ test("signing up with email verifies the address, then signs in with a code", as
   // Until the code is entered the account exists but has no session.
   expect(await hasSession(page)).toBe(false);
 
-  // A wrong guess spends one of the five attempts.
+  // A wrong guess spends one of the five attempts, and says no more than an
+  // unknown address would.
   const code = await issueSignInCode(request, email);
   const wrong = code === "000000" ? "111111" : "000000";
   await page.getByLabel("Verification code").fill(wrong);
   await page.getByRole("button", { name: "Verify Email" }).click();
   await expect(page.locator("#sign_in_form [role=alert]")).toContainText(
-    "You have 4 tries left.",
+    "That code is wrong or has expired.",
   );
 
   await page.getByLabel("Verification code").fill(code);

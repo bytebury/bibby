@@ -12,8 +12,15 @@ impl Database {
     pub async fn init() -> DbPool {
         let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
+        // Per replica, so several replicas need a Postgres that allows
+        // replicas × this many connections.
+        let max_connections = std::env::var("DATABASE_MAX_CONNECTIONS")
+            .ok()
+            .and_then(|n| n.trim().parse().ok())
+            .unwrap_or(25);
+
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .max_connections(25)
+            .max_connections(max_connections)
             .idle_timeout(Duration::from_secs(5 * 60))
             .max_lifetime(Duration::from_secs(30 * 60))
             .connect(&database_url)

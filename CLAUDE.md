@@ -23,12 +23,32 @@ JS framework.
     code verifies it.
   - `/sign-in` emails a 6-digit code (`one_time_passcodes` table,
     HMAC-hashed, 10-minute TTL, 5 attempts, throttled per address). It never
-    reveals whether an email has an account.
+    reveals whether an email has an account: unknown addresses answer the
+    same, every failed code gets the same message, and the email is sent in
+    the background so timing matches too.
   - A verified Google sign-in converts an email account to `'google'`, taking
-    Google's name and photo.
+    Google's name and photo. An identity Google hasn't verified never gets a
+    session, even for an existing verified account.
+  - **Admins come from `ADMIN_EMAILS`** (required, comma-separated, trimmed;
+    `domain/value_objects/admin_emails.rs`). A listed address becomes an
+    admin once it proves ownership (verified Google sign-in or an emailed
+    code). Leaving the list doesn't demote anyone.
   - **Unverified or locked users never get a session:** `BaseUser` treats them
-    as signed out.
-- Payments: Stripe via the `shima` crate (see the sqlx caveat below)
+    as signed out. So does a token whose `uid` or `ver` no longer matches the
+    account: `User::end_all_sessions` bumps `users.session_version`, which
+    happens on a lock, an admin email change, and "Sign out everywhere" in
+    settings.
+  - The sign-up and sign-in POSTs are rate limited per IP
+    (`infra/rate_limit.rs`, in memory, off while the test shim is on), and
+    `infra/csrf.rs` refuses state-changing requests from other sites.
+  - Startup refuses a missing or short (< 32 chars) `JWT_SECRET`.
+- Payments: Stripe via the `shima` crate, **optional**. Without
+  `STRIPE_SECRET_KEY`, `AppState::payments_use_cases` is `None`, the billing
+  routes answer 404 (`state.payments()?`), and `shared.payments_enabled`
+  hides the links. The webhook follows subscription status (see
+  `handle_stripe_event.rs`) and never changes an admin's role.
+- Google sign-in is optional the same way (`GoogleOAuth::is_configured`,
+  `shared.google_enabled`).
 - Email: the `mailman` microservice (`infra/email.rs`)
 - Geolocation: the `geodude` microservice resolves IPs to country / region /
   city on sign-in
@@ -43,10 +63,18 @@ JS framework.
 Prerequisites: Rust, Node, `sqlx-cli`, and Postgres reachable at
 `DATABASE_URL`. The generated `.env` lists every variable with comments:
 `PORT`, `APP_NAME`, `APP_ORIGIN`, `PUBLIC_SITE_URL`, `SEO_*`, `WEB_APP_*`,
-`DATABASE_URL`, `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
+`DATABASE_URL`, `DATABASE_MAX_CONNECTIONS`, `JWT_SECRET` (generated),
+`ADMIN_EMAILS` (defaults to your `git config user.email`),
+`TRUSTED_PROXY_HOPS`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
 `GOOGLE_CALLBACK_URL`, `OAUTH_ALLOWED_TARGETS`, `GEODUDE_URL`, `MAILMAN_URL`,
 `MAILMAN_API_TOKEN`, `CRON_SECRET`, `STRIPE_SECRET_KEY`,
-`STRIPE_WEBHOOK_SECRET`.
+`STRIPE_WEBHOOK_SECRET`, `STRIPE_MONTHLY_PRO`, `STRIPE_ANNUAL_PRO`.
+
+Only `DATABASE_URL`, `JWT_SECRET` and `ADMIN_EMAILS` are required; the app
+runs without Stripe, Google, mailman and geodude. Not in `.env`:
+`ENABLE_TEST_AUTH` / `TEST_AUTH_TOKEN` (the e2e shim, below), `GIT_HASH`
+(read at compile time and shown on `/admin/monitoring`; the Dockerfile takes
+it as a build arg) and Railway's `RAILWAY_GIT_COMMIT_SHA` (its fallback).
 
 ## Before committing
 
@@ -80,8 +108,8 @@ src/
     mod.rs                # Access<T> and Validate traits
     user.rs, country.rs, region.rs, city.rs, announcement.rs, blog.rs,
     one_time_passcode.rs, sign_in.rs, user_note.rs, user_flag.rs,
-    user_activity.rs, admin_analytics.rs, avatar.rs
-    value_objects/        # Email, OneTimeCode, Markdown, Severity, Toggle
+    user_activity.rs, admin_analytics.rs, avatar.rs, system_status.rs
+    value_objects/        # Email, AdminEmails, OneTimeCode, Markdown, Severity, Toggle
   use_cases/              # application logic, grouped by aggregate
     user/, payments/      # each exposes a `<Name>UseCases` bundle mounted on AppState
   infra/
@@ -89,7 +117,11 @@ src/
     pagination.rs         # Paginate trait, Paginated<T>, paginate!/paginate_with!
     geolocation.rs        # geodude lookup
     email.rs              # mailman: sign-in codes, plan-expiry emails
-    payments.rs           # Stripe client wrapper
+    payments.rs           # Stripe client wrapper (optional)
+    markdown.rs           # Markdown → sanitized HTML (pulldown-cmark + ammonia)
+    monitoring.rs         # in-memory logs and request stats for /admin/monitoring
+    rate_limit.rs         # per-IP limit on the sign-up / sign-in POSTs
+    csrf.rs               # refuses cross-site state-changing requests
     scheduler.rs          # the daily tick (plan expirations, sign-in pruning)
     seo.rs                # SeoConfig / WebAppConfig / PageMeta
     assets.rs             # content-hash cache busting + Cache-Control for /assets
@@ -254,6 +286,9 @@ fragment and an inline message instead — see `infra/api/auth.rs`.
   from `api/mod.rs`, never `Redirect::to`. Every handler that may redirect
   takes a `HeaderMap`.
 - Timestamps render as `<time data-utc="{{ x.created_at }}"></time>`.
+- JSON embedded in a `<script>` goes through `api::script_json` before
+  `|safe`. Plain `serde_json` output doesn't escape `</script>`, so a user's
+  name in it would run as script.
 - **Link static files through `{{ shared.asset("/assets/…") }}`**, never a
   bare `/assets/…` path. It appends `?v=<content hash>` (see
   `infra/assets.rs`), and release builds cache only a current-hash URL
@@ -267,7 +302,7 @@ fragment and an inline message instead — see `infra/api/auth.rs`.
 | `CurrentUser(User)` | Signed in — else 401. |
 | `MaybeCurrentUser(Option<User>)` | Optional user. |
 | `Admin(User)` | Signed in + `role == Admin` — else 403. |
-| `RealIp(String)` | Client IP (X-Forwarded-For aware). |
+| `RealIp(String)` | Client IP: the `X-Forwarded-For` entry `TRUSTED_PROXY_HOPS` (default 1) from the right, else the socket. |
 | `ValidatedForm<T>` | Form body that has passed `T::validate`. |
 
 `BaseUser` is the root of the user extractors. It verifies the JWT and runs
@@ -285,6 +320,8 @@ paginate_with!(User, &db, "WHERE role = $1 ORDER BY last_seen_at DESC", vec!["ad
 ```
 
 Bindings are positional and passed as `&str`; put `ORDER BY` inside the clause.
+`page` / `page_size` from the request are clamped (`PagingInfo::clamped`, at
+most `MAX_PAGE_SIZE` rows).
 Only interpolate fixed SQL fragments into the clause, never request data (see
 `RoleFilter::sql`).
 
@@ -299,10 +336,10 @@ Only interpolate fixed SQL fragments into the clause, never request data (see
 - Prefer `query!` / `query_as!` for static SQL. Use `query_as::<_, T>` with
   `.bind()` only for dynamic SQL.
 
-### shima / sqlx version mismatch
-`shima` derives `sqlx::Type` against sqlx 0.8 only. Store shima-typed columns
-as `Option<String>` (see `User::stripe_customer_id`) and convert with
-`CustomerId::try_from(…)` at the use-case boundary.
+### shima types in the database
+shima 0.8 implements sqlx 0.9's traits, so shima ids can be columns directly
+(`User::stripe_customer_id: Option<CustomerId>`, selected as
+`stripe_customer_id as "stripe_customer_id: CustomerId"`).
 
 ## Admin monitoring
 
@@ -364,6 +401,9 @@ every route requires `X-Test-Auth-Token` to match `TEST_AUTH_TOKEN`:
   plaintext. Wrapped by `issueSignInCode`.
 
 ### Writing tests
+- `e2e.sh` and the workflow list `playwright+listed-admin@example.com` in
+  `ADMIN_EMAILS`, set dummy Google values so the Google button renders, and
+  leave Stripe unset so the suite also covers running without billing.
 - The database is shared across the suite and never reset. Derive emails from
   `testInfo.testId` plus a per-run suffix so retries start clean (see
   `e2e/admin_users.spec.ts`).

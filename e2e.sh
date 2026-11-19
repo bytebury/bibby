@@ -40,7 +40,8 @@ command -v npx >/dev/null || { echo "❌ npx not on PATH (install Node)"; exit 1
 
 # Build the app (debug profile — same as CI)
 echo "🦀 building (debug)..."
-cargo build --bin bibby --quiet
+# GIT_HASH is read at compile time (`option_env!`), so it goes on the build.
+GIT_HASH="$(git rev-parse HEAD 2>/dev/null || echo unknown)" cargo build --bin bibby --quiet
 
 # Build the Tailwind stylesheet so the e2e binary serves the same CSS users do.
 echo "🎨 building tailwind..."
@@ -61,10 +62,13 @@ npx playwright install chromium >/dev/null
 echo "🚀 starting app on http://127.0.0.1:${PORT}"
 PORT="${PORT}" \
 APP_NAME="Bibby" \
-JWT_SECRET="${JWT_SECRET:-e2e-jwt-secret}" \
+JWT_SECRET="${JWT_SECRET:-e2e-jwt-secret-at-least-32-characters}" \
+ADMIN_EMAILS="playwright+listed-admin@example.com" \
+GOOGLE_CLIENT_ID="e2e-client-id" \
+GOOGLE_CLIENT_SECRET="e2e-client-secret" \
+GOOGLE_CALLBACK_URL="http://127.0.0.1:${PORT}/auth/google/callback" \
 ENABLE_TEST_AUTH=true \
 TEST_AUTH_TOKEN="${TEST_AUTH_TOKEN}" \
-GIT_HASH="$(git rev-parse HEAD 2>/dev/null || echo unknown)" \
 ./target/debug/bibby >"${APP_LOG}" 2>&1 &
 APP_PID=$!
 

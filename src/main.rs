@@ -1,7 +1,7 @@
 use axum::Router;
 use axum::response::IntoResponse;
 use bibby::infra::db::Database;
-use bibby::infra::{api, assets, monitoring};
+use bibby::infra::{api, assets, csrf, monitoring};
 use bibby::{AppError, AppState};
 use std::env;
 use std::net::SocketAddr;
@@ -33,6 +33,7 @@ async fn main() {
     let app = api::routes()
         .merge(serve_static)
         .fallback(not_found_handler)
+        .layer(axum::middleware::from_fn(csrf::same_origin_only))
         .layer(axum::middleware::from_fn(monitoring::track_requests))
         .with_state(state)
         .layer(CompressionLayer::new())

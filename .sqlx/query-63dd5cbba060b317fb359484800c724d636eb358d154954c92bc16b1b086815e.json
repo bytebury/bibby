@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO scheduler_locks (key, held_until)\n        VALUES ('daily', NOW() + INTERVAL '30 minutes')\n        ON CONFLICT (key) DO UPDATE\n          SET held_until = EXCLUDED.held_until\n          WHERE scheduler_locks.held_until < NOW()\n        RETURNING held_until\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "held_until",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "scheduler_locks",
+            "name": "held_until"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "63dd5cbba060b317fb359484800c724d636eb358d154954c92bc16b1b086815e"
+}

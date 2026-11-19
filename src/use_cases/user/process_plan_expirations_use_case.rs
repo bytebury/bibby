@@ -45,16 +45,21 @@ impl ProcessPlanExpirationsUseCase {
     /// not a concurrent replica) downgraded, which keeps the notification
     /// emails exactly-once even though the whole tick is best-effort.
     async fn downgrade_expired(&self) -> Result<()> {
+        // Today in UTC, computed here rather than with the database's
+        // `CURRENT_DATE`, which follows the session time zone, so this and
+        // the reminder countdown agree on what day it is.
+        let today = Utc::now().date_naive();
         let expired = sqlx::query!(
             r#"
             UPDATE users
                SET role = 'free',
                    plan_expiry_date = NULL,
                    plan_expiry_reminder_days = NULL
-             WHERE plan_expiry_date < CURRENT_DATE
+             WHERE plan_expiry_date < $1
                AND role = 'professional'
          RETURNING id, first_name, email
             "#,
+            today,
         )
         .fetch_all(self.db.as_ref())
         .await?;
@@ -76,6 +81,7 @@ impl ProcessPlanExpirationsUseCase {
     /// that sits between two thresholds — never re-sends.
     async fn send_reminders(&self) -> Result<()> {
         let widest = REMINDER_THRESHOLDS[0];
+        let today = Utc::now().date_naive();
         let candidates = sqlx::query_as!(
             ExpiringUser,
             r#"
@@ -86,16 +92,16 @@ impl ProcessPlanExpirationsUseCase {
                    plan_expiry_reminder_days
               FROM users
              WHERE plan_expiry_date IS NOT NULL
-               AND plan_expiry_date >= CURRENT_DATE
-               AND plan_expiry_date <= CURRENT_DATE + $1::INT
+               AND plan_expiry_date >= $1
+               AND plan_expiry_date <= $1 + $2::INT
                AND role = 'professional'
             "#,
+            today,
             widest as i32,
         )
         .fetch_all(self.db.as_ref())
         .await?;
 
-        let today = Utc::now().date_naive();
         let mut sent = 0;
         for user in candidates {
             let days_remaining = (user.plan_expiry_date - today).num_days();

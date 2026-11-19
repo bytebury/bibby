@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            UPDATE one_time_passcodes\n               SET attempts = attempts + 1\n             WHERE id = (SELECT id\n                           FROM one_time_passcodes\n                          WHERE email = $1\n                          ORDER BY created_at DESC, id DESC\n                          LIMIT 1)\n               AND expires_at > NOW()\n               AND attempts < $2\n            RETURNING id, email, code_hash, attempts\n            ",
+  "query": "\n            UPDATE one_time_passcodes\n               SET attempts = attempts + 1\n             WHERE id = (SELECT id\n                           FROM one_time_passcodes\n                          WHERE email = $1\n                          ORDER BY created_at DESC, id DESC\n                          LIMIT 1)\n               AND expires_at > NOW()\n               AND attempts < $2\n            RETURNING id, email, code_hash\n            ",
   "describe": {
     "columns": [
       {
@@ -35,17 +35,6 @@
             "name": "code_hash"
           }
         }
-      },
-      {
-        "ordinal": 3,
-        "name": "attempts",
-        "type_info": "Int4",
-        "origin": {
-          "Table": {
-            "table": "one_time_passcodes",
-            "name": "attempts"
-          }
-        }
       }
     ],
     "parameters": {
@@ -57,9 +46,8 @@
     "nullable": [
       false,
       false,
-      false,
       false
     ]
   },
-  "hash": "bec9132f93e8385713876e4646bf42a22e951dec33da39826dbeda707223f0bd"
+  "hash": "2053b6f1217d958bf09ff2260f46a61c7a9d8b8bf2de3fc0609e7c974ec2b48e"
 }

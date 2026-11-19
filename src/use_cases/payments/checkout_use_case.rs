@@ -9,7 +9,6 @@ use shima::{CustomerId, PriceId};
 pub enum Plan {
     MonthlyPro,
     AnnualPro,
-    Unknown,
 }
 
 impl Plan {
@@ -17,7 +16,6 @@ impl Plan {
         match self {
             Plan::MonthlyPro => "STRIPE_MONTHLY_PRO",
             Plan::AnnualPro => "STRIPE_ANNUAL_PRO",
-            Plan::Unknown => "UNKNOWN",
         }
     }
 
@@ -25,14 +23,12 @@ impl Plan {
         match self {
             Plan::MonthlyPro => "monthly_pro",
             Plan::AnnualPro => "annual_pro",
-            Plan::Unknown => "unknown",
         }
     }
 
     pub fn role(&self) -> Role {
         match self {
             Plan::MonthlyPro | Plan::AnnualPro => Role::Professional,
-            _ => Role::Professional,
         }
     }
 }
@@ -44,7 +40,7 @@ impl std::str::FromStr for Plan {
         match s {
             "monthly_pro" => Ok(Plan::MonthlyPro),
             "annual_pro" => Ok(Plan::AnnualPro),
-            _ => Ok(Plan::MonthlyPro),
+            other => Err(AppError::BadRequest(format!("Unknown plan {other:?}."))),
         }
     }
 }
@@ -61,7 +57,7 @@ impl CheckoutUseCase {
     }
 
     pub async fn execute(&self, customer_id: CustomerId, plan: Plan) -> Result<CheckoutSession> {
-        let website_url = env::var("WEBSITE_URL").expect("WEBSITE_URL must be set");
+        let website_url = app_origin()?;
         let success_url = format!("{}/checkout/success", website_url);
         let price = env::var(plan.env_var()).map_err(|_| {
             AppError::BadRequest(format!("Plan {} is not configured.", plan.env_var()))
@@ -81,4 +77,13 @@ impl CheckoutUseCase {
             .await
             .map_err(Into::into)
     }
+}
+
+/// Where Stripe sends people back to: this app's public origin.
+pub fn app_origin() -> Result<String> {
+    env::var("APP_ORIGIN")
+        .ok()
+        .map(|origin| origin.trim_end_matches('/').to_string())
+        .filter(|origin| !origin.is_empty())
+        .ok_or_else(|| AppError::Internal("APP_ORIGIN must be set to use Stripe".to_string()))
 }

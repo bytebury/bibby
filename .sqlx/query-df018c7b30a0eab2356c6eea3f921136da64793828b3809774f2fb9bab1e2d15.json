@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            INSERT INTO one_time_passcodes (email, code_hash, expires_at)\n            VALUES ($1, $2, $3)\n            RETURNING id, email, code_hash, attempts\n            ",
+  "query": "\n            INSERT INTO one_time_passcodes (email, code_hash, expires_at)\n            VALUES ($1, $2, $3)\n            RETURNING id, email, code_hash\n            ",
   "describe": {
     "columns": [
       {
@@ -35,17 +35,6 @@
             "name": "code_hash"
           }
         }
-      },
-      {
-        "ordinal": 3,
-        "name": "attempts",
-        "type_info": "Int4",
-        "origin": {
-          "Table": {
-            "table": "one_time_passcodes",
-            "name": "attempts"
-          }
-        }
       }
     ],
     "parameters": {
@@ -58,9 +47,8 @@
     "nullable": [
       false,
       false,
-      false,
       false
     ]
   },
-  "hash": "4ee1f781cdea039ea5113410f16462c4e7c427359710165695e5204e10d8bcfb"
+  "hash": "df018c7b30a0eab2356c6eea3f921136da64793828b3809774f2fb9bab1e2d15"
 }

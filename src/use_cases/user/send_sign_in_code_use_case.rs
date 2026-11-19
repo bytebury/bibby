@@ -34,7 +34,6 @@ impl SendSignInCodeUseCase {
 
         let code = OneTimeCode::generate();
         let mut tx = self.db.begin().await?;
-        OneTimePasscode::prune(&mut *tx).await?;
         if !OneTimePasscode::can_issue(&mut *tx, email).await? {
             return Ok(());
         }

@@ -26,6 +26,7 @@ use axum::response::IntoResponse;
 use axum::routing::post;
 use axum_extra::extract::cookie::{self, Cookie};
 use axum_extra::extract::{CookieJar, Form};
+use std::sync::LazyLock;
 
 const ENABLE_ENV: &str = "ENABLE_TEST_AUTH";
 const TOKEN_ENV: &str = "TEST_AUTH_TOKEN";
@@ -56,9 +57,11 @@ pub fn routes() -> Router<SharedState> {
 }
 
 pub fn is_enabled() -> bool {
-    env::var(ENABLE_ENV)
-        .map(|v| matches!(v.to_lowercase().as_str(), "1" | "true" | "yes"))
-        .unwrap_or(false)
+    static ENABLED: LazyLock<bool> = LazyLock::new(|| {
+        env::var(ENABLE_ENV)
+            .is_ok_and(|v| matches!(v.to_lowercase().as_str(), "1" | "true" | "yes"))
+    });
+    *ENABLED
 }
 
 fn ensure_token(headers: &HeaderMap) -> Result<()> {
@@ -118,7 +121,7 @@ async fn test_sign_in(
     let user = User::update_sign_in_fields(db, user.id, &sign_in, user.locked).await?;
     SignIn::record(db, user.id, &user.last_known_ip, None, None, None).await?;
 
-    let token = Jwt::generate(&UserClaims::from(user))?;
+    let token = Jwt::generate(&UserClaims::from(&user))?;
     // No `secure(true)`: Playwright drives a plain-HTTP localhost server.
     let cookie = Cookie::build(("auth_token", token))
         .path("/")

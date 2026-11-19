@@ -194,11 +194,15 @@ impl SystemStatus {
         let (memory_bytes, threads) = monitoring::process_usage();
         let (log_lines, log_warnings, log_errors) = monitoring::log_counts();
 
-        let database = Self::database(db).await;
-        let tables = Self::tables(db).await;
-        let migrations = Self::migrations(db).await;
-        let scheduler = Self::scheduler(db).await;
-        let pulse = Self::pulse(db).await;
+        // Independent queries, and the page re-polls every 15s, so they run
+        // at once.
+        let (database, tables, migrations, scheduler, pulse) = tokio::join!(
+            Self::database(db),
+            Self::tables(db),
+            Self::migrations(db),
+            Self::scheduler(db),
+            Self::pulse(db),
+        );
 
         let config = CONFIG
             .iter()
@@ -322,8 +326,7 @@ impl SystemStatus {
     }
 
     pub fn test_auth_enabled(&self) -> bool {
-        std::env::var("ENABLE_TEST_AUTH")
-            .is_ok_and(|v| matches!(v.to_lowercase().as_str(), "1" | "true" | "yes"))
+        crate::infra::api::auth_test::is_enabled()
     }
 
     fn find_issues(&self) -> Vec<Issue> {

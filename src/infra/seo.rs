@@ -91,6 +91,11 @@ impl PageMeta {
         Self::default()
     }
 
+    /// A page search engines must not index: admin pages, settings, billing.
+    pub fn private(title: impl Into<String>) -> Self {
+        Self::new().title(title).robots("noindex,nofollow")
+    }
+
     pub fn title(mut self, title: impl Into<String>) -> Self {
         self.title = Some(title.into());
         self

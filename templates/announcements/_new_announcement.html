@@ -20,10 +20,9 @@
   <label class="block">
     <span class="label">Severity</span>
     <select name="severity" class="input mt-1">
-      <option value="info" selected>Info</option>
-      <option value="primary">Primary</option>
-      <option value="warn">Warn</option>
-      <option value="danger">Danger</option>
+      {% for level in severity.all() %}
+        <option value="{{ level }}" {% if *level == severity %}selected{% endif %}>{{ level.label() }}</option>
+      {% endfor %}
     </select>
   </label>
 

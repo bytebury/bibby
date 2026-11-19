@@ -26,8 +26,8 @@ impl UserClaims {
     }
 }
 
-impl From<User> for UserClaims {
-    fn from(user: User) -> Self {
+impl From<&User> for UserClaims {
+    fn from(user: &User) -> Self {
         let exp = Utc::now()
             .checked_add_signed(Duration::days(SESSION_DAYS))
             .expect("valid timestamp")
@@ -36,7 +36,7 @@ impl From<User> for UserClaims {
         Self {
             uid: Some(user.id),
             ver: user.session_version,
-            sub: user.email,
+            sub: user.email.clone(),
             exp,
         }
     }

@@ -141,7 +141,7 @@ impl User {
     }
 
     /// Per-request audit + lookup in a single statement. This runs on every
-    /// authenticated request (see `BaseUser::from_request_parts`), so the CTE
+    /// authenticated request (see `extract::session_user`), so the CTE
     /// folds the lookup, the audit UPDATE, and the read into one round trip.
     /// Only the columns the audit actually changes (`last_known_ip`,
     /// `last_seen_at`) are written, which avoids racily writing back stale
@@ -160,16 +160,17 @@ impl User {
     {
         let user = sqlx::query_as(
             r#"
-            WITH _audited AS (
+            WITH audited AS (
                 UPDATE users
                    SET last_known_ip = $2, last_seen_at = NOW()
                  WHERE email = $1
                    AND (last_known_ip IS DISTINCT FROM $2
                         OR last_seen_at < NOW() - INTERVAL '1 minute')
+             RETURNING id
             ),
             _activity AS (
                 INSERT INTO user_daily_activity (user_id, day)
-                SELECT id, (NOW() AT TIME ZONE 'UTC')::DATE FROM users WHERE email = $1
+                SELECT id, (NOW() AT TIME ZONE 'UTC')::DATE FROM audited
                 ON CONFLICT DO NOTHING
             )
             SELECT * FROM user_details WHERE email = $1

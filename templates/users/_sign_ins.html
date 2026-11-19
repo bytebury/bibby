@@ -1,3 +1,4 @@
+{% import "_macros/pagination.html" as pagination %}
 <section class="card" id="sign-ins">
   <div class="card-header">
     <div>
@@ -28,19 +29,7 @@
           </li>
         {% endfor %}
       </ul>
-      {% if sign_ins.has_previous_page || sign_ins.has_next_page %}
-        <nav class="mt-3 flex items-center justify-between text-xs">
-          <span class="text-gray-500">Page {{ sign_ins.page }} of {{ sign_ins.total_pages() }}</span>
-          <div class="flex gap-2">
-            {% if sign_ins.has_previous_page %}
-              <button type="button" class="btn-link" hx-get="{{ sign_ins_base }}page={{ sign_ins.page - 1 }}" hx-target="#sign-ins" hx-swap="outerHTML">Previous</button>
-            {% endif %}
-            {% if sign_ins.has_next_page %}
-              <button type="button" class="btn-link" hx-get="{{ sign_ins_base }}page={{ sign_ins.page + 1 }}" hx-target="#sign-ins" hx-swap="outerHTML">Next</button>
-            {% endif %}
-          </div>
-        </nav>
-      {% endif %}
+      {% call pagination::pager(self.sign_ins, self.sign_ins_base.as_str(), "#sign-ins") %}{% endcall %}
     {% endif %}
   </div>
 </section>

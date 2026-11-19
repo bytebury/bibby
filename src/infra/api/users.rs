@@ -151,11 +151,7 @@ async fn users(
         shared: SharedContext::new(&state)
             .with_user(Some(user))
             .with_canonical_path("/users")
-            .with_meta(
-                PageMeta::new()
-                    .title("Manage Users")
-                    .robots("noindex,nofollow"),
-            ),
+            .with_meta(PageMeta::private("Manage Users")),
         users,
         search_query,
         role_filter,
@@ -205,7 +201,7 @@ async fn user_page(
         shared: SharedContext::new(&state)
             .with_user(Some(admin))
             .with_canonical_path(format!("/users/{}", user.id))
-            .with_meta(PageMeta::new().title(page_title).robots("noindex,nofollow")),
+            .with_meta(PageMeta::private(page_title)),
         sign_ins_base: sign_ins_base(user.id),
         user,
         activity: activity?,

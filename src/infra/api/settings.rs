@@ -35,7 +35,7 @@ async fn settings_page(
     let shared = SharedContext::new(&state)
         .with_user(Some(user.clone()))
         .with_canonical_path("/settings")
-        .with_meta(PageMeta::new().title("Settings").robots("noindex,nofollow"));
+        .with_meta(PageMeta::private("Settings"));
     Ok(SettingsTemplate { shared, user })
 }
 

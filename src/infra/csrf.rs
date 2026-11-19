@@ -12,6 +12,7 @@ use axum::extract::Request;
 use axum::http::{HeaderMap, Method, header};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
+use std::sync::LazyLock;
 
 pub async fn same_origin_only(request: Request, next: Next) -> Response {
     let safe = matches!(
@@ -42,14 +43,19 @@ fn is_same_origin(headers: &HeaderMap) -> bool {
     };
     // A proxy may rewrite `Host`, so the forwarded host and the configured
     // origin count as this site too.
-    let app_origin = env::var("APP_ORIGIN").unwrap_or_default();
-    let app_host = app_origin
-        .split_once("://")
-        .map(|(_, host)| host.trim_end_matches('/'));
-    [header("host"), header("x-forwarded-host"), app_host]
-        .into_iter()
-        .flatten()
-        .any(|host| host.eq_ignore_ascii_case(&origin_host))
+    static APP_HOST: LazyLock<Option<String>> = LazyLock::new(|| {
+        let origin = env::var("APP_ORIGIN").ok()?;
+        let (_, host) = origin.split_once("://")?;
+        Some(host.trim_end_matches('/').to_string())
+    });
+    [
+        header("host"),
+        header("x-forwarded-host"),
+        APP_HOST.as_deref(),
+    ]
+    .into_iter()
+    .flatten()
+    .any(|host| host.eq_ignore_ascii_case(&origin_host))
 }
 
 #[cfg(test)]

@@ -89,146 +89,50 @@ impl<T> Paginated<T> {
     }
 }
 
-impl<T> Default for Paginated<T> {
-    fn default() -> Self {
-        Self {
-            data: vec![],
-            total: 0,
-            page: 1,
-            start: 1,
-            end: 1,
-            page_size: 15,
-            has_next_page: false,
-            has_previous_page: false,
-        }
-    }
-}
-
-impl<T> IntoIterator for Paginated<T> {
-    type Item = T;
-    type IntoIter = std::vec::IntoIter<Self::Item>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.data.into_iter()
-    }
-}
-
 #[allow(async_fn_in_trait)]
 pub trait Paginate:
     Sized + Send + Unpin + for<'r> FromRow<'r, sqlx::postgres::PgRow> + Serialize
 {
     fn table_name() -> &'static str;
 
-    fn count_query() -> String {
-        format!("SELECT COUNT(*) FROM {}", Self::table_name())
+    /// A page of every row, newest (highest id) first.
+    async fn paginate(db: &SharedDatabase, paging: &PagingInfo) -> Result<Paginated<Self>> {
+        Self::paginate_where(db, "ORDER BY id DESC", vec![], paging).await
     }
 
-    fn page_query() -> String {
-        format!("SELECT * FROM {}", Self::table_name())
-    }
-
-    async fn paginate(pool: &SharedDatabase, pagination: &PagingInfo) -> Result<Paginated<Self>> {
-        Self::paginate_filter(pool, None, vec![], pagination).await
-    }
-
-    async fn paginate_filter(
-        pool: &SharedDatabase,
-        where_clause: Option<&str>,
+    /// A page of the rows `clause` selects: an optional `WHERE … ` followed
+    /// by its `ORDER BY`. `args` fill its `$1`, `$2`, … in order. Only fixed
+    /// SQL goes in `clause`, never request data.
+    async fn paginate_where(
+        db: &SharedDatabase,
+        clause: &str,
         args: Vec<&str>,
-        pagination: &PagingInfo,
+        paging: &PagingInfo,
     ) -> Result<Paginated<Self>> {
-        let (page, page_size) = pagination.clamped();
-        let offset = (page - 1) * page_size;
+        let (page, page_size) = paging.clamped();
+        let table = Self::table_name();
 
-        let count_sql = if let Some(wc) = where_clause {
-            format!("{} {}", Self::count_query(), without_order_by(wc))
-        } else {
-            Self::count_query().to_string()
-        };
-
-        let mut total_query = sqlx::query_as(AssertSqlSafe(count_sql));
-        for arg in args.iter() {
-            total_query = total_query.bind(arg);
+        let count_sql = format!("SELECT COUNT(*) FROM {table} {}", without_order_by(clause));
+        let mut count = sqlx::query_as(AssertSqlSafe(count_sql));
+        for arg in &args {
+            count = count.bind(arg);
         }
-        let total: (i64,) = total_query.fetch_one(pool.as_ref()).await?;
-        let arg_count = args.len();
 
-        let page_sql = if let Some(wc) = where_clause {
-            format!(
-                "{} {} LIMIT ${} OFFSET ${}",
-                Self::page_query(),
-                wc,
-                arg_count + 1,
-                arg_count + 2
-            )
-        } else {
-            format!(
-                "{} ORDER BY id DESC LIMIT ${} OFFSET ${}",
-                Self::page_query(),
-                arg_count + 1,
-                arg_count + 2
-            )
-        };
-        let mut rows_query = sqlx::query_as::<_, Self>(AssertSqlSafe(page_sql));
-        for arg in args.iter() {
-            rows_query = rows_query.bind(arg);
+        let page_sql = format!(
+            "SELECT * FROM {table} {clause} LIMIT ${} OFFSET ${}",
+            args.len() + 1,
+            args.len() + 2
+        );
+        let mut rows = sqlx::query_as::<_, Self>(AssertSqlSafe(page_sql));
+        for arg in &args {
+            rows = rows.bind(arg);
         }
-        let rows = rows_query
-            .bind(page_size)
-            .bind(offset)
-            .fetch_all(pool.as_ref())
-            .await?;
+        let rows = rows.bind(page_size).bind((page - 1) * page_size);
 
-        Ok(Paginated::new(rows, total.0, page, page_size))
+        let ((total,), rows) =
+            tokio::try_join!(count.fetch_one(db.as_ref()), rows.fetch_all(db.as_ref()))?;
+        Ok(Paginated::new(rows, total, page, page_size))
     }
-}
-
-/// Paginate every row in the entity's table with default paging info.
-///
-/// ```ignore
-/// paginate!(User, &db);
-/// paginate!(User, &db, &paging);
-/// ```
-#[macro_export]
-macro_rules! paginate {
-    ($entity:ty, $db:expr) => {
-        <$entity as $crate::infra::pagination::Paginate>::paginate(
-            $db,
-            &$crate::infra::pagination::PagingInfo::default(),
-        )
-        .await
-    };
-    ($entity:ty, $db:expr, $paging:expr) => {
-        <$entity as $crate::infra::pagination::Paginate>::paginate($db, $paging).await
-    };
-}
-
-/// Paginate with a `WHERE` clause and the parameters that fill it.
-///
-/// ```ignore
-/// paginate_with!(User, &db, "where role = $1", vec!["admin"]);
-/// paginate_with!(User, &db, "where role = $1", vec!["admin"], &paging);
-/// ```
-#[macro_export]
-macro_rules! paginate_with {
-    ($entity:ty, $db:expr, $where:expr, $args:expr) => {
-        <$entity as $crate::infra::pagination::Paginate>::paginate_filter(
-            $db,
-            Some($where),
-            $args,
-            &$crate::infra::pagination::PagingInfo::default(),
-        )
-        .await
-    };
-    ($entity:ty, $db:expr, $where:expr, $args:expr, $paging:expr) => {
-        <$entity as $crate::infra::pagination::Paginate>::paginate_filter(
-            $db,
-            Some($where),
-            $args,
-            $paging,
-        )
-        .await
-    };
 }
 
 #[cfg(test)]

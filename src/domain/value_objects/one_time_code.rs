@@ -2,6 +2,7 @@ use crate::domain::value_objects::email::Email;
 use crate::prelude::*;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
+use std::sync::LazyLock;
 
 pub const ONE_TIME_CODE_LEN: usize = 6;
 
@@ -42,12 +43,12 @@ impl OneTimeCode {
     }
 
     pub fn digest(&self, email: &Email) -> Vec<u8> {
-        self.mac(&secret(), email).finalize().into_bytes().to_vec()
+        self.mac(secret(), email).finalize().into_bytes().to_vec()
     }
 
     /// Constant-time comparison against a stored `digest`.
     pub fn matches(&self, email: &Email, digest: &[u8]) -> bool {
-        self.mac(&secret(), email).verify_slice(digest).is_ok()
+        self.mac(secret(), email).verify_slice(digest).is_ok()
     }
 
     fn mac(&self, key: &[u8], email: &Email) -> Hmac<Sha256> {
@@ -59,10 +60,10 @@ impl OneTimeCode {
     }
 }
 
-fn secret() -> Vec<u8> {
-    env::var("JWT_SECRET")
-        .expect("JWT_SECRET is not present")
-        .into_bytes()
+fn secret() -> &'static [u8] {
+    static SECRET: LazyLock<Vec<u8>> =
+        LazyLock::new(|| env::var("JWT_SECRET").unwrap_or_default().into_bytes());
+    &SECRET
 }
 
 #[cfg(test)]

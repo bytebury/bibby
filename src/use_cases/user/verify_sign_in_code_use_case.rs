@@ -38,7 +38,7 @@ impl VerifySignInCodeUseCase {
         let mut user = User::find_by_email(self.db.as_ref(), email.as_str()).await?;
         if !user.verified {
             User::mark_verified(self.db.as_ref(), user.id).await?;
-            user = User::find_by_id(self.db.as_ref(), user.id).await?;
+            user.verified = true;
         }
         user.grant_listed_admin(self.db.as_ref(), &self.admins)
             .await

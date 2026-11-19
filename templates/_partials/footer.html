@@ -1,8 +1,8 @@
 <footer class="footer">
   <div class="footer-inner">
     <div class="footer-brand">
-      <div class="footer-brand-name">{{ shared.app_name }}</div>
-      <p class="footer-tagline">Thanks for using {{ shared.app_name }}.</p>
+      <div class="footer-brand-name">{{ shared.app_name() }}</div>
+      <p class="footer-tagline">Thanks for using {{ shared.app_name() }}.</p>
     </div>
 
     <nav class="footer-col">
@@ -19,6 +19,6 @@
   </div>
 
   <div class="footer-bottom">
-    <span>&copy; {{ shared.current_year }} {{ shared.app_name }}. All rights reserved.</span>
+    <span>&copy; {{ shared.current_year }} {{ shared.app_name() }}. All rights reserved.</span>
   </div>
 </footer>

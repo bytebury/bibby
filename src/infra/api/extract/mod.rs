@@ -12,37 +12,26 @@ use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
 use axum_extra::extract::CookieJar;
 
-pub enum BaseUser {
-    User(Box<User>),
-    None,
-}
-
-impl FromRequestParts<SharedState> for BaseUser {
-    type Rejection = AppError;
-
-    async fn from_request_parts(parts: &mut Parts, state: &SharedState) -> Result<Self> {
-        let jar = CookieJar::from_headers(&parts.headers);
-        let Some(token) = jar.get("auth_token").map(|c| c.value()) else {
-            return Ok(BaseUser::None);
-        };
-        let RealIp(ip) = RealIp::from_request_parts(parts, state).await?;
-
-        if let Ok(data) = Jwt::verify::<UserClaims>(token)
-            && let Ok(user) =
-                User::audit_and_find_by_email(state.db.as_ref(), &data.claims.sub, &ip).await
-        {
-            // A locked account with a still-valid cookie is treated as signed
-            // out everywhere (the audit folded into the lookup above still
-            // records their IP so the shared-IP lock keeps propagating). So is
-            // one that hasn't verified its email —
-            // sign-in never mints a session for those, so a cookie for one
-            // shouldn't exist anyway.
-            if user.locked || !user.verified || !data.claims.is_current_for(&user) {
-                return Ok(BaseUser::None);
-            }
-            return Ok(BaseUser::User(Box::new(user)));
-        }
-
-        Ok(BaseUser::None)
-    }
+/// The signed-in user behind the request's `auth_token` cookie, or `None`.
+/// The root of `CurrentUser`, `MaybeCurrentUser` and `Admin`.
+///
+/// Verifies the JWT and runs the per-request audit. A locked account, one that
+/// hasn't verified its email, or a token for an older session (see
+/// `User::end_all_sessions`) counts as signed out. The audit still records a
+/// locked account's IP, so the shared-IP lock keeps propagating.
+pub async fn session_user(parts: &mut Parts, state: &SharedState) -> Result<Option<User>> {
+    let jar = CookieJar::from_headers(&parts.headers);
+    let Some(token) = jar.get("auth_token").map(|c| c.value().to_string()) else {
+        return Ok(None);
+    };
+    let Ok(data) = Jwt::verify::<UserClaims>(&token) else {
+        return Ok(None);
+    };
+    let RealIp(ip) = RealIp::from_request_parts(parts, state).await?;
+    let Ok(user) = User::audit_and_find_by_email(state.db.as_ref(), &data.claims.sub, &ip).await
+    else {
+        return Ok(None);
+    };
+    let signed_in = !user.locked && user.verified && data.claims.is_current_for(&user);
+    Ok(signed_in.then_some(user))
 }

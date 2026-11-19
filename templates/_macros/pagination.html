@@ -1,0 +1,31 @@
+{#-
+  Previous / Next links for a `Paginated<T>`, shown only when there is more
+  than one page. `base` is the URL to add `page=N` to, ending in `?` or `&`.
+  With a `target`, the links swap that element over HTMX instead of navigating.
+
+  {% import "_macros/pagination.html" as pagination %}
+  {% call pagination::pager(self.blogs, "/blogs?") %}{% endcall %}
+-#}
+{% macro pager(paged, base, target = "") %}
+{% if paged.has_previous_page || paged.has_next_page %}
+<nav class="mt-4 flex items-center justify-between text-sm">
+  <span class="text-gray-500">Page {{ paged.page }} of {{ paged.total_pages() }}</span>
+  <div class="flex gap-2">
+    {% if paged.has_previous_page %}
+      {% if target.is_empty() %}
+        <a class="btn-link" href="{{ base }}page={{ paged.page - 1 }}">Previous</a>
+      {% else %}
+        <button type="button" class="btn-link" hx-get="{{ base }}page={{ paged.page - 1 }}" hx-target="{{ target }}" hx-swap="outerHTML">Previous</button>
+      {% endif %}
+    {% endif %}
+    {% if paged.has_next_page %}
+      {% if target.is_empty() %}
+        <a class="btn-link" href="{{ base }}page={{ paged.page + 1 }}">Next</a>
+      {% else %}
+        <button type="button" class="btn-link" hx-get="{{ base }}page={{ paged.page + 1 }}" hx-target="{{ target }}" hx-swap="outerHTML">Next</button>
+      {% endif %}
+    {% endif %}
+  </div>
+</nav>
+{% endif %}
+{% endmacro %}

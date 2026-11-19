@@ -21,7 +21,7 @@ impl From<sqlx::Error> for AppError {
             return AppError::NotFound("Not found".into());
         }
         match err.as_database_error().and_then(|e| e.code()) {
-            Some(code) if matches!(code.as_ref(), "2067" | "1555" | "23505") => {
+            Some(code) if code == "23505" => {
                 AppError::Conflict("This record already exists.".into())
             }
             _ => AppError::Internal(err.to_string()),

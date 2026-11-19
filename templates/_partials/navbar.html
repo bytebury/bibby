@@ -1,15 +1,15 @@
 {% import "_macros/buttons.html" as ui %}
 <nav class="navbar">
   <div class="navbar-inner">
-    <a href="/" class="navbar-brand">{{ shared.app_name }}</a>
+    <a href="/" class="navbar-brand">{{ shared.app_name() }}</a>
 
     <div class="navbar-links">
       <a href="/blogs" class="navbar-link hidden md:inline-block">Blog</a>
       {% match shared.user %}
         {% when Some with (user) %}
-          {% if shared.payments_enabled && user.is_free() %}
+          {% if shared.payments_enabled() && user.is_free() %}
             <a href="/upgrade" class="navbar-link hidden md:inline-block">Upgrade</a>
-          {% else if shared.payments_enabled && user.is_pro() %}
+          {% else if shared.payments_enabled() && user.is_pro() %}
             {% call ui::spinner_button("post", "/manage-subscriptions", "Billing", "btn-ghost hidden md:inline-flex") %}{% endcall %}
           {% endif %}
 
@@ -26,9 +26,9 @@
               {# The navbar hides these on small screens, so the menu carries them there. #}
               <div class="flex flex-col gap-1 border-b border-gray-100 pb-1 md:hidden">
                 <a href="/blogs" class="navbar-link">Blog</a>
-                {% if shared.payments_enabled && user.is_free() %}
+                {% if shared.payments_enabled() && user.is_free() %}
                   <a href="/upgrade" class="navbar-link">Upgrade</a>
-                {% else if shared.payments_enabled && user.is_pro() %}
+                {% else if shared.payments_enabled() && user.is_pro() %}
                   {% call ui::spinner_button("post", "/manage-subscriptions", "Billing", "btn-ghost justify-start") %}{% endcall %}
                 {% endif %}
               </div>

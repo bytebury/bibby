@@ -3,8 +3,8 @@
 {% block content %}
   <div class="card">
     <div class="card-body text-center">
-      <h1 class="page-title">{{ shared.app_name }}</h1>
-      <p class="mt-2 page-subtitle">Welcome to {{ shared.app_name }}.</p>
+      <h1 class="page-title">{{ shared.app_name() }}</h1>
+      <p class="mt-2 page-subtitle">Welcome to {{ shared.app_name() }}.</p>
 
       {% match shared.user %}
         {% when Some with (user) %}

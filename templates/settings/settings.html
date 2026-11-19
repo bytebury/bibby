@@ -76,9 +76,9 @@
           {% endif %}
         </div>
       </div>
-      {% if shared.payments_enabled && user.is_free() %}
+      {% if shared.payments_enabled() && user.is_free() %}
         <a href="/upgrade" class="btn-primary">Upgrade</a>
-      {% else if shared.payments_enabled && user.stripe_customer_id.is_some() %}
+      {% else if shared.payments_enabled() && user.stripe_customer_id.is_some() %}
         {% call ui::spinner_button("post", "/manage-subscriptions", "Manage billing", "btn-ghost") %}{% endcall %}
       {% endif %}
     </div>

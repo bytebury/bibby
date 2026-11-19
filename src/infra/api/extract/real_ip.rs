@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use axum::extract::{ConnectInfo, FromRequestParts};
 use std::net::SocketAddr;
-use std::sync::Arc;
+use std::sync::LazyLock;
 
 /// The client's IP address.
 ///
@@ -14,16 +14,13 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub struct RealIp(pub String);
 
-impl<S> FromRequestParts<Arc<S>> for RealIp
+impl<S> FromRequestParts<S> for RealIp
 where
     S: Send + Sync,
 {
     type Rejection = AppError;
 
-    async fn from_request_parts(
-        parts: &mut axum::http::request::Parts,
-        state: &Arc<S>,
-    ) -> Result<Self> {
+    async fn from_request_parts(parts: &mut axum::http::request::Parts, state: &S) -> Result<Self> {
         let connect_info = ConnectInfo::<SocketAddr>::from_request_parts(parts, state)
             .await
             .map_err(|err| AppError::Internal(format!("Unable to get IP Address: {err}")))?;
@@ -40,10 +37,13 @@ where
 }
 
 fn trusted_proxy_hops() -> usize {
-    env::var("TRUSTED_PROXY_HOPS")
-        .ok()
-        .and_then(|hops| hops.trim().parse().ok())
-        .unwrap_or(1)
+    static HOPS: LazyLock<usize> = LazyLock::new(|| {
+        env::var("TRUSTED_PROXY_HOPS")
+            .ok()
+            .and_then(|hops| hops.trim().parse().ok())
+            .unwrap_or(1)
+    });
+    *HOPS
 }
 
 /// The entry `hops` from the right of an `X-Forwarded-For` header, or `None`

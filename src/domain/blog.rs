@@ -157,25 +157,34 @@ impl Blog {
         blog_id: PrimaryKey,
         user_id: PrimaryKey,
         request: &BlogForm,
-    ) -> Result<()>
+    ) -> Result<Blog>
     where
         E: Executor<'e, Database = sqlx::Postgres>,
     {
-        sqlx::query(
+        let blog = sqlx::query_as!(
+            Blog,
             r#"
             UPDATE blogs
             SET user_id = $1, title = $2, content = $3, image_url = $4
             WHERE id = $5
+            RETURNING
+                id,
+                user_id,
+                title,
+                content as "content: Markdown",
+                image_url,
+                created_at,
+                updated_at
             "#,
+            user_id,
+            request.title,
+            request.content.raw(),
+            request.image_url,
+            blog_id,
         )
-        .bind(user_id)
-        .bind(&request.title)
-        .bind(request.content.raw())
-        .bind(&request.image_url)
-        .bind(blog_id)
-        .execute(exec)
+        .fetch_one(exec)
         .await?;
-        Ok(())
+        Ok(blog)
     }
 
     pub async fn destroy<'e, E>(exec: E, id: PrimaryKey) -> Result<()>
@@ -213,16 +222,6 @@ impl Validate for BlogForm {
             return Err(AppError::BadRequest("Content is required.".into()));
         }
         Ok(())
-    }
-}
-
-impl From<Blog> for BlogForm {
-    fn from(blog: Blog) -> Self {
-        Self {
-            title: blog.title,
-            content: blog.content,
-            image_url: blog.image_url,
-        }
     }
 }
 

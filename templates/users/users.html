@@ -1,4 +1,5 @@
 {% extends "_layouts/base.html" %}
+{% import "_macros/pagination.html" as pagination %}
 {% import "users/_macros.html" as users_ui %}
 
 {% block title %}{{ shared.title_tag() }}{% endblock %}
@@ -110,16 +111,6 @@
       {% endif %}
     </div>
 
-    <nav class="mt-4 flex items-center justify-between text-sm">
-      <span class="text-gray-500">Page {{ users.page }} of {{ users.total_pages() }}</span>
-      <div class="flex gap-2">
-        {% if users.has_previous_page %}
-          <a class="btn-link" href="{{ pagination_base }}page={{ users.page - 1 }}">Previous</a>
-        {% endif %}
-        {% if users.has_next_page %}
-          <a class="btn-link" href="{{ pagination_base }}page={{ users.page + 1 }}">Next</a>
-        {% endif %}
-      </div>
-    </nav>
+    {% call pagination::pager(self.users, self.pagination_base.as_str()) %}{% endcall %}
   </div>
 {% endblock %}

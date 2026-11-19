@@ -39,11 +39,7 @@ async fn analytics(
         shared: SharedContext::new(&state)
             .with_user(Some(user))
             .with_canonical_path("/admin/analytics")
-            .with_meta(
-                PageMeta::new()
-                    .title("Site Analytics")
-                    .robots("noindex,nofollow"),
-            ),
+            .with_meta(PageMeta::private("Site Analytics")),
         analytics,
     })
 }
@@ -116,11 +112,7 @@ async fn monitoring_page(
         shared: SharedContext::new(&state)
             .with_user(Some(user))
             .with_canonical_path("/admin/monitoring")
-            .with_meta(
-                PageMeta::new()
-                    .title("Monitoring")
-                    .robots("noindex,nofollow"),
-            ),
+            .with_meta(PageMeta::private("Monitoring")),
     })
 }
 

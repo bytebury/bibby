@@ -1,5 +1,5 @@
 use crate::domain::announcement::{Announcement, AnnouncementForm};
-use crate::domain::value_objects::toggle::Toggle;
+use crate::domain::value_objects::severity::Severity;
 use crate::infra::api::SharedContext;
 use crate::infra::api::extract::admin::Admin;
 use crate::infra::api::extract::validated_form::ValidatedForm;
@@ -28,7 +28,8 @@ pub fn routes() -> Router<SharedState> {
 #[derive(Deserialize, Default)]
 struct ActiveForm {
     #[serde(default)]
-    active: Toggle,
+    /// A checkbox: browsers only send it when it is checked.
+    active: Option<String>,
 }
 
 #[derive(Template, WebTemplate)]
@@ -40,7 +41,10 @@ struct AnnouncementsTemplate {
 
 #[derive(Template, WebTemplate)]
 #[template(path = "announcements/_new_announcement.html")]
-struct NewAnnouncementModal {}
+struct NewAnnouncementModal {
+    /// The level the form starts on.
+    severity: Severity,
+}
 
 #[derive(Template, WebTemplate)]
 #[template(path = "announcements/_edit_announcement.html")]
@@ -63,17 +67,15 @@ async fn announcements(
         shared: SharedContext::new(&state)
             .with_user(Some(user))
             .with_canonical_path("/announcements")
-            .with_meta(
-                PageMeta::new()
-                    .title("Announcements")
-                    .robots("noindex,nofollow"),
-            ),
+            .with_meta(PageMeta::private("Announcements")),
         announcements: Announcement::paginate(&state.db, &params).await?,
     })
 }
 
 async fn new_announcement_modal(Admin(_): Admin) -> NewAnnouncementModal {
-    NewAnnouncementModal {}
+    NewAnnouncementModal {
+        severity: Severity::default(),
+    }
 }
 
 async fn create_announcement(
@@ -128,7 +130,7 @@ async fn toggle_active(
 ) -> Result<impl IntoResponse> {
     let announcement = Announcement::find_by_id(state.db.as_ref(), id).await?;
     admin.ensure_can_write(&announcement)?;
-    Announcement::set_active(state.db.as_ref(), announcement.id, form.active.as_bool()).await?;
+    Announcement::set_active(state.db.as_ref(), announcement.id, form.active.is_some()).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 

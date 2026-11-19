@@ -2,12 +2,13 @@
 //! `infra/api/cron.rs`) so they run even when the web service has been asleep.
 
 use crate::SharedState;
+use crate::infra::db::DbPool;
 use crate::prelude::*;
 
 pub async fn run_tick(state: &SharedState) {
     info!("scheduler tick start");
 
-    let Some(lease) = acquire_tick_lock(state).await else {
+    let Some(lease) = acquire_tick_lock(state.db.as_ref()).await else {
         return;
     };
 
@@ -24,7 +25,7 @@ pub async fn run_tick(state: &SharedState) {
         error!(%error, "sign-in pruning job failed");
     }
 
-    release_tick_lock(state, lease).await;
+    release_tick_lock(state.db.as_ref(), lease).await;
     info!("scheduler tick done");
 }
 
@@ -34,7 +35,7 @@ pub async fn run_tick(state: &SharedState) {
 /// wedge the system for long — and is long enough for a tick that waits on
 /// slow mail sends. The `held_until` it wrote is returned as the holder's
 /// token for `release_tick_lock`.
-async fn acquire_tick_lock(state: &SharedState) -> Option<DateTime<Utc>> {
+async fn acquire_tick_lock(db: &DbPool) -> Option<DateTime<Utc>> {
     let result = sqlx::query_scalar!(
         r#"
         INSERT INTO scheduler_locks (key, held_until)
@@ -45,7 +46,7 @@ async fn acquire_tick_lock(state: &SharedState) -> Option<DateTime<Utc>> {
         RETURNING held_until
         "#,
     )
-    .fetch_optional(state.db.as_ref())
+    .fetch_optional(db)
     .await;
 
     match result {
@@ -65,14 +66,52 @@ async fn acquire_tick_lock(state: &SharedState) -> Option<DateTime<Utc>> {
 /// immediately instead of waiting for the safety window to lapse. Only the
 /// lease this tick took is released: if it ran past `held_until` and another
 /// replica has since taken the lease, that one is left alone.
-async fn release_tick_lock(state: &SharedState, lease: DateTime<Utc>) {
+async fn release_tick_lock(db: &DbPool, lease: DateTime<Utc>) {
     if let Err(error) = sqlx::query!(
         "UPDATE scheduler_locks SET held_until = NOW() - INTERVAL '1 second' WHERE key = 'daily' AND held_until = $1",
         lease,
     )
-    .execute(state.db.as_ref())
+    .execute(db)
     .await
     {
         error!(%error, "failed to release scheduler lock — will expire on its own");
+    }
+}
+
+#[cfg(test)]
+mod db_tests {
+    use super::*;
+    use sqlx::PgPool;
+
+    #[sqlx::test]
+    async fn only_one_caller_holds_the_daily_lease(db: PgPool) {
+        let lease = acquire_tick_lock(&db)
+            .await
+            .expect("first caller gets the lease");
+        assert!(
+            acquire_tick_lock(&db).await.is_none(),
+            "a second replica skips"
+        );
+        release_tick_lock(&db, lease).await;
+        assert!(
+            acquire_tick_lock(&db).await.is_some(),
+            "released, so the next tick runs"
+        );
+    }
+
+    #[sqlx::test]
+    async fn a_tick_that_outlived_its_lease_leaves_the_new_holder_alone(db: PgPool) {
+        let stale = acquire_tick_lock(&db).await.unwrap();
+        // The lease lapses and another replica takes it.
+        sqlx::query("UPDATE scheduler_locks SET held_until = NOW() - INTERVAL '1 second'")
+            .execute(&db)
+            .await
+            .unwrap();
+        acquire_tick_lock(&db).await.expect("new holder");
+        release_tick_lock(&db, stale).await;
+        assert!(
+            acquire_tick_lock(&db).await.is_none(),
+            "the new holder still has it"
+        );
     }
 }

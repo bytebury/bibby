@@ -21,6 +21,26 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
+    # The #[sqlx::test] tests create a fresh database per test on this server.
+    # Queries still compile offline (SQLX_OFFLINE); only the tests connect.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 1s
+          --health-timeout 5s
+          --health-retries 30
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+
     steps:
       - uses: actions/checkout@v4
 

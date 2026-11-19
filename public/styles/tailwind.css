@@ -10,9 +10,9 @@
         overflow-wrap: anywhere;
     }
 
-    /* Button labels stay on one line; the button grows instead. */
-    button,
-    :where(.btn, .btn-primary, .btn-secondary, .btn-ghost, .btn-danger, .btn-link) {
+    /* Button labels stay on one line; the button grows instead. Text links
+       (`btn-link`) wrap like the text around them. */
+    :where(.btn, .btn-primary, .btn-secondary, .btn-ghost, .btn-danger) {
         white-space: nowrap;
         overflow-wrap: normal;
     }

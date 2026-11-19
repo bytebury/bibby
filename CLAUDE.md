@@ -533,10 +533,9 @@ axe and tests keyboard behaviour; add a page to its scan when you add one.
 - Decorative images get `alt=""` (a flag next to its country name).
 - Anything shown on hover (tooltips, menus) works from the keyboard too, and
   Escape dismisses it.
-- Button labels never wrap: a base rule in `tailwind.css` keeps `<button>`
-  and every `btn-*` on one line, and the phone-width e2e test checks it. A
-  `btn-link` that shows data of any length (an email) adds
-  `whitespace-normal break-all`.
+- Button labels never wrap: a base rule in `tailwind.css` keeps `.btn`,
+  `btn-primary`, `btn-secondary`, `btn-ghost` and `btn-danger` on one line,
+  and the phone-width e2e test checks it. Text links (`btn-link`) wrap.
 - Landmarks are labelled when there's more than one of a kind
   (`<nav aria-label="Main">`).
 

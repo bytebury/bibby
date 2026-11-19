@@ -215,9 +215,8 @@ async function expectFitsThePhone(page: Page) {
         .map((rect) => Math.round(rect.top));
       return new Set(tops).size;
     };
-    // Data shown as a link (an email) opts out with `whitespace-normal`.
     const buttons = document.querySelectorAll(
-      "button, [class*='btn']:not(.whitespace-normal)",
+      ".btn, .btn-primary, .btn-secondary, .btn-ghost, .btn-danger",
     );
     return {
       overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,

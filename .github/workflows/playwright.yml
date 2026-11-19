@@ -34,9 +34,9 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd pg_isready
-          --health-interval 5s
+          --health-interval 1s
           --health-timeout 5s
-          --health-retries 10
+          --health-retries 30
 
     env:
       PORT: "8080"
@@ -66,14 +66,6 @@ jobs:
           shared-key: bibby-debug
           cache-targets: "true"
 
-      - name: Install sqlx-cli
-        uses: taiki-e/install-action@v2
-        with:
-          tool: sqlx-cli
-
-      - name: Run migrations
-        run: cargo sqlx migrate run
-
       - name: Build app (debug)
         run: cargo build --bin bibby --locked
 
@@ -96,14 +88,15 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
+      # On a cache hit nothing is installed: the runner image already has the
+      # system libraries Chromium needs (it ships Chrome). If Chromium stops
+      # launching after a runner image update, restore an
+      # `npx playwright install-deps chromium` step for cache hits.
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
 
-      - name: Install Playwright OS deps
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
-
+      # The app applies its embedded migrations on startup.
       - name: Start app
         run: |
           export GIT_HASH=${GITHUB_SHA}

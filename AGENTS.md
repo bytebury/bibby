@@ -235,8 +235,8 @@ For the common case, prefer the `spinner_button` macro:
 
 ### Tooltips
 
-`data-tooltip="..."` on any element. A word that explains itself in a tooltip also gets `class="tooltip-term"
-tabindex="0"` (dotted underline, keyboard focusable). Opt out on mobile with `data-tooltip-no-mobile`. Delegated from `document`,
+`data-tooltip="..."` on any element. A word that explains itself in a tooltip also gets `class="tooltip-term"`
+(dotted underline; it's text, so not focusable). Opt out on mobile with `data-tooltip-no-mobile`. Delegated from `document`,
 so swapped-in content works without rebinding.
 
 ### Modals

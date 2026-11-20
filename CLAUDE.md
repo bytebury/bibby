@@ -145,6 +145,13 @@ round trip.
 - **Never discard commits you haven't checked.** Before resetting or
   recreating a branch, make sure it doesn't hold unmerged work, such as an
   open PR's commits.
+- **Never read environment variables directly unless explicitly asked.**
+  That covers a deployed service's variables (Railway's `list-variables`,
+  `railway variables`, a dashboard) and local `.env` files: listing them
+  prints every secret in plain text (Stripe keys, OAuth secrets,
+  `JWT_SECRET`, database passwords), and anything read ends up in the
+  session. Don't pull credentials from them to connect to a database either.
+  If you need to know a value or whether one is set, ask.
 
 ## Branching workflow
 

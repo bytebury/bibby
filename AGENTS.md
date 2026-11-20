@@ -102,6 +102,13 @@ it.
 
 These are the things that compile fine but break at runtime, or get caught in code review every time.
 
+### Never read environment variables directly unless explicitly asked
+
+That covers a deployed service's variables (Railway's `list-variables`, `railway variables`, a dashboard) and local
+`.env` files: listing them prints every secret in plain text (Stripe keys, OAuth secrets, `JWT_SECRET`, database
+passwords), and anything read ends up in the session. Don't pull credentials from them to connect to a database either.
+If you need to know a value or whether one is set, ask.
+
 ### Redirects always go through `redirect!`
 
 Every handler redirect must use the `redirect!(url, &headers)` macro from `src/infra/api/mod.rs`. **Never** call

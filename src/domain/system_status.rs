@@ -183,7 +183,6 @@ const CONFIG: &[(&str, &str, bool)] = &[
     ("STRIPE_MONTHLY_PRO", "Monthly plan price", false),
     ("STRIPE_ANNUAL_PRO", "Annual plan price", false),
     ("GEODUDE_URL", "Sign-in locations", false),
-    ("TRUSTED_PROXY_HOPS", "Client IPs behind a proxy", false),
     ("CRON_SECRET", "Daily jobs (cron tick)", true),
     ("PUBLIC_SITE_URL", "Canonical URLs for SEO", false),
 ];

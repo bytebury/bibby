@@ -492,9 +492,10 @@
         @apply grid gap-2 border-t border-gray-100 px-4 py-1;
         grid-template-columns: max-content 52px minmax(0, 180px) minmax(0, 1fr);
     }
+    /* gray-600: gray-500 falls under 4.5:1 on the amber and red rows. */
     .monitoring-log time,
     .monitoring-target {
-        @apply truncate text-gray-500;
+        @apply truncate text-gray-600;
     }
     .monitoring-message {
         @apply whitespace-pre-wrap break-all;

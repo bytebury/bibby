@@ -56,10 +56,6 @@ JWT_SECRET=${JWT_SECRET_VALUE}
 # (verified Google sign-in or an emailed code). Whitespace is trimmed.
 ADMIN_EMAILS=${ADMIN_EMAILS_VALUE}
 
-# How many reverse proxies sit in front of the app (Railway: 1). The client IP
-# is read that many entries from the right of X-Forwarded-For. 0 ignores it.
-TRUSTED_PROXY_HOPS=0
-
 # Google OAuth, optional: leave the id and secret empty and the "Continue
 # with Google" button is hidden. Register a single redirect URI in the Google Console
 # (the one matching this env's APP_ORIGIN). Preview deploys can share prod's

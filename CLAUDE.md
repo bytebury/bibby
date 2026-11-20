@@ -77,7 +77,7 @@ Prerequisites: Rust, Node, `sqlx-cli`, and Postgres reachable at
 `PORT`, `APP_NAME`, `APP_ORIGIN`, `PUBLIC_SITE_URL`, `SEO_*`, `WEB_APP_*`,
 `DATABASE_URL`, `DATABASE_MAX_CONNECTIONS`, `JWT_SECRET` (generated),
 `ADMIN_EMAILS` (defaults to your `git config user.email`),
-`TRUSTED_PROXY_HOPS`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
+`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
 `GOOGLE_CALLBACK_URL`, `OAUTH_ALLOWED_TARGETS`, `GEODUDE_URL`, `MAILMAN_URL`,
 `MAILMAN_API_TOKEN`, `CRON_SECRET`, `STRIPE_SECRET_KEY`,
 `STRIPE_WEBHOOK_SECRET`, `STRIPE_MONTHLY_PRO`, `STRIPE_ANNUAL_PRO`.
@@ -374,7 +374,7 @@ documented here and in the README.
 | `CurrentUser(User)` | Signed in — else 401. |
 | `MaybeCurrentUser(Option<User>)` | Optional user. |
 | `Admin(User)` | Signed in + `role == Admin` — else 403. |
-| `RealIp(String)` | Client IP: the `X-Forwarded-For` entry `TRUSTED_PROXY_HOPS` (default 1) from the right, else the socket. |
+| `RealIp(String)` | Client IP: `X-Real-IP`, which Railway's edge sets to the real client (replacing whatever the client sent), else the socket. Don't use `X-Forwarded-For`: Railway's edge appends its own hop, so the last entry is Railway's, and the first is the client's to choose. |
 | `ValidatedForm<T>` | Form body that has passed `T::validate`. |
 
 `extract::session_user` is the root of the user extractors. It verifies the JWT and runs
